@@ -1,5 +1,6 @@
 """Cases whose reference comes from a court decision's answer key."""
 
+from datetime import date as date_type
 from typing import Any
 
 from pydantic import Field
@@ -19,6 +20,9 @@ class AnswerKey(Record):
     jurisdiction: str
     inputs: dict[str, Any]
     facts: list[Fact] = Field(min_length=1)
+    date: date_type | None = None
+    court: str | None = None
+    level: str | None = None
 
 
 def case_from_answer_key(key: AnswerKey, *, task: str, metrics: list[str]) -> Case:

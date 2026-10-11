@@ -2,6 +2,9 @@
 
 from collections import Counter
 from pathlib import Path
+from typing import Any
+
+from pydantic import Field
 
 from casebench import __version__
 from casebench.core.canonical import canonical_json, content_hash
@@ -22,6 +25,7 @@ class SuiteManifest(FrozenRecord):
     task_types: dict[str, int]
     reference_sources: dict[str, int]
     approvals: dict[str, int]
+    generation: dict[str, Any] = Field(default_factory=dict)
 
 
 class SuiteHashMismatch(ValueError):
@@ -32,7 +36,9 @@ def case_lines(cases: list[Case]) -> list[str]:
     return [canonical_json(case.model_dump(mode="json")) for case in cases]
 
 
-def manifest_for(suite_id: str, cases: list[Case]) -> SuiteManifest:
+def manifest_for(
+    suite_id: str, cases: list[Case], generation: dict[str, Any] | None = None
+) -> SuiteManifest:
     return SuiteManifest(
         suite_id=suite_id,
         content_hash=content_hash(case_lines(cases)),
@@ -41,10 +47,13 @@ def manifest_for(suite_id: str, cases: list[Case]) -> SuiteManifest:
         task_types=dict(Counter(case.task.type for case in cases)),
         reference_sources=dict(Counter(case.reference.source.value for case in cases)),
         approvals=dict(Counter(case.approval.value for case in cases)),
+        generation=generation or {},
     )
 
 
-def freeze(suite_id: str, cases: list[Case], folder: Path) -> SuiteManifest:
+def freeze(
+    suite_id: str, cases: list[Case], folder: Path, generation: dict[str, Any] | None = None
+) -> SuiteManifest:
     """Write `suite.jsonl` and `manifest.json`; the case order is the suite's order."""
     ids = [case.id for case in cases]
     if len(set(ids)) != len(ids):
@@ -52,7 +61,7 @@ def freeze(suite_id: str, cases: list[Case], folder: Path) -> SuiteManifest:
     folder.mkdir(parents=True, exist_ok=True)
     lines = case_lines(cases)
     (folder / SUITE_FILE).write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
-    manifest = manifest_for(suite_id, cases)
+    manifest = manifest_for(suite_id, cases, generation)
     (folder / MANIFEST_FILE).write_text(manifest.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return manifest
 
