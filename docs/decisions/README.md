@@ -41,3 +41,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0025](0025-corpus-connectors.md) | Corpus connectors fetch, search and are cached; any store is configured, not coded | accepted |
 | [0026](0026-judge-and-citation-checks.md) | The judge lists, matches and weighs citations; the corpus finds them | accepted |
 | [0027](0027-answer-keys-from-decisions.md) | Two models extract each answer key; a field counts only where their quotes agree | accepted |
+| [0028](0028-scores-baselines-and-intervals.md) | Scores carry a bootstrap interval and a baseline; outcome scores need no model | accepted |
