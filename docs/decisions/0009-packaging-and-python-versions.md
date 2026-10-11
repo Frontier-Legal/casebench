@@ -20,7 +20,7 @@ The core and the first adapter are separate distributions that live in one repos
 
 Chosen option: "A uv workspace with `uv_build`", because `uv sync` builds the whole workspace from a committed lockfile, `uv_build` is a pure-Python backend with no extra build dependency, and the same tool runs the checks and builds the release.
 
-- The core package is `casebench/` at the repository root. Adapters and other first-party plugins are workspace members under `packages/`.
+- The core package is `casebench/` at the repository root. Adapters and other first-party plugins are workspace members under `packages/`. (Replaced for adapters by [0013](0013-built-in-jurisdictions-load-on-demand.md): built-in jurisdictions live inside the core.)
 - Every distribution ships `py.typed`.
 - Supported Python versions are 3.11 to 3.14. After the first public release the floor follows [SPEC 0](https://scientific-python.org/specs/spec-0000/) with a lag of one minor version, because firm environments trail.
 - The core depends on as little as it can; integrations come as extras named after the user's library, never after the vendor that instruments it.

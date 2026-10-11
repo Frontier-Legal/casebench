@@ -40,7 +40,7 @@ A material choice, such as a new dependency, a public interface or a storage for
 
 ## Adapters
 
-A jurisdiction adapter is its own package named `casebench-<country>`. [ADAPTERS.md](ADAPTERS.md) describes the steps.
+A jurisdiction adapter either lives in `casebench/jurisdictions/<code>/` or ships as a separate package named `casebench-<code>`. [ADAPTERS.md](ADAPTERS.md) describes both.
 
 ## Security
 

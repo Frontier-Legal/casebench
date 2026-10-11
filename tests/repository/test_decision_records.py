@@ -46,9 +46,11 @@ def test_the_first_decisions_are_on_record():
     ):
         assert topic in titles, topic
 
+    index = text("docs/decisions/README.md")
     for path in records():
         body = path.read_text(encoding="utf-8")
         assert front_matter(path)["status"], path.name
+        assert f"]({path.name})" in index, f"{path.name} is missing from the index"
         for section in REQUIRED_SECTIONS:
             assert section in body, f"{path.name} lacks {section}"
 
