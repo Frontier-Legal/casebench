@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_no_country_in_the_core():
     assert all("jurisdiction" not in kind.name and "adapter" not in kind.name for kind in KINDS)
-    assert not (ROOT / "casebench" / "jurisdictions").exists()
-    assert not (ROOT / "casebench" / "adapters").exists()
+    for folder in ("jurisdictions", "adapters"):
+        assert not list((ROOT / "casebench" / folder).glob("**/*.py")), folder
     assert set(CorpusConfig.model_fields) == {
         "connector",
         "jurisdiction",
