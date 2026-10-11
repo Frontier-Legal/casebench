@@ -27,3 +27,5 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0011](0011-ci-and-supply-chain.md) | One set of checks, locally and in CI, with a pinned supply chain | accepted |
 | [0012](0012-click-for-the-command-line.md) | Click for the command line | accepted |
 | [0013](0013-built-in-jurisdictions-load-on-demand.md) | Built-in jurisdictions ship in the core and load on demand | accepted |
+| [0014](0014-pydantic-for-the-data-model.md) | Pydantic for the data model | accepted |
+| [0015](0015-suite-and-run-log-formats.md) | Suites and run logs are JSON Lines with a manifest | accepted |
