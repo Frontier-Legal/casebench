@@ -47,3 +47,12 @@ class Resolver:
         if document_id is None or str(document_id) not in found:
             return Resolution(None, pick.get("reason"))
         return Resolution(str(document_id), pick.get("reason"))
+
+
+def cited_documents(judge: Judge, resolver: Resolver, answer: str) -> dict[str, str | None]:
+    """Each citation in an answer as written, with the corpus document it resolves to."""
+    listed = judge.ask(prompts.LIST_CITATIONS, prompts.list_citations(answer))
+    return {
+        str(item["citation"]): resolver.resolve(str(item["citation"])).document_id
+        for item in listed
+    }

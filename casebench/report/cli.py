@@ -7,6 +7,7 @@ import click
 
 from casebench.core.score import Score
 from casebench.report.compare import compare
+from casebench.report.funnel import FunnelSummary
 from casebench.report.render import REPORT_FILE, lines
 from casebench.report.tables import Table
 from casebench.runs.log import RunLog
@@ -31,7 +32,8 @@ def report_command(run_dir: Path) -> None:
     saved = json.loads(path.read_text(encoding="utf-8"))
     tables = [Table.model_validate(t) for t in saved["tables"]]
     scores = [Score.model_validate(s) for s in saved["scores"]]
-    for line in lines(tables, scores):
+    funnel = FunnelSummary.model_validate(saved["funnel"]["summary"]) if "funnel" in saved else None
+    for line in lines(tables, scores, funnel):
         click.echo(line)
 
 

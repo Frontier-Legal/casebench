@@ -5,6 +5,7 @@ from pathlib import Path
 
 from casebench.core.score import Score
 from casebench.report.citations import citation_rates
+from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.tables import Table
 
 REPORT_FILE = "report.json"
@@ -14,7 +15,9 @@ def _percent(value: float | None) -> str:
     return "-" if value is None else f"{value:.0%}"
 
 
-def lines(tables: list[Table], scores: list[Score]) -> list[str]:
+def lines(
+    tables: list[Table], scores: list[Score], funnel: FunnelSummary | None = None
+) -> list[str]:
     out: list[str] = []
     for table in tables:
         out.append(f"{table.task_type} · {table.metric}")
@@ -33,15 +36,28 @@ def lines(tables: list[Table], scores: list[Score]) -> list[str]:
     if rates:
         out.append("citations")
         out += [f"  {r.label.value:<12} {r.count:>5} {_percent(r.rate):>6}" for r in rates]
+    if funnel is not None:
+        out += funnel_lines(funnel)
     return out
 
 
-def write(folder: Path, tables: list[Table], scores: list[Score], score_set: Path) -> Path:
+def write(
+    folder: Path,
+    tables: list[Table],
+    scores: list[Score],
+    score_set: Path,
+    funnels: list[CaseFunnel],
+    summary: FunnelSummary,
+) -> Path:
     path = folder / REPORT_FILE
     report = {
         "score_set": score_set.name,
         "tables": [t.model_dump(mode="json") for t in tables],
         "citations": [r.model_dump(mode="json") for r in citation_rates(scores)],
+        "funnel": {
+            "summary": summary.model_dump(mode="json"),
+            "cases": [f.model_dump(mode="json") for f in funnels],
+        },
         "scores": [s.model_dump(mode="json") for s in scores],
     }
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

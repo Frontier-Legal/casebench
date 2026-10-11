@@ -148,6 +148,6 @@ def run(
         raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
     scored = score(log, cases, config, manifest.suite_id)
-    for line in render.lines(scored.tables, scored.scores):
+    for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
     click.echo(str(scored.report))

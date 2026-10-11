@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 
+from casebench.capture.read import ids_in
 from casebench.capture.step import HttpExchange, Step, StepKind, ToolCall
 
 ParseExchange = Callable[[HttpExchange], list[Step]]
@@ -64,7 +65,16 @@ def gaps(steps: list[Step]) -> list[Step]:
 def assemble(
     exchanges: list[HttpExchange], parse: ParseExchange, in_process: list[Step]
 ) -> list[Step]:
-    steps = [step for exchange in exchanges for step in parse(exchange)] + list(in_process)
+    parsed = [(exchange, parse(exchange)) for exchange in exchanges]
+    known = {i for _, found in parsed for s in found for i in s.doc_ids_out}
+    known |= {i for s in in_process for i in s.doc_ids_out}
+    steps = [
+        step.model_copy(update={"doc_ids_in": ids_in(exchange.request_body, known)})
+        if step.kind is StepKind.LLM
+        else step
+        for exchange, found in parsed
+        for step in found
+    ] + list(in_process)
     steps += paired_tools(steps)
     steps += gaps(steps)
     return sorted(steps, key=_start)
