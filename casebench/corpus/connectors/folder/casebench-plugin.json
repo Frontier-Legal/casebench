@@ -1,0 +1,5 @@
+{
+  "kind": "connector",
+  "name": "folder",
+  "object": "casebench.corpus.connectors.folder:Connector"
+}

@@ -29,3 +29,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0013](0013-built-in-jurisdictions-load-on-demand.md) | Built-in jurisdictions ship in the core and load on demand | accepted |
 | [0014](0014-pydantic-for-the-data-model.md) | Pydantic for the data model | accepted |
 | [0015](0015-suite-and-run-log-formats.md) | Suites and run logs are JSON Lines with a manifest | accepted |
+| [0016](0016-plugin-contract.md) | Plugins: entry points, a manifest, conformance figures and explicit sources | accepted |

@@ -1,6 +1,6 @@
 """The contract every metric meets: read a case and its result, return a verdict."""
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -19,6 +19,7 @@ class Verdict(FrozenRecord):
     criteria: list[CriterionVerdict] = Field(default_factory=list)
 
 
+@runtime_checkable
 class Metric(Protocol):
     """Scores one aspect of one output. It reads the case and the result and never
     calls the system under test."""
