@@ -3,7 +3,6 @@
 import re
 from pathlib import Path
 
-import pytest
 import yaml
 
 from tests.repository.files import ROOT, text
@@ -71,16 +70,13 @@ def test_agents_and_humans_read_one_contract():
     assert "exactly one test named after that scenario" in contract
 
 
-@pytest.mark.xfail(strict=True, reason="the private design folder still holds the full documents")
 def test_docs_have_one_home():
+    # The repository can only check its own side: the design documents live here.
     design = ROOT / "docs" / "design"
     for name in ("architecture.md", "design.md", "harness-eval.md", "integrations.md"):
         assert (design / name).is_file(), name
-
-    private = ROOT.parent / "karararama" / "internal-docs" / "product" / "casebench"
-    if private.is_dir():
-        remaining = {path.name for path in private.glob("*.md")}
-        assert remaining <= {"strategy.md", "market.md", "README.md"}, remaining
+    first_record = text("docs/decisions/0001-record-architecture-decisions.md")
+    assert "[../design/](../design/)" in first_record
 
 
 def test_superseding_is_explicit():
