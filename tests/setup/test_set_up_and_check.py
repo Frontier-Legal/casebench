@@ -16,6 +16,7 @@ from casebench.runs.log import RunLog
 from casebench.setup.sdks import detect
 from casebench.suites.freeze import freeze
 from tests.capture.upstreams import start_upstream
+from tests.corpus.document_api import KEY, start_document_api
 from tests.judge.fake_judge import start_fake_judge
 
 PLAIN_AGENT = Path(__file__).resolve().parents[1] / "capture" / "plain_http_agent.py"
@@ -68,13 +69,13 @@ def test_set_up_in_the_checkout(checkout: Path):
             "--catalog",
             str(CATALOG),
         ],
-        input=f"{production}\n/search\n/documents/{{id}}\ndismissal\n",
+        input=f"{production}\n/search\n/documents/{{id}}\n\ndismissal\n",
     )
 
     assert ran.exit_code == 0, ran.output
     assert "found    anthropic: read by the anthropic parser" in ran.output
     assert "litellm" not in ran.output  # no installed parser reads it
-    assert "corpus   not reachable from here: run `casebench corpus add http`" in ran.output
+    assert "corpus   not reachable from here; run `casebench corpus add http`" in ran.output
     assert "target   passed" in ran.output
     assert "judge    not reachable from here" in ran.output
     assert "run `casebench check` where the rest is reachable" in ran.output
@@ -201,3 +202,29 @@ def test_sdks_found_in_a_lock_and_a_package_json(tmp_path: Path):
         "google-genai": "gemini",
         "openai": "openai",
     }
+
+
+def test_a_corpus_that_refuses_says_why(checkout: Path, monkeypatch: pytest.MonkeyPatch):
+    api = start_document_api()
+    base = f"http://127.0.0.1:{api.server_port}/v1"
+    asked = f"{base}\n/search\n/documents/{{id}}\nDOC_KEY\nfeshi\n"
+    flags = ["init", "--target", "python", "--entry", "agent.py:answer", "--corpus", "http"]
+    flags += ["--no-judge", "--no-extract", "--no-live"]
+    monkeypatch.setenv("DOC_KEY", "a-wrong-key")
+    try:
+        refused = CliRunner().invoke(main, flags, input=asked)
+        (checkout / "casebench.yaml").unlink()
+        monkeypatch.setenv("DOC_KEY", KEY)
+        added = CliRunner().invoke(main, flags, input=asked + "\n" * 8)
+    finally:
+        api.shutdown()
+
+    assert refused.exit_code == 0, refused.output
+    assert (
+        "corpus   not added: the API answered 401 to the search: it needs an API key, or the "
+        "key it got is wrong"
+    ) in refused.output
+    assert added.exit_code == 0, added.output
+    assert "corpus   added after one live search and fetch" in added.output
+    corpus = yaml.safe_load((checkout / "casebench.yaml").read_text("utf-8"))["corpus"]
+    assert corpus["options"]["headers"] == {"Authorization": "Bearer ${DOC_KEY}"}
