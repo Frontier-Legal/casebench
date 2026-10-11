@@ -9,7 +9,7 @@ from casebench.judge import prompts
 
 # OpenAI's published rule of thumb for English text; other languages differ (decision 0028).
 CHARACTERS_PER_TOKEN = 4
-CHECKED = "citation_integrity"
+JUDGED = ("citation_integrity", "statute", "precedent")
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ class DryRun:
             out.append(
                 f"judge: at least {self.judge_calls_at_least} calls and "
                 f"{self.judge_input_tokens_at_least} input tokens (one call per answer to list "
-                "its citations, then two per citation, known only once the answers exist)"
+                "its citations, then up to two per citation, known only once the answers exist)"
             )
         if self.judge_calls_at_least and self.candidates is not None:
             out.append(
@@ -55,7 +55,7 @@ def estimate(
 ) -> DryRun:
     pending = [case for case in cases if case.id not in stored]
     characters = sum(len(str(value)) for case in pending for value in case.task.inputs.values())
-    checked = sum(1 for case in pending if CHECKED in case.metrics)
+    checked = sum(1 for case in pending if set(JUDGED) & set(case.metrics))
     corpus = config.corpus
     return DryRun(
         target_calls=len(pending),

@@ -44,13 +44,13 @@
 |---|---|---|---|---|
 | Outcome | the facts and claims, operative part removed | the ruling (upheld, reversed, granted, rejected) | exact match | wrong outcome |
 | Statute | the facts and the legal question | statute articles the court cited | precision and recall over the article set | missed statute, wrong statute |
-| Precedent | the legal question | decisions the court cited | recall at k, nDCG | missed precedent |
+| Precedent | the legal question | decisions the court cited | precision and recall over the decision set | missed precedent, wrong precedent |
 | Statute version | a question fixed to a date | the article text in force on that date | exact match on version id | wrong statute version |
 | Appeal | the lower court decision | the higher court's ruling on it | exact match | wrong outcome |
 | Research | an open legal question built from the decision | the court's reasoning passage | reference-anchored judge | unsupported claim, wrong holding |
 | Citation integrity | applies to every answer of every type | the corpus | lookup, then passage comparison | fabricated citation, misstated citation |
 
-Outcome, statute, precedent, version and appeal need no LLM to score. The judge runs only on research tests and on the "does the passage support the claim" step of citation integrity.
+Outcome, version and appeal need no LLM to score. Statute and precedent compare corpus document ids; the judge only lists the answer's citations and names the document each one means ([0029](../decisions/0029-statute-and-precedent-scores.md)). Otherwise the judge runs on research tests and on the "does the passage support the claim" step of citation integrity.
 
 ## Integrity controls
 
