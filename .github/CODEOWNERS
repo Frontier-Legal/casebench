@@ -1,4 +1,4 @@
-# Maintainers review every change. Each adapter package under packages/
+# Maintainers review every change. Each jurisdiction under casebench/jurisdictions/
 # names its own owners here when it gains maintainers outside the core team.
 *       @Frontier-Legal/frontier-legal
 /ee/    @Frontier-Legal/frontier-legal

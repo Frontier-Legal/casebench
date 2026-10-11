@@ -19,9 +19,11 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0003](0003-opentelemetry-genai-trace-model.md) | OpenTelemetry GenAI conventions are the trace model | accepted |
 | [0004](0004-open-core-and-ee-boundary.md) | Open core: Apache-2.0 everywhere except `ee/` | accepted |
 | [0005](0005-cloud-never-computes-a-score.md) | A shared server never computes a score | accepted |
-| [0006](0006-every-adapter-is-its-own-package.md) | Every jurisdiction adapter is its own package | accepted |
+| [0006](0006-every-adapter-is-its-own-package.md) | Every jurisdiction adapter is its own package | superseded by [0013](0013-built-in-jurisdictions-load-on-demand.md) |
 | [0007](0007-no-telemetry.md) | No telemetry | accepted |
 | [0008](0008-zero-code-capture-before-decorators.md) | Zero-code capture before decorators | accepted |
 | [0009](0009-packaging-and-python-versions.md) | uv workspace, `uv_build`, Python 3.11 to 3.14 | accepted |
 | [0010](0010-releases-from-conventional-commits.md) | Versions and changelog come from Conventional Commits | accepted |
 | [0011](0011-ci-and-supply-chain.md) | One set of checks, locally and in CI, with a pinned supply chain | accepted |
+| [0012](0012-click-for-the-command-line.md) | Click for the command line | accepted |
+| [0013](0013-built-in-jurisdictions-load-on-demand.md) | Built-in jurisdictions ship in the core and load on demand | accepted |

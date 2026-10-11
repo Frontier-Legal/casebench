@@ -29,13 +29,13 @@ Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT
 | Quality gates | pre-commit, ruff, pyright, pytest on Linux, macOS and Windows |
 | Publish | [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) through `pypa/gh-action-pypi-publish`, which [attests by default](https://docs.pypi.org/attestations/producing-attestations/); build and publish in separate jobs; `id-token: write` only on publish. `uv publish` alone does not generate attestations |
 | Later | [immutable releases](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases), SBOM in the wheel ([PEP 770](https://peps.python.org/pep-0770/)), SLSA provenance |
-| Plugins | [entry points](https://packaging.python.org/en/latest/specifications/entry-points/) per plugin kind ([architecture.md](architecture.md)), the [pytest](https://docs.pytest.org/en/stable/how-to/writing_plugins.html) and [Inspect](https://inspect.aisi.org.uk/extensions.html) pattern; `casebench-<name>` package naming; `casebench plugin new` scaffolds a kind and `casebench plugin test` runs its conformance suite |
+| Plugins | [entry points](https://packaging.python.org/en/latest/specifications/entry-points/) per plugin kind ([architecture.md](architecture.md)), the [pytest](https://docs.pytest.org/en/stable/how-to/writing_plugins.html) and [Inspect](https://inspect.aisi.org.uk/extensions.html) pattern; `casebench-<name>` naming for third-party packages, built-in jurisdictions inside the core ([decision 0013](../decisions/0013-built-in-jurisdictions-load-on-demand.md)); `casebench plugin new` scaffolds a kind and `casebench plugin test` runs its conformance suite |
 
 ## First-run path
 
 | Minute | Command | What the user sees |
 |---|---|---|
-| 0 | `uvx casebench demo` | a bundled sample (a lawyer-authored mini set that needs no adapter, public decisions through the `casebench-tr` package the demo extra installs, an echo target, cached judge verdicts) runs with no key; the viewer opens on real failures |
+| 0 | `uvx casebench demo` | a bundled sample (a lawyer-authored mini set that needs no adapter, public decisions through the built-in Türkiye adapter, an echo target, cached judge verdicts) runs with no key; the viewer opens on real failures |
 | 2 | `casebench init`, or "set up Casebench for this agent" to a coding agent with the repo's skill | the stack detected from the repo and lockfile (SDKs, vector store, reranker); two questions, where the corpus is and which judge; `casebench.yaml` written with its `# yaml-language-server: $schema=` line, the proxy's environment lines printed, one sample case sent and its parsed answer and citations shown |
 | 5 | `casebench run` | on first use: extraction, generation, a cost estimate and a confirmation; then the run with live progress, resumable; a link to the workbench |
 | 10 | `casebench ui` | the workbench: failures beside evidence, ready for a lawyer to review; the harness waterfall and the authority funnel for engineers |

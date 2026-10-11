@@ -59,6 +59,6 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 - Show the failing example next to every rate.
 - No score is reported without its baseline and its confidence interval.
 - Country specifics live in adapters and config, never in shared code.
-- Two tiers of jurisdiction support, both stated on the README. Lawyer-authored cases work in any country with no adapter. Court-derived references and citation checks need that country's adapter package.
+- Two tiers of jurisdiction support, both stated on the README. Lawyer-authored cases work in any country with no adapter. Court-derived references and citation checks need that country's adapter, built into the core or installed as a package.
 - Court-derived, never "synthetic". No LLM invents a question or an answer. The question is what the court was asked, the answer is what it ruled, and every fact points at a passage in the decision.
 - Lawyers are first-class users. The workbench ([workbench.md](workbench.md)) ships with the library, and every review is done in legal terms, never in spans or JSON. Their first session is a queue of answers to review, reached from an email invite with nothing to install. Authoring golden data comes after.

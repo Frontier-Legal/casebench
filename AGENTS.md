@@ -4,9 +4,9 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 
 ## Layout
 
-- `casebench/` is the core package: the evaluation case model, runners, metrics, the command line and the local workbench. It contains no country-specific logic.
-- Jurisdiction adapters, corpus connectors, capture parsers and model providers are plugins, discovered through entry points, each kind with an interface and a conformance suite defined in the core. A third-party plugin is its own package named `casebench-<name>`, and the core imports none by name.
-- First-party plugins that ship as their own distribution, such as the Türkiye adapter `casebench-tr`, are uv workspace members under `packages/`.
+- `casebench/` is the core package: the evaluation case model, runners, metrics, the command line and the local workbench.
+- Built-in jurisdictions live in `casebench/jurisdictions/<code>/`, one folder per country, and load only when a config selects them. Code outside that folder never imports a jurisdiction; only the plugin registry loads one by name. Country-specific logic lives nowhere else.
+- Jurisdiction adapters, corpus connectors, capture parsers and model providers are plugins, discovered through entry points, each kind with an interface and a conformance suite defined in the core. Built-in plugins register in the core's own `pyproject.toml`; a third-party plugin is its own package named `casebench-<name>`.
 - `docs/design/` describes the system; `docs/decisions/` records why, one MADR file per decision.
 - Anything that serves several users at once (accounts, roles, audit) lives under `ee/`, which carries its own licence. Everything else is Apache-2.0. `LICENSE` names the boundary.
 

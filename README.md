@@ -14,7 +14,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 
 ## Jurisdictions
 
-Lawyer-written cases work in any country with no adapter. Court-derived cases and citation checks need the adapter package for that country, published separately as `casebench-<country>`. Türkiye is the first. [ADAPTERS.md](ADAPTERS.md) explains how to add one.
+Lawyer-written cases work in any country with no adapter. Court-derived cases and citation checks need an adapter for that country. Built-in adapters ship inside `casebench` and load only when your config names the jurisdiction; Türkiye is the first. Anyone can also publish an adapter as a separate `casebench-<country>` package. [ADAPTERS.md](ADAPTERS.md) explains both routes.
 
 ## Principles
 

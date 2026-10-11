@@ -104,12 +104,13 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 | `casebench.metrics` | deterministic, judge and trace metrics |
 | `casebench.traces` | OTLP intake with OTel GenAI and OpenInference mapping; JSON fallback |
 | `casebench.corpus` | folder, S3, SQL, HTTP connectors |
-| `casebench.adapters` | the adapter interface and its conformance suite only; every country ships as its own package, Türkiye included (`casebench-tr`), so the core contains no jurisdiction ([decision 0006](../decisions/0006-every-adapter-is-its-own-package.md)) |
+| `casebench.adapters` | the adapter interface and its conformance suite |
+| `casebench.jurisdictions` | built-in adapters, one folder per country (`tr` first), registered as entry points and imported only when a config selects them; framework code never imports them ([decision 0013](../decisions/0013-built-in-jurisdictions-load-on-demand.md)) |
 | `casebench.cli` | the commands, including `casebench setup` (an agent prompt that adds the 3 lines to the user's code) |
 | `casebench.server`, `casebench.ui` | FastAPI service + bundled React app; SQLite by default, Postgres for teams; the local single-user mode is Apache-2.0, the multi-user layer (roles, SSO, audit, invites, the push/pull server side) lives in `ee/` ([open-source.md](open-source.md)) |
 | `casebench.pytest` | `@pytest.mark.casebench(suite=...)`; stable case ids, `git_sha` recorded, exit code is the CI gate |
 
-Third parties publish `casebench-<name>` packages that register entry points in the groups above (the pytest and Inspect plugin model). The core never imports a jurisdiction by name.
+Third parties publish `casebench-<name>` packages that register entry points in the groups above (the pytest and Inspect plugin model). Framework code never imports a jurisdiction; the registry loads one by the name in the config.
 
 ## Boundaries that keep it trustworthy
 

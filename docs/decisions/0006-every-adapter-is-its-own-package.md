@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded by 0013
 date: 2026-10-11
 decision-makers: Casebench maintainers
 ---
 
 # Every jurisdiction adapter is its own package
+
+Superseded by [0013](0013-built-in-jurisdictions-load-on-demand.md): built-in jurisdictions ship in the core and load on demand.
 
 ## Context and problem statement
 
