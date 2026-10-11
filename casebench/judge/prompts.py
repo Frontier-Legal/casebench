@@ -5,9 +5,11 @@ from typing import Any
 
 LIST_CITATIONS = """You read an answer written by a legal AI system and list every authority it \
 cites: court decisions, statutes, articles and regulations. Copy each citation exactly as the \
-answer writes it, and state the claim the answer makes with it in one sentence. Do not judge \
-whether the citations are right. Reply with JSON only: \
-[{"citation": "...", "claim": "..."}]. Reply [] if the answer cites nothing."""
+answer writes it, state the claim the answer makes with it in one sentence, and say whether it \
+is a statute (any legislation, article or regulation) or a court decision. Do not judge whether \
+the citations are right. Reply with JSON only: \
+[{"citation": "...", "claim": "...", "kind": "statute" or "decision"}]. Reply [] if the answer \
+cites nothing."""
 
 MATCH = """You decide which document a legal citation refers to. You get the citation and \
 candidate documents from a search, each with its id, court, date, metadata and opening \

@@ -114,7 +114,7 @@ def test_date_filter(workspace):
         "--keys",
         str(tmp_path / "keys"),
         "--types",
-        "statute",
+        "outcome",
         "--n",
         "10",
         "--after",
@@ -128,7 +128,7 @@ def test_date_filter(workspace):
     assert made.exit_code == 0, made.output
     assert "cutoff 2024-12-31: 2 decisions allowed, 3 excluded" in made.output
     manifest, cases = load(tmp_path / "suite")
-    assert {c.provenance.source_decision_id for c in cases if c.provenance} == {"tr-2", "de-1"}
+    assert {c.provenance.source_decision_id for c in cases if c.provenance} == {"de-1"}
     assert manifest.generation["after"] == "2024-12-31"
     assert manifest.generation["decisions_allowed"] == 2
 

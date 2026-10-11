@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from casebench.judge.config import JudgeConfig
+from casebench.judge.memo import Memo, memo_key
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.providers.call import complete
@@ -34,6 +35,7 @@ class Judge:
         self,
         config: JudgeConfig,
         send: Callable[[HttpRequest], tuple[int, Any]] = send_over_http,
+        memo: Memo | None = None,
     ) -> None:
         self.config = config
         kind = kind_named("provider")
@@ -41,6 +43,7 @@ class Judge:
             **config.options
         )
         self.send = send
+        self.memo = memo
         self.calls = 0
         self.input_tokens = 0
         self.output_tokens = 0
@@ -50,9 +53,16 @@ class Judge:
         return self.provider.family
 
     def ask(self, system: str, user: str) -> Any:
+        """A question already in the memo is answered from it, with no call."""
+        key = memo_key(self.config.provider, self.config.model, system, user)
+        if self.memo is not None and (kept := self.memo.get(key)) is not None:
+            return kept
         self.calls += 1
         messages = [Message(role="system", content=system), Message(role="user", content=user)]
         completion = complete(self.provider, messages, self.config.model, self.send)
         self.input_tokens += completion.input_tokens or 0
         self.output_tokens += completion.output_tokens or 0
-        return read_json(completion.text)
+        reply = read_json(completion.text)
+        if self.memo is not None:
+            self.memo.put(key, reply)
+        return reply

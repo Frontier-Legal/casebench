@@ -1,72 +1,45 @@
 """Citation integrity: every cited authority found in the corpus and weighed against its claim."""
 
-from typing import Any
-
 from casebench.core.case import Case
 from casebench.core.score import CitationCheck, CitationLabel, Direction, ScoreKind
 from casebench.corpus.binding import Corpus
 from casebench.judge import prompts
 from casebench.judge.client import Judge
+from casebench.judge.resolve import Resolver
 from casebench.metrics.base import Verdict
 from casebench.runs.log import Result
-
-
-def _opening(text: str) -> str:
-    """The first paragraph, which is where a decision names its court, numbers and parties."""
-    return text.strip().split("\n\n", 1)[0]
 
 
 class CitationIntegrity:
     """The share of an answer's citations the corpus holds and that support their claims."""
 
     name = "citation_integrity"
-    version = "1"
+    version = "2"
     kind = ScoreKind.LLM
     direction = Direction.HIGHER
 
     def __init__(self, judge: Judge, corpus: Corpus, candidates: int, **_: object) -> None:
         self.model = judge
         self.corpus = corpus
-        self.candidates = candidates
-
-    def _candidate(self, document_id: str) -> dict[str, Any]:
-        raw = self.corpus.raw(document_id)
-        return {
-            "id": document_id,
-            "court": raw.get("court"),
-            "date": raw.get("date"),
-            "metadata": raw.get("metadata", {}),
-            "opening": _opening(str(raw.get("text", ""))),
-        }
+        self.resolver = Resolver(judge, corpus, candidates)
 
     def check(self, citation: str, claim: str) -> CitationCheck:
-        found = self.corpus.search(citation, self.candidates)
-        if not found:
+        resolved = self.resolver.resolve(citation)
+        if resolved.document_id is None:
             return CitationCheck(
                 citation=citation,
                 claim=claim,
                 label=CitationLabel.FABRICATED,
-                reason="the corpus search found no document for it",
+                reason=resolved.reason,
             )
-        pick = self.model.ask(
-            prompts.MATCH, prompts.match(citation, [self._candidate(i) for i in found])
-        )
-        document_id = pick.get("document_id")
-        if document_id is None or str(document_id) not in found:
-            return CitationCheck(
-                citation=citation,
-                claim=claim,
-                label=CitationLabel.FABRICATED,
-                reason=pick.get("reason"),
-            )
-        document = {"id": str(document_id), **self.corpus.raw(str(document_id))}
+        document = {"id": resolved.document_id, **self.corpus.raw(resolved.document_id)}
         weighed = self.model.ask(prompts.WEIGH, prompts.weigh(claim, document))
         label = CitationLabel.VERIFIED if weighed.get("supports") else CitationLabel.MISGROUNDED
         return CitationCheck(
             citation=citation,
             claim=claim,
             label=label,
-            document_id=str(document_id),
+            document_id=resolved.document_id,
             quote=weighed.get("quote"),
             reason=weighed.get("reason"),
         )

@@ -9,6 +9,7 @@ from casebench.core.case import Case
 from casebench.core.score import Score
 from casebench.corpus.binding import Corpus
 from casebench.judge.client import Judge
+from casebench.judge.memo import MEMO_FILE, Memo
 from casebench.metrics.base import Metric
 from casebench.metrics.loading import metrics_for
 from casebench.report import render
@@ -25,11 +26,11 @@ class Scored:
     report: Path
 
 
-def context_for(config: CasebenchConfig) -> dict[str, Any]:
+def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, Any]:
     """What metrics may ask for: the judge and the corpus, when the config has them."""
     context: dict[str, Any] = {}
     if config.judge is not None:
-        context["judge"] = Judge(config.judge)
+        context["judge"] = Judge(config.judge, memo=memo)
         context["candidates"] = config.judge.candidates
     if config.corpus is not None:
         context["corpus"] = Corpus(config.corpus)
@@ -41,7 +42,9 @@ def prepare(cases: list[Case], config: CasebenchConfig) -> list[Metric]:
     return metrics_for(cases, context_for(config))
 
 
-def score(log: RunLog, cases: list[Case], metrics: list[Metric], suite_id: str) -> Scored:
+def score(log: RunLog, cases: list[Case], config: CasebenchConfig, suite_id: str) -> Scored:
+    """The judge's replies are kept in the run folder; scoring again reads them back."""
+    metrics = metrics_for(cases, context_for(config, Memo(log.folder / MEMO_FILE)))
     path = rescore(log, cases, metrics)
     scores = RunLog.read_scores(path)
     tables = build_tables(scores, cases, suite_id)

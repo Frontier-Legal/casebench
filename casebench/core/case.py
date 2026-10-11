@@ -41,6 +41,9 @@ class Fact(Record):
     kind: str
     value: str
     evidence: Evidence
+    document_id: str | None = Field(
+        default=None, description="The corpus document a cited authority resolved to."
+    )
 
 
 class Criterion(Record):

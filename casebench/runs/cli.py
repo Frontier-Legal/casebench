@@ -22,6 +22,11 @@ from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.load import target_from_config
 
 DEFAULT_RUNS = Path(".casebench") / "runs"
+SAME_FAMILY = (
+    "warning: pick a judge from another model family than your target's model; a model "
+    "grading its own family's answers favours them (decision 0029). Casebench does not check "
+    "this yet."
+)
 
 
 def _config(path: Path, python: str | None) -> CasebenchConfig:
@@ -112,9 +117,11 @@ def run(
             click.echo(line)
         return
     try:
-        metrics = prepare(cases, config)
+        prepare(cases, config)
     except MetricNeeds as error:
         raise click.ClickException(str(error)) from error
+    if config.judge is not None:
+        click.echo(SAME_FAMILY, err=True)
     target_config = target_of(config)
     target = target_from_config(target_config)
     concurrency = max_concurrency or int(target_config.get("max_concurrency", 1))
@@ -146,7 +153,7 @@ def run(
     except TargetDidNotStart as error:
         raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
-    scored = score(log, cases, metrics, manifest.suite_id)
+    scored = score(log, cases, config, manifest.suite_id)
     for line in render.lines(scored.tables, scored.scores):
         click.echo(line)
     click.echo(str(scored.report))
