@@ -6,6 +6,10 @@ from typing import Any, Protocol, runtime_checkable
 from casebench.targets.answer import Answer, CitationParser
 
 
+class TargetDidNotStart(RuntimeError):
+    """The target could not start, so the run stops before its first case."""
+
+
 @runtime_checkable
 class Target(Protocol):
     """Built from its config, started once per run, asked once per case, stopped at the end.

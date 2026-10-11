@@ -1,9 +1,11 @@
 """Start the recording proxy for a run and point every client at it."""
 
+import json
 import os
 from typing import Any
 
 from casebench.capture.backend import backend_step
+from casebench.capture.functions import STEP_FUNCTIONS, StepFunction
 from casebench.capture.interface import CaptureParser
 from casebench.capture.proxy.forward import make_app
 from casebench.capture.proxy.routes import Route, environment
@@ -21,8 +23,11 @@ PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
 class CaptureSession:
     """For one run: the proxy, the recorder, and the variables that point clients at it."""
 
-    def __init__(self, routes: list[Route], port: int = 0) -> None:
+    def __init__(
+        self, routes: list[Route], port: int = 0, functions: list[StepFunction] | None = None
+    ) -> None:
         self.routes = {route.name: route for route in routes}
+        self.functions = functions or []
         self.port = port
         self.recorder = Recorder()
         self.parsers: dict[str, CaptureParser] = {
@@ -46,6 +51,10 @@ class CaptureSession:
         self.env = environment(list(self.routes.values()), self.port)
         self.env[PROXY] = f"http://127.0.0.1:{self.port}"
         self.env[PROXY_VARIABLES] = ",".join(name for name in self.env if name != PROXY)
+        if self.functions:
+            self.env[STEP_FUNCTIONS] = json.dumps(
+                [f.model_dump(mode="json") for f in self.functions]
+            )
         for name, value in self.env.items():
             self._previous[name] = os.environ.get(name)
             os.environ[name] = value

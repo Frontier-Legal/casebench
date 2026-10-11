@@ -15,6 +15,7 @@ from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
 from casebench.suites.freeze import load
+from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.load import target_from_config
 
 DEFAULT_RUNS = Path(".casebench") / "runs"
@@ -103,7 +104,8 @@ def run(
     capture = None
     if not no_capture:
         port = config.capture.port if config.capture else 0
-        capture = CaptureSession(routes_for(config.capture), port)
+        functions = config.capture.functions if config.capture else []
+        capture = CaptureSession(routes_for(config.capture), port, functions)
     log = _log(
         runs_dir,
         run_id,
@@ -113,9 +115,17 @@ def run(
             "target": str(config.target.get("type")),
         },
     )
-    sent = asyncio.run(
-        run_cases(
-            cases, target, log, max_concurrency=concurrency, parse_citations=parse, capture=capture
+    try:
+        sent = asyncio.run(
+            run_cases(
+                cases,
+                target,
+                log,
+                max_concurrency=concurrency,
+                parse_citations=parse,
+                capture=capture,
+            )
         )
-    )
+    except TargetDidNotStart as error:
+        raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
