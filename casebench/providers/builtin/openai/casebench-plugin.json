@@ -1,0 +1,5 @@
+{
+  "kind": "provider",
+  "name": "openai",
+  "object": "casebench.providers.builtin.openai:Provider"
+}

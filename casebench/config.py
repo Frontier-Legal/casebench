@@ -10,6 +10,7 @@ from casebench.capture.config import CaptureConfig
 from casebench.core.model import Record
 from casebench.corpus.binding import CorpusConfig
 from casebench.corpus.guard import refuse_self_check
+from casebench.judge.config import JudgeConfig
 
 DEFAULT_CONFIG = Path("casebench.yaml")
 
@@ -22,6 +23,7 @@ class CasebenchConfig(Record):
     target: dict[str, Any] | None = None
     corpus: CorpusConfig | None = None
     capture: CaptureConfig | None = None
+    judge: JudgeConfig | None = None
 
     @model_validator(mode="after")
     def _corpus_is_not_the_target(self) -> "CasebenchConfig":

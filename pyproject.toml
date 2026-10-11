@@ -49,6 +49,10 @@ folder = "casebench.corpus.connectors.folder:Connector"
 http = "casebench.corpus.connectors.http:Connector"
 mcp = "casebench.corpus.connectors.mcp:Connector"
 
+[project.entry-points."casebench.providers"]
+anthropic = "casebench.providers.builtin.anthropic:Provider"
+openai = "casebench.providers.builtin.openai:Provider"
+
 [project.entry-points."casebench.targets"]
 command = "casebench.targets.builtin.command:Target"
 http = "casebench.targets.builtin.http:Target"

@@ -1,0 +1,38 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "Answer in JSON."
+    },
+    {
+      "role": "user",
+      "content": "List the citations."
+    }
+  ],
+  "model": "claude-sonnet-5-5",
+  "expected_request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "type": "message",
+      "content": [
+        {
+          "type": "text",
+          "text": "[]"
+        }
+      ],
+      "usage": {
+        "input_tokens": 20,
+        "output_tokens": 2
+      }
+    }
+  },
+  "expected": {
+    "text": "[]",
+    "input_tokens": 20,
+    "output_tokens": 2
+  }
+}
