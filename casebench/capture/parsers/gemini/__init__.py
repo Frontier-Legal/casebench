@@ -43,6 +43,7 @@ def _read(chunks: list[Any]) -> tuple[str | None, int | None, int | None, list[T
 
 class Parser:
     hosts: ClassVar[list[str]] = ["generativelanguage.googleapis.com"]
+    packages: ClassVar[list[str]] = ["google-genai", "google-generativeai", "@google/genai"]
     default_route: ClassVar[dict[str, str]] = {
         "name": "gemini",
         "upstream": "https://generativelanguage.googleapis.com",

@@ -60,6 +60,7 @@ def _from_chunks(chunks: list[Any]) -> tuple[str | None, int | None, int | None,
 
 class Parser:
     hosts: ClassVar[list[str]] = ["api.openai.com"]
+    packages: ClassVar[list[str]] = ["openai"]
     default_route: ClassVar[dict[str, str]] = {
         "name": "openai",
         "upstream": "https://api.openai.com",
