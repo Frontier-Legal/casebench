@@ -25,6 +25,8 @@ dependencies = [
     "jsonpath-ng>=1.10.0",
     "pydantic>=2.14.0",
     "pyyaml>=6.0.3",
+    "starlette>=1.7.0",
+    "uvicorn>=0.54.0",
 ]
 
 [project.urls]
@@ -34,6 +36,11 @@ Changelog = "https://github.com/Frontier-Legal/casebench/blob/main/CHANGELOG.md"
 
 [project.scripts]
 casebench = "casebench.cli:main"
+
+[project.entry-points."casebench.capture"]
+anthropic = "casebench.capture.parsers.anthropic:Parser"
+gemini = "casebench.capture.parsers.gemini:Parser"
+openai = "casebench.capture.parsers.openai:Parser"
 
 [project.entry-points."casebench.corpus"]
 folder = "casebench.corpus.connectors.folder:Connector"

@@ -11,6 +11,7 @@ from casebench.capture.step import Step
 @dataclass
 class CaseCapture:
     case_id: str
+    traceparent: str | None = None
     steps: list[Step] = field(default_factory=list)
 
 
@@ -18,10 +19,10 @@ _current: ContextVar[CaseCapture | None] = ContextVar("casebench_case", default=
 
 
 @contextmanager
-def capturing(case_id: str) -> Iterator[CaseCapture]:
+def capturing(case_id: str, traceparent: str | None = None) -> Iterator[CaseCapture]:
     """Steps recorded inside this block belong to this case, even with other cases
     running at the same time, because each asyncio task and thread gets its own copy."""
-    capture = CaseCapture(case_id)
+    capture = CaseCapture(case_id, traceparent)
     token = _current.set(capture)
     try:
         yield capture
@@ -36,3 +37,9 @@ def record(step: Step) -> bool:
         return False
     capture.steps.append(step)
     return True
+
+
+def current_traceparent() -> str | None:
+    """The running case's trace context, to pass on to an agent outside this process."""
+    capture = _current.get()
+    return capture.traceparent if capture is not None else None

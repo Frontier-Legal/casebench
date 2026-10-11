@@ -5,6 +5,7 @@ from typing import Any
 
 import yaml
 
+from casebench.capture.config import CaptureConfig
 from casebench.core.model import Record
 from casebench.corpus.binding import CorpusConfig
 
@@ -14,6 +15,7 @@ DEFAULT_CONFIG = Path("casebench.yaml")
 class CasebenchConfig(Record):
     target: dict[str, Any]
     corpus: CorpusConfig | None = None
+    capture: CaptureConfig | None = None
 
 
 def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:

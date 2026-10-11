@@ -1,7 +1,9 @@
 """Anyone adds a jurisdiction, a data provider, a model provider or a capture parser as a
 plugin."""
 
+import asyncio
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,11 +11,14 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 from click.testing import CliRunner
 
+from casebench.capture.proxy.routes import Route
 from casebench.capture.routing import parsers_for_host
-from casebench.capture.step import HttpExchange, StepKind
+from casebench.capture.session import CaptureSession
+from casebench.capture.step import Step, StepKind
 from casebench.cli import main
 from casebench.corpus.binding import Corpus, CorpusConfig
 from casebench.plugins import registry
@@ -27,6 +32,7 @@ from tests.plugins.fixture_files import (
     venv_python,
     write_decisions,
 )
+from tests.plugins.national_api import start_national_api
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ADAPTERS = {
@@ -145,18 +151,36 @@ def test_a_model_provider_opentelemetry_does_not_know(monkeypatch: pytest.Monkey
             "casebench.providers": {"national": "tests.plugins.fixtures:NationalApiProvider"},
         },
     )
-    recorded = HttpExchange(
-        method="POST",
-        url="https://llm.national.example/v1/generate",
-        request_body={"model": "national-large", "turns": []},
-        status=200,
-        response_body={"output": "...", "usage": {"in": 812, "out": 96}},
-        duration_ms=1840.0,
-    )
+    assert len(parsers_for_host("llm.national.example")) == 1
 
-    parsers = parsers_for_host("llm.national.example")
-    assert len(parsers) == 1
-    [step] = parsers[0].parse(recorded)
+    api = start_national_api()
+    routes = [
+        Route(
+            name="national",
+            upstream=f"http://127.0.0.1:{api.server_port}",
+            parser="national",
+            env="NATIONAL_BASE_URL",
+        )
+    ]
+    session = CaptureSession(routes)
+
+    async def call_through_the_proxy() -> list[Step]:
+        await session.start()
+        try:
+            session.recorder.begin("c1")
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    os.environ["NATIONAL_BASE_URL"] + "/v1/generate",
+                    json={"model": "national-large", "turns": []},
+                )
+            return [step for e in session.recorder.end("c1") for step in session.parse(e)]
+        finally:
+            await session.stop()
+
+    try:
+        [step] = asyncio.run(call_through_the_proxy())
+    finally:
+        api.shutdown()
     assert (step.kind, step.model, step.input_tokens, step.output_tokens) == (
         StepKind.LLM,
         "national-large",
