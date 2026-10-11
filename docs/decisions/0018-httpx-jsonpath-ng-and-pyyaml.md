@@ -6,6 +6,8 @@ decision-makers: Casebench maintainers
 
 # httpx, jsonpath-ng and PyYAML
 
+Amended by [0021](0021-httpx2.md): httpx2 replaces httpx.
+
 ## Context and problem statement
 
 The HTTP target sends cases to endpoints and reads answers out of their JSON, and users describe targets and corpora in `casebench.yaml`. Each needs a library; writing an HTTP client, a JSONPath engine or a YAML parser in the project would be code nobody should have to maintain.
