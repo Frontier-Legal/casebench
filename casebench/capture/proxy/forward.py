@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-import httpx
+import httpx2
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response, StreamingResponse
@@ -45,7 +45,7 @@ def _json(raw: bytes) -> Any:
 def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare]) -> Starlette:
     """`prepare` maps a route name to its parser's request hook, such as asking for usage."""
     by_name = {route.name: route for route in routes}
-    client = httpx.AsyncClient(timeout=None)
+    client = httpx2.AsyncClient(timeout=None)
 
     async def forward(request: Request) -> Response:
         route = by_name.get(request.path_params["route"])

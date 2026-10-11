@@ -11,7 +11,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 from click.testing import CliRunner
 
@@ -168,7 +168,7 @@ def test_a_model_provider_opentelemetry_does_not_know(monkeypatch: pytest.Monkey
         await session.start()
         try:
             session.recorder.begin("c1")
-            async with httpx.AsyncClient() as client:
+            async with httpx2.AsyncClient() as client:
                 await client.post(
                     os.environ["NATIONAL_BASE_URL"] + "/v1/generate",
                     json={"model": "national-large", "turns": []},
