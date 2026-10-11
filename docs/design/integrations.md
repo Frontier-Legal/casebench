@@ -60,7 +60,7 @@ casebench run --endpoint https://agent.firm.internal/ask --suite tr-labour-sampl
 
 | Stack | Captured by | Extra |
 |---|---|---|
-| Any Python agent, no edit to its code | `casebench run --python agent.py`: the process starts under OTel zero-code auto-instrumentation with the registry's instrumentors, the `opentelemetry-instrument` mechanism | none |
+| Any Python agent, no edit to its code | `casebench run --python agent.py`: the process starts under OTel zero-code auto-instrumentation with the registry's instrumentors, the `opentelemetry-instrument` mechanism | Casebench installed in the agent's own environment, as a dev dependency: the agent's function runs in Casebench's Python, so its packages must be there. A command target needs no shared environment. |
 | OpenAI SDK, incl. OpenRouter, Fireworks, Together, vLLM, Groq via `base_url` | instrumentor per library, chosen in [instrumentation.md](instrumentation.md) | `casebench[openai]` |
 | Anthropic, Google GenAI, Bedrock, LiteLLM | same | `casebench[anthropic]`, `[gemini]`, `[bedrock]`, `[litellm]` |
 | LangChain, LangGraph, LlamaIndex, DSPy | same | `casebench[langchain]`, `[llamaindex]`, `[dspy]` |
