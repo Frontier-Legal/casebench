@@ -29,4 +29,4 @@ Both routes implement the same interface and pass the same conformance suite.
 
 Heavy dependencies, such as a morphology library, go behind an extra named after the code (`casebench[tr]`), never into the core's required dependencies.
 
-The `plugin new` and `plugin test` commands arrive with the plugin contract; until then, this file describes the target.
+`casebench plugin kinds` lists every plugin kind with its entry-point group and interface. Decision [0016](docs/decisions/0016-plugin-contract.md) explains the contract.
