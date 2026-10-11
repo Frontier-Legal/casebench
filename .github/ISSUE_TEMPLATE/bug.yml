@@ -1,0 +1,35 @@
+name: Something is wrong
+description: A command fails, a score looks wrong, or the docs say something the code does not do.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran and what you saw. Paste the error text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Casebench version
+      description: Output of `casebench --version`.
+    validations:
+      required: true
+  - type: input
+    id: context
+    attributes:
+      label: Jurisdiction and task
+      description: For example "tr, outcome" or "any, lawyer-authored qa".
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: The relevant part of casebench.yaml with keys and hosts removed. Never paste client data.
+      render: yaml

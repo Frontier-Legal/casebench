@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use Casebench in research or in a published evaluation, please cite it as below, with the version you ran."
+title: Casebench
+abstract: "Measures the legal accuracy of an AI system against court decisions and lawyer-written references, in any jurisdiction."
+type: software
+authors:
+  - name: Casebench maintainers
+license: Apache-2.0
+repository-code: "https://github.com/Frontier-Legal/casebench"
+keywords:
+  - legal AI
+  - evaluation
+  - citations
+  - court decisions
