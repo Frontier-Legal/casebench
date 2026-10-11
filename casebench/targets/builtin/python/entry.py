@@ -14,19 +14,27 @@ from typing import Any
 DEFAULT_FUNCTION = "answer"
 
 
+def split_entry(entry: str) -> tuple[str, str, bool]:
+    """(module or file, function, is a file). The function follows the last colon, so a
+    Windows path's drive letter (`C:\\agents\\agent.py:answer`) stays in the path."""
+    if entry.endswith(".py"):
+        return entry, DEFAULT_FUNCTION, True
+    location, _, function = entry.rpartition(":")
+    if not location or not function:
+        raise ValueError(f"entry {entry!r} must look like module:function or agent.py")
+    return location, function, location.endswith(".py")
+
+
 def load_entry(entry: str) -> Callable[..., Any]:
     """`module:function`, or `path/to/agent.py[:function]` with `answer` as the default."""
-    module_part, _, attribute = entry.partition(":")
-    if module_part.endswith(".py"):
-        module = _module_from_file(Path(module_part))
-        attribute = attribute or DEFAULT_FUNCTION
+    location, attribute, is_file = split_entry(entry)
+    if is_file:
+        module = _module_from_file(Path(location))
     else:
-        if not module_part or not attribute:
-            raise ValueError(f"entry {entry!r} must look like module:function or agent.py")
         cwd = str(Path.cwd())
         if cwd not in sys.path:
             sys.path.insert(0, cwd)
-        module = importlib.import_module(module_part)
+        module = importlib.import_module(location)
     function = getattr(module, attribute, None)
     if not callable(function):
         raise TypeError(f"{entry} has no function {attribute!r}")
