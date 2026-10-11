@@ -6,6 +6,8 @@ from casebench.providers.interface import Completion, HttpRequest, Message
 
 
 class Provider:
+    speaks = ("@ai-sdk/openai-compatible", "@ai-sdk/openai")
+
     def __init__(
         self,
         base_url: str = "https://api.openai.com/v1",

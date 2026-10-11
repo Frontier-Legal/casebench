@@ -15,9 +15,11 @@ from casebench.corpus.binding import Corpus
 from casebench.corpus.check import SAMPLE_SIZE, check
 from casebench.corpus.interface import ListingNotSupported
 from casebench.judge.client import Judge
+from casebench.judge.config import JudgeConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.providers.interface import Message
+from casebench.setup.catalog import installed
 from casebench.targets.sample import send_sample
 
 JUDGE_SYSTEM = "Reply with JSON only."
@@ -104,15 +106,16 @@ def offline(config: CasebenchConfig) -> list[Check]:
     if config.corpus is not None:
         source = config.corpus.connector_source
         named.append(("corpus", "connector", config.corpus.connector, source))
-    if config.judge is not None:
-        named.append(("judge", "provider", config.judge.provider, config.judge.provider_source))
+    for name, model in _models(config):
+        named.append((name, "provider", model.provider, model.provider_source))
     for name, kind, plugin, source in named:
         try:
             registry.load(kind_named(kind), plugin, source)
         except Exception as error:
             checks.append(Check(name, Status.FAILED, str(error)))
-    if config.judge is not None and not checks:
-        checks += _judge_request(config)
+    for name, model in _models(config):
+        if not any(c.name == name for c in checks):
+            checks += _model_request(name, model)
     if config.target is not None and config.target.get("type") == "python":
         problem = _entry_defined(str(config.target.get("entry", "")))
         if problem:
@@ -120,14 +123,27 @@ def offline(config: CasebenchConfig) -> list[Check]:
     return checks
 
 
-def _judge_request(config: CasebenchConfig) -> list[Check]:
-    """Build one request without sending it, so a missing provider option shows here."""
-    assert config.judge is not None
-    messages = [Message(role="system", content=JUDGE_SYSTEM), Message(role="user", content="")]
+def _models(config: CasebenchConfig) -> list[tuple[str, JudgeConfig]]:
+    """Every model Casebench calls itself: the judge and the extraction models."""
+    models = [("judge", config.judge)] if config.judge is not None else []
+    if config.extract is not None:
+        models += [(f"extract{n}", m) for n, m in enumerate(config.extract.models, start=1)]
+    return models
+
+
+def _model_request(name: str, model: JudgeConfig) -> list[Check]:
+    """Build one request without sending it, so a missing option shows here. A provider that
+    calls its own SDK is checked for that SDK instead."""
     try:
-        Judge(config.judge).provider.request(messages, config.judge.model, "not-sent")
+        provider = Judge(model).provider
+        missing = [p for p in getattr(provider, "packages", ()) if not installed(p)]
+        if missing:
+            return [Check(name, Status.FAILED, f"{', '.join(missing)} is not installed here")]
+        if getattr(provider, "complete", None) is None:
+            messages = [Message(role="system", content=JUDGE_SYSTEM)]
+            provider.request(messages, model.model, "not-sent")
     except Exception as error:
-        return [Check("judge", Status.FAILED, str(error))]
+        return [Check(name, Status.FAILED, str(error))]
     return []
 
 
@@ -158,24 +174,22 @@ def _target(config: CasebenchConfig) -> Check:
     return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
 
 
-def _judge(config: CasebenchConfig) -> Check:
-    assert config.judge is not None
+def _model(name: str, model: JudgeConfig) -> Check:
     try:
-        Judge(config.judge).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
+        Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
-        return _failure("judge", error)
-    return Check("judge", Status.PASSED, f"{config.judge.provider} {config.judge.model} answered")
+        return _failure(name, error)
+    return Check(name, Status.PASSED, f"{model.provider} {model.model} answered")
 
 
 def live(
     config: CasebenchConfig, queries: list[str] | None = None, size: int = SAMPLE_SIZE
 ) -> list[Check]:
-    """One check for each part the config names: the corpus, the target, the judge."""
+    """One check for each part the config names: the corpus, the target, each model."""
     checks = []
     if config.corpus is not None:
         checks.append(_corpus(config, queries or [], size))
     if config.target is not None:
         checks.append(_target(config))
-    if config.judge is not None:
-        checks.append(_judge(config))
+    checks += [_model(name, model) for name, model in _models(config)]
     return checks

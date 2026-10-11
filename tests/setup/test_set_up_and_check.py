@@ -19,6 +19,7 @@ from tests.capture.upstreams import start_upstream
 from tests.judge.fake_judge import start_fake_judge
 
 PLAIN_AGENT = Path(__file__).resolve().parents[1] / "capture" / "plain_http_agent.py"
+CATALOG = Path(__file__).resolve().parent / "catalog.json"
 
 
 def closed_port() -> int:
@@ -63,8 +64,9 @@ def test_set_up_in_the_checkout(checkout: Path):
             "judge-model",
             "--judge-option",
             f"base_url={production}",
-            "--judge-option",
-            "max_tokens=256",
+            "--no-extract",
+            "--catalog",
+            str(CATALOG),
         ],
         input=f"{production}\n/search\n/documents/{{id}}\ndismissal\n",
     )
@@ -80,7 +82,7 @@ def test_set_up_in_the_checkout(checkout: Path):
     assert "secret-judge-key" not in written
     config = yaml.safe_load(written)
     assert config["target"] == {"type": "python", "entry": "agent.py:answer"}
-    assert config["judge"]["options"]["max_tokens"] == 256
+    assert config["judge"]["options"]["max_tokens"] == 256  # the model's output limit
 
 
 def test_init_refuses_an_entry_that_does_not_exist(checkout: Path):
@@ -95,6 +97,7 @@ def test_init_refuses_an_entry_that_does_not_exist(checkout: Path):
             "--corpus",
             "none",
             "--no-judge",
+            "--no-extract",
             "--no-live",
         ],
     )
