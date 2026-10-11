@@ -1,4 +1,7 @@
-"""Find and load plugins by the name a config gives. The only place a plugin is imported."""
+"""Find and load plugins by the name a config gives.
+
+This is the only place a plugin is imported.
+"""
 
 from dataclasses import dataclass
 from importlib.metadata import EntryPoint, entry_points

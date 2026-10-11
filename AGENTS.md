@@ -12,7 +12,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 
 ## Rules
 
-1. One file has one job and stays under 400 lines.
+1. One file has one job. The first line of its module docstring names that job in one sentence, and everything in the file serves it. When a change adds code that serves a different job, that code goes in its own file. A reviewer who cannot say the job without "and" asks for a split; a test checks that every module states its job.
 2. A change to behaviour arrives with a test that fails before the change and passes after it. Name the test after what a user would notice. A behaviour written as a scenario gets exactly one test named after that scenario.
 3. No magic numbers. A budget, limit or timeout is derived from a documented contract or from a measurement, and the decision record says which, with the date.
 4. Identifiers are English. Other languages appear only in user-facing strings and test fixtures.

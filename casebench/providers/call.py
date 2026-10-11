@@ -1,4 +1,7 @@
-"""Send one model call through a provider. The core, not the provider, does the sending."""
+"""Send one model call through a provider.
+
+The core, not the provider, does the sending.
+"""
 
 import os
 from collections.abc import Callable
