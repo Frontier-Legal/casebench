@@ -14,4 +14,4 @@
 
 - [ ] Commit messages follow Conventional Commits and every commit is signed off (`git commit -s`).
 - [ ] `uv run pytest`, `uv run ruff check .` and `uv run pyright` pass locally.
-- [ ] No file is over 400 lines, and no budget, limit or timeout is a bare number without its source.
+- [ ] Every file I touched still does the one job its docstring names, and no budget, limit or timeout is a bare number without its source.

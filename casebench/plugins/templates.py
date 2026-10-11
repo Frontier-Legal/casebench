@@ -1,4 +1,7 @@
-"""The stub each plugin kind starts from. Every method says what to implement."""
+"""The stub each plugin kind starts from.
+
+Every method says what to implement.
+"""
 
 CLASS_NAMES = {
     "adapter": "Adapter",
