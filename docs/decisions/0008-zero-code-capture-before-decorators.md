@@ -40,5 +40,4 @@ A capture tier proves unreliable on recorded fixtures for a widely used stack, o
 ## More information
 
 - [OpenTelemetry Python zero-code instrumentation](https://opentelemetry.io/docs/zero-code/python/)
-- [Inspect agent bridge](https://inspect.aisi.org.uk/agent-bridge.html), the recording proxy pattern.
 - [../design/integrations.md](../design/integrations.md)

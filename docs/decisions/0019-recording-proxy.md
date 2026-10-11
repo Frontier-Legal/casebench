@@ -42,7 +42,6 @@ A widely used SDK stops honouring base-URL variables, or agents commonly need co
 
 ## More information
 
-- [Inspect agent bridge](https://inspect.aisi.org.uk/agent-bridge.html), the same pattern for model calls.
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 - [OpenTelemetry environment variables as context carriers](https://opentelemetry.io/docs/specs/otel/context/env-carriers/)
 - [OpenAI streaming usage](https://platform.openai.com/docs/api-reference/chat/create#chat-create-stream_options)

@@ -40,5 +40,4 @@ A task type cannot express its reference as evidenced facts plus criteria, or a 
 ## More information
 
 - Weighted criteria use signed integer weights scored as the weighted sum of passed criteria over the sum of positive weights, clipped to 0 to 1, the scheme [PRBench](https://arxiv.org/abs/2511.11562) reports a judge-expert agreement of κ 0.603 for.
-- [Inspect: Task = Dataset + Solver + Scorer](https://inspect.aisi.org.uk/scorers.html) and [lm-eval-harness task configs](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/new_task_guide.md) informed the declarative task type.
 - [../design/architecture.md](../design/architecture.md) has the field-level model.

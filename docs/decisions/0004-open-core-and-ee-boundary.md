@@ -38,4 +38,3 @@ A second organisation co-maintains the project, or the hosted service is dropped
 
 - [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 - [Developer Certificate of Origin](https://developercertificate.org/)
-- Langfuse uses the same layout: an `ee/` directory with its own licence inside an otherwise permissive repository.

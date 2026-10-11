@@ -42,10 +42,9 @@ A run is a folder `runs/<run_id>/`:
 
 ## Revisit when
 
-Suites or run logs reach sizes where JSON Lines is slow to read, or a standard eval log format (such as Inspect's) becomes the one users expect.
+Suites or run logs reach sizes where JSON Lines is slow to read, or a standard eval log format becomes the one users expect.
 
 ## More information
 
 - [JSON Lines](https://jsonlines.org/)
 - [RFC 8785, JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785), which the canonical form follows for key order and whitespace.
-- [Inspect eval logs](https://inspect.aisi.org.uk/eval-logs.html)

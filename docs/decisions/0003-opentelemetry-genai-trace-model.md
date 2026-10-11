@@ -15,7 +15,7 @@ To show where a multi-step system lost the right authority, Casebench needs the 
 - OpenTelemetry GenAI semantic conventions (`gen_ai.*`), with a small `casebench.rerank.*` extension
 - OpenInference semantic conventions
 - A Casebench-only span schema
-- MLflow's span schema
+- A tracing vendor's own span schema
 
 ## Decision outcome
 
