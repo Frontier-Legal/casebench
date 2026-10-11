@@ -64,7 +64,7 @@ def extract(config: Path, out: Path):
 
 
 def test_only_agreed_extractions_become_drafts(workspace):
-    tmp_path, config, port = workspace
+    tmp_path, config, _ = workspace
 
     ran = extract(config, tmp_path / "keys")
 
@@ -155,7 +155,8 @@ def test_stratified_suite(workspace):
 
     assert made.exit_code == 0, made.output
     _, cases = load(tmp_path / "suite")
-    levels = sorted(DECISIONS[c.provenance.source_decision_id][2] for c in cases if c.provenance)
+    sources = [c.provenance.source_decision_id for c in cases if c.provenance]
+    levels = sorted(DECISIONS[source][2] for source in sources if source)
     assert levels == ["appellate", "first_instance", "supreme"]
 
 
