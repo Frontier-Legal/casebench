@@ -7,7 +7,7 @@ from typing import Any
 
 from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
-from casebench.targets.answer import Answer, CitationParser, to_answer
+from casebench.targets.answer import Answer, to_answer
 from casebench.targets.placeholders import fill_args
 
 
@@ -34,9 +34,7 @@ class Target:
     async def start(self, slots: int = 1) -> None:
         return None
 
-    async def answer(
-        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
-    ) -> Answer:
+    async def answer(self, inputs: Mapping[str, Any]) -> Answer:
         process = await asyncio.create_subprocess_exec(
             *fill_args(self.config.run, inputs),
             stdout=asyncio.subprocess.PIPE,
@@ -48,7 +46,7 @@ class Target:
             lines = stderr.decode("utf-8", "replace").strip().splitlines()
             last = f": {lines[-1]}" if lines else ""
             raise CommandFailed(f"the command exited with {process.returncode}{last}")
-        return to_answer(stdout.decode("utf-8").strip(), parse_citations)
+        return to_answer(stdout.decode("utf-8").strip())
 
     async def stop(self) -> None:
         return None

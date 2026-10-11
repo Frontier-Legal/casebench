@@ -137,10 +137,9 @@ def test_a_contributor_finds_the_way_in():
         "CODE_OF_CONDUCT.md",
         ".github/ISSUE_TEMPLATE/bug.yml",
         ".github/ISSUE_TEMPLATE/need.yml",
-        ".github/ISSUE_TEMPLATE/adapter.yml",
         ".github/pull_request_template.md",
         ".github/CODEOWNERS",
-        "ADAPTERS.md",
+        "PLUGINS.md",
         "CITATION.cff",
     ):
         assert (ROOT / path).is_file(), path

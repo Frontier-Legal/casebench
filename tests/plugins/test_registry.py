@@ -15,39 +15,41 @@ def test_two_sources_for_one_name_must_be_chosen_between(monkeypatch: pytest.Mon
     def point(source: str) -> SimpleNamespace:
         # An installed entry point as the registry sees it: a name and its distribution.
         return SimpleNamespace(
-            name="tr", value="tests.plugins.fixtures:TrAdapter", dist=SimpleNamespace(name=source)
+            name="national",
+            value="tests.plugins.fixtures:NationalApiParser",
+            dist=SimpleNamespace(name=source),
         )
 
-    clash = [point("casebench"), point("casebench-tr")]
+    clash = [point("casebench"), point("casebench-national")]
     monkeypatch.setattr(registry, "entry_points", lambda *, group: clash)
-    adapters = kind_named("adapter")
+    parsers = kind_named("parser")
 
     with pytest.raises(registry.PluginClash, match="Add `source: <distribution>`"):
-        registry.find(adapters, "tr")
-    assert registry.find(adapters, "tr", source="casebench-tr").name == "tr"
-    with pytest.raises(registry.PluginNotFound, match="no adapter named 'nl'"):
-        registry.find(adapters, "nl")
+        registry.find(parsers, "national")
+    assert registry.find(parsers, "national", source="casebench-national").name == "national"
+    with pytest.raises(registry.PluginNotFound, match="no parser named 'regional'"):
+        registry.find(parsers, "regional")
 
 
 def test_the_boundary_check_finds_an_import_and_a_name(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
-        '[project.entry-points."casebench.adapters"]\nzz = "casebench.jurisdictions.zz:Adapter"\n',
+        '[project.entry-points."casebench.capture"]\nzz = "casebench.capture.parsers.zz:Parser"\n',
         encoding="utf-8",
     )
-    plugin = tmp_path / "casebench" / "jurisdictions" / "zz"
+    plugin = tmp_path / "casebench" / "capture" / "parsers" / "zz"
     plugin.mkdir(parents=True)
     (plugin / "__init__.py").write_text('CODE = "zz"\n', encoding="utf-8")
     core = tmp_path / "casebench" / "core"
     core.mkdir()
     (core / "leak.py").write_text(
         '"""Mentions zz only in a docstring."""\n'
-        "from casebench.jurisdictions.zz import CODE\n"
+        "from casebench.capture.parsers.zz import CODE\n"
         'DEFAULT = "zz"\n',
         encoding="utf-8",
     )
 
     assert plugin_leaks(tmp_path) == [
-        "casebench.core.leak imports casebench.jurisdictions.zz",
+        "casebench.core.leak imports casebench.capture.parsers.zz",
         "casebench.core.leak names the plugin 'zz'",
     ]
 
@@ -63,14 +65,14 @@ def test_registering_adds_to_an_existing_table_and_refuses_a_repeat(tmp_path: Pa
         pyproject, "casebench.corpus", "s3", "casebench.corpus.connectors.s3:Connector"
     )
     register_entry_point(
-        pyproject, "casebench.adapters", "tr", "casebench.jurisdictions.tr:Adapter"
+        pyproject, "casebench.capture", "acme", "casebench.capture.parsers.acme:Parser"
     )
     text = pyproject.read_text(encoding="utf-8")
     assert text.count('[project.entry-points."casebench.corpus"]') == 1
     assert 's3 = "casebench.corpus.connectors.s3:Connector"' in text
-    assert '[project.entry-points."casebench.adapters"]\ntr = ' in text
-    with pytest.raises(ValueError, match="already registers 'tr'"):
-        register_entry_point(pyproject, "casebench.adapters", "tr", "x:y")
+    assert '[project.entry-points."casebench.capture"]\nacme = ' in text
+    with pytest.raises(ValueError, match="already registers 'acme'"):
+        register_entry_point(pyproject, "casebench.capture", "acme", "x:y")
 
 
 @pytest.mark.parametrize("name", ["FR", "fr-be", "1fr", ""])

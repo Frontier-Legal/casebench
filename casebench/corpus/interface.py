@@ -8,9 +8,8 @@ from typing import Any, Protocol, runtime_checkable
 class CorpusConnector(Protocol):
     """Lists and fetches raw decisions from one store.
 
-    A connector holds no jurisdiction logic: it returns each decision as a mapping
-    and the core checks it against the decision record. The same connector serves any
-    jurisdiction; the config binds it to an adapter per corpus.
+    A connector holds no legal logic: it returns each decision as a mapping and the core
+    checks it against the decision record. One connector may serve several jurisdictions.
     """
 
     def list_ids(self) -> Iterable[str]:

@@ -47,7 +47,7 @@ casebench run --endpoint https://agent.firm.internal/ask --suite tr-labour-sampl
 
 | The team's function returns | Casebench does |
 |---|---|
-| `str` | parses citations from the text with the jurisdiction adapter |
+| `str` | keeps the text; the judge lists its citations when it grades |
 | `dict` with `answer`, optional `citations`, `documents` | uses the returned citations and document ids directly |
 | anything, with spans captured by `cb.instrument()` | reads retrieval, rerank, tool and LLM spans for the authority funnel ([harness-eval.md](harness-eval.md)) |
 

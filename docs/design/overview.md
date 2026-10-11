@@ -28,7 +28,7 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 
 1. A vendor engineer gets a first report on their own corpus in one working session, with no help from the maintainers.
 2. Every score links to the evidence behind it: the court record or the lawyer's reference.
-3. A new jurisdiction costs one adapter and no change to shared code.
+3. A new jurisdiction costs no code: models read its decisions and the corpus resolves its citations.
 4. A third party with the suite id and the same corpus snapshot reproduces a published result.
 5. The agent, the corpus and the API keys never leave the user's machines. Full decision text goes only to the AI under test and the judge the user picked. The shared place receives cases, outputs, scores, evidence excerpts and reviews, and never computes a score ([decision 0005](../decisions/0005-cloud-never-computes-a-score.md)).
 
@@ -49,7 +49,7 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 | Firm builder | runs an in-house assistant on GPT or Claude | test it on the firm's practice areas without touching its code |
 | Buyer (general counsel, innovation lead, procurement) | chooses between vendors | the same suite run against each vendor, on their own corpus, in a report a partner can read |
 | Security officer | approves tools near client data | proof that nothing leaves the perimeter |
-| Adapter contributor | lawyer-engineer in another country | a documented adapter interface and a conformance test |
+| Plugin contributor | engineer at a data provider or in another country | a documented plugin interface and a conformance test |
 | AI lab evaluator | tests models on non-English law | suites limited to decisions after the model's cutoff, in a standard result format |
 
 ## Principles
@@ -58,7 +58,6 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 - The grader never asks the system it grades. Citation checks read raw decisions, never the AI under test.
 - Show the failing example next to every rate.
 - No score is reported without its baseline and its confidence interval.
-- Country specifics live in adapters and config, never in shared code.
-- Two tiers of jurisdiction support, both stated on the README. Lawyer-authored cases work in any country with no adapter. Court-derived references and citation checks need that country's adapter, built into the core or installed as a package.
+- There is no country-specific code: models read, the corpus resolves.
 - Court-derived, never "synthetic". No LLM invents a question or an answer. The question is what the court was asked, the answer is what it ruled, and every fact points at a passage in the decision.
 - Lawyers are first-class users. The workbench ([workbench.md](workbench.md)) ships with the library, and every review is done in legal terms, never in spans or JSON. Their first session is a queue of answers to review, reached from an email invite with nothing to install. Authoring golden data comes after.

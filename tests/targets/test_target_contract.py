@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from casebench.adapters.citations import citation_parser
 from casebench.capture.step import StepKind
 from casebench.cli import main
 from casebench.core.case import Case, Reference, ReferenceSource, Task
@@ -17,7 +16,6 @@ from casebench.runs.log import RunInfo, RunLog
 from casebench.runs.runner import run_cases
 from casebench.targets.builtin.http import Target as HttpTarget
 from casebench.targets.load import target_from_config
-from tests.plugins.entry_points import install
 from tests.targets.server import serve
 
 HERE = Path(__file__).resolve().parent
@@ -43,8 +41,7 @@ def free_port() -> int:
         return probe.getsockname()[1]
 
 
-def test_python_entry_point(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    install(monkeypatch, {"casebench.adapters": {"tr": "tests.plugins.fixtures:TrAdapter"}})
+def test_python_entry_point(tmp_path: Path):
     log = new_log(tmp_path)
     the_case = case("c1", question="Is it valid?", facts="Dismissed by text.", document="x")
 
@@ -57,15 +54,12 @@ def test_python_entry_point(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     assert [step.name for step in result.steps] == ["search"]
 
     plain = target_from_config({"type": "python", "entry": "tests.targets.agents:plain"})
-    [parsed] = asyncio.run(
-        run_cases(
-            [case("c2", question="Q?")],
-            plain,
-            new_log(tmp_path / "2"),
-            parse_citations=citation_parser("tr"),
-        )
+    [text_only] = asyncio.run(
+        run_cases([case("c2", question="Q?")], plain, new_log(tmp_path / "2"))
     )
-    assert parsed.citations == ["E2023/1-K2024/2", "E2022/7-K2023/9"]
+    # A plain-text answer keeps its text; the judge lists its citations when it grades.
+    assert (text_only.output or "").startswith("The court relied on")
+    assert text_only.citations == []
 
     joined = target_from_config({"type": "python", "entry": "tests.targets.agents:chunks"})
     [streamed] = asyncio.run(

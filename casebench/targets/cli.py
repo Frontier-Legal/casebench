@@ -5,7 +5,6 @@ from pathlib import Path
 
 import click
 
-from casebench.adapters.citations import citation_parser
 from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.runner import ask
@@ -21,9 +20,6 @@ def target() -> None:
 
 async def _check(config_path: Path, question: str) -> None:
     config = load_config(config_path)
-    parse = None
-    if config.corpus is not None:
-        parse = citation_parser(config.corpus.jurisdiction, config.corpus.adapter_source)
     agent = target_from_config(config.target)
     sample = Case(
         id="target-check",
@@ -33,7 +29,7 @@ async def _check(config_path: Path, question: str) -> None:
     )
     await agent.start()
     try:
-        result = await ask(sample, agent, parse)
+        result = await ask(sample, agent)
     finally:
         await agent.stop()
     if result.error:

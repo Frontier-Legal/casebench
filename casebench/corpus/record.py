@@ -1,4 +1,4 @@
-"""The decision record: what every connector yields and every adapter reads."""
+"""The decision record: what every connector yields."""
 
 from datetime import date
 
@@ -10,7 +10,8 @@ REQUIRED_FIELDS = ("id", "jurisdiction", "court", "date", "text")
 
 
 class DecisionRecord(Record):
-    """One court decision, in the shape every component downstream of a connector reads."""
+    """One court decision or statute, in the shape everything downstream of a connector reads.
+    `level` is the court's level when the provider's metadata gives it."""
 
     id: str
     jurisdiction: str

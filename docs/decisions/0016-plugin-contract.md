@@ -6,6 +6,8 @@ decision-makers: Casebench maintainers
 
 # Plugins: entry points, a manifest, conformance figures and explicit sources
 
+Amended by [0024](0024-no-jurisdiction-adapters.md): the adapter kind is removed.
+
 ## Context and problem statement
 
 A contributor in any country must be able to add their courts, their data provider, their model provider or a parser for their backend without changing the core or asking the maintainers. Plugins may be built into the core ([0013](0013-built-in-jurisdictions-load-on-demand.md)) or published as `casebench-<name>` packages. Both need the same discovery, the same contract and the same proof that they work.

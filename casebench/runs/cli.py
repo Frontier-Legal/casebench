@@ -8,7 +8,6 @@ from typing import Any
 
 import click
 
-from casebench.adapters.citations import citation_parser
 from casebench.capture.config import routes_for
 from casebench.capture.session import CaptureSession
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config
@@ -98,9 +97,6 @@ def run(
     manifest, cases = load(suite_dir)
     target = target_from_config(config.target)
     concurrency = max_concurrency or int(config.target.get("max_concurrency", 1))
-    parse = None
-    if config.corpus is not None:
-        parse = citation_parser(config.corpus.jurisdiction, config.corpus.adapter_source)
     capture = None
     if not no_capture:
         port = config.capture.port if config.capture else 0
@@ -123,7 +119,6 @@ def run(
                 target,
                 log,
                 max_concurrency=concurrency,
-                parse_citations=parse,
                 capture=capture,
             )
         )
