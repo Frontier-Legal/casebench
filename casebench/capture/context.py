@@ -12,6 +12,7 @@ from casebench.capture.step import Step
 class CaseCapture:
     case_id: str
     traceparent: str | None = None
+    worker: str | None = None
     steps: list[Step] = field(default_factory=list)
 
 
@@ -43,3 +44,10 @@ def current_traceparent() -> str | None:
     """The running case's trace context, to pass on to an agent outside this process."""
     capture = _current.get()
     return capture.traceparent if capture is not None else None
+
+
+def set_worker(worker: str) -> None:
+    """Note which worker process answers the running case, so its calls are found by path."""
+    capture = _current.get()
+    if capture is not None:
+        capture.worker = worker

@@ -28,7 +28,7 @@ async def ask(
         except Exception as failure:
             answer, error = None, f"{type(failure).__name__}: {failure}"
         latency_ms = (time.perf_counter() - started) * 1000
-    exchanges = capture.recorder.end(case.id) if capture else []
+    exchanges = capture.recorder.end(case.id, captured.worker) if capture else []
     steps = assemble(exchanges, capture.parse, captured.steps) if capture else captured.steps
     if answer is None:
         return Result(case_id=case.id, error=error, steps=steps, latency_ms=latency_ms)
@@ -67,7 +67,7 @@ async def run_cases(
     if capture is not None:
         await capture.start()
     try:
-        await target.start()
+        await target.start(max_concurrency)
         try:
             return list(await asyncio.gather(*(one(case) for case in pending)))
         finally:

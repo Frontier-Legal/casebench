@@ -98,7 +98,7 @@ class Target:
     def __init__(self, **config: Any) -> None:
         self.config = config
 
-    async def start(self) -> None:
+    async def start(self, slots: int = 1) -> None:
         return None
 
     async def answer(

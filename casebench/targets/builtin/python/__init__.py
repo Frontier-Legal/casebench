@@ -1,15 +1,27 @@
-"""The python target: call a function in this process once per case."""
+"""The python target: answer each case in one of N worker processes running the agent."""
 
 import asyncio
-import importlib
-import inspect
+import os
 import sys
-from collections.abc import Callable, Mapping
-from pathlib import Path
+from collections.abc import Mapping
 from typing import Any
 
+from casebench.capture.context import record, set_worker
+from casebench.capture.session import PROXY, PROXY_VARIABLES
+from casebench.capture.step import Step
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, CitationParser, to_answer
+from casebench.targets.builtin.python.framing import read_message_async, send
+
+WORKER_MODULE = "casebench.targets.builtin.python.worker"
+
+
+class WorkerDied(RuntimeError):
+    """The agent's process ended while answering a case."""
+
+
+class AgentError(RuntimeError):
+    """The agent raised while answering a case; the message is the agent's own."""
 
 
 class PythonConfig(Record):
@@ -18,56 +30,87 @@ class PythonConfig(Record):
     max_concurrency: int = 1
 
 
-def load_entry(entry: str) -> Callable[..., Any]:
-    """`module:function`, imported with the working directory on the path."""
-    module_name, _, attribute = entry.partition(":")
-    if not module_name or not attribute:
-        raise ValueError(f"entry {entry!r} must look like module:function")
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-    function = getattr(importlib.import_module(module_name), attribute)
-    if not callable(function):
-        raise TypeError(f"{entry} is not callable")
-    return function
+def worker_environment(worker: int) -> dict[str, str]:
+    """The run's environment, with each proxy variable under this worker's own path."""
+    env = dict(os.environ)
+    proxy = env.get(PROXY)
+    for name in filter(None, env.get(PROXY_VARIABLES, "").split(",")):
+        if proxy and name in env:
+            env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}", 1)
+    return env
 
 
-def accepted(function: Callable[..., Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
-    """All inputs for `**kwargs`; otherwise only the ones the function names."""
-    parameters = inspect.signature(function).parameters
-    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
-        return dict(inputs)
-    return {name: value for name, value in inputs.items() if name in parameters}
+class Worker:
+    def __init__(self, number: int, entry: str) -> None:
+        self.number, self.entry = number, entry
+        self.process: asyncio.subprocess.Process | None = None
 
+    async def start(self) -> None:
+        self.process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            WORKER_MODULE,
+            self.entry,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            env=worker_environment(self.number),
+        )
 
-async def call(function: Callable[..., Any], kwargs: dict[str, Any]) -> Any:
-    """Await coroutines, join generators' chunks, run plain functions in a thread."""
-    if inspect.isasyncgenfunction(function):
-        return "".join([str(chunk) async for chunk in function(**kwargs)])
-    if inspect.iscoroutinefunction(function):
-        return await function(**kwargs)
-    if inspect.isgeneratorfunction(function):
-        return await asyncio.to_thread(lambda: "".join(str(c) for c in function(**kwargs)))
-    value = await asyncio.to_thread(function, **kwargs)
-    return await value if inspect.isawaitable(value) else value
+    async def ask(self, case_id: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+        process = self.process
+        assert process is not None and process.stdin and process.stdout
+        try:
+            await send(process.stdin, {"case": case_id, "inputs": dict(inputs)})
+            reply = await read_message_async(process.stdout)
+        except (BrokenPipeError, ConnectionResetError, asyncio.IncompleteReadError):
+            reply = None
+        if reply is None:
+            code = await process.wait()
+            await self.start()
+            raise WorkerDied(f"the agent's process exited with {code} during this case")
+        return reply
+
+    async def stop(self) -> None:
+        if self.process is not None and self.process.stdin is not None:
+            self.process.stdin.close()
+            await self.process.wait()
+            self.process = None
 
 
 class Target:
     def __init__(self, **config: Any) -> None:
         self.config = PythonConfig.model_validate(config)
-        self.function: Callable[..., Any] | None = None
+        self.workers: list[Worker] = []
+        self.idle: asyncio.Queue[Worker] = asyncio.Queue()
+        self.cases = 0
 
-    async def start(self) -> None:
-        self.function = load_entry(self.config.entry)
+    async def start(self, slots: int = 1) -> None:
+        """One worker per parallel slot, each importing the agent once."""
+        count = max(slots, self.config.max_concurrency)
+        self.idle = asyncio.Queue()
+        self.workers = [Worker(n, self.config.entry) for n in range(count)]
+        await asyncio.gather(*(worker.start() for worker in self.workers))
+        for worker in self.workers:
+            self.idle.put_nowait(worker)
 
     async def answer(
         self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
     ) -> Answer:
-        if self.function is None:
+        if not self.workers:
             await self.start()
-        assert self.function is not None
-        value = await call(self.function, accepted(self.function, inputs))
-        return to_answer(value, parse_citations)
+        worker = await self.idle.get()
+        self.cases += 1
+        set_worker(str(worker.number))
+        try:
+            reply = await worker.ask(f"case-{self.cases}", inputs)
+        finally:
+            self.idle.put_nowait(worker)
+        for step in reply.get("steps", []):
+            record(Step.model_validate(step))
+        if "error" in reply:
+            raise AgentError(reply["error"])
+        return to_answer(reply["value"], parse_citations)
 
     async def stop(self) -> None:
-        self.function = None
+        await asyncio.gather(*(worker.stop() for worker in self.workers))
+        self.workers = []

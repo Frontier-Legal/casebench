@@ -60,7 +60,7 @@ class Target:
         self.process: subprocess.Popen[bytes] | None = None
         self.client = httpx.AsyncClient(timeout=self.config.timeout_s)
 
-    async def start(self) -> None:
+    async def start(self, slots: int = 1) -> None:
         if self.config.start is None:
             return
         self.process = subprocess.Popen(split_command(self.config.start))
