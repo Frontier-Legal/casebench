@@ -1,7 +1,6 @@
 """The http target: send each case to an endpoint, optionally started by Casebench."""
 
 import asyncio
-import shlex
 import subprocess
 from collections.abc import Mapping
 from typing import Any
@@ -12,7 +11,7 @@ from pydantic import Field
 
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, CitationParser, to_answer
-from casebench.targets.placeholders import expand_env, fill_json
+from casebench.targets.placeholders import expand_env, fill_json, split_command
 
 # Decision 0017: a start that completes between polls is seen at most this late.
 READY_POLL_SECONDS = 0.1
@@ -58,7 +57,7 @@ class Target:
     async def start(self) -> None:
         if self.config.start is None:
             return
-        self.process = subprocess.Popen(shlex.split(self.config.start))
+        self.process = subprocess.Popen(split_command(self.config.start))
         await self._wait_until_ready()
 
     async def _wait_until_ready(self) -> None:

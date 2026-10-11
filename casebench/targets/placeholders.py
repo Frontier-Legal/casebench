@@ -35,9 +35,14 @@ def fill_json(template: Any, inputs: Mapping[str, Any]) -> Any:
     return template
 
 
+def split_command(run: str) -> list[str]:
+    """Split like the platform's shell would, without running one; Windows keeps backslashes."""
+    return shlex.split(run, posix=os.name != "nt")
+
+
 def fill_args(run: str, inputs: Mapping[str, Any]) -> list[str]:
     """Split like a shell, without one, then replace `{name}` inside each argument."""
-    arguments = shlex.split(run, posix=os.name != "nt")
+    arguments = split_command(run)
     return [
         re.sub(r"\{(\w+)\}", lambda m: str(_value(inputs, m.group(1))), argument)
         for argument in arguments
