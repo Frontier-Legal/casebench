@@ -12,12 +12,17 @@ from casebench.capture.step import Step
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, CitationParser, to_answer
 from casebench.targets.builtin.python.framing import read_message_async, send
+from casebench.targets.interface import TargetDidNotStart
 
 WORKER_MODULE = "casebench.targets.builtin.python.worker"
 
 
 class WorkerDied(RuntimeError):
     """The agent's process ended while answering a case."""
+
+
+class AgentDidNotStart(TargetDidNotStart):
+    """The agent could not be loaded in a worker; the run stops before its first case."""
 
 
 class AgentError(RuntimeError):
@@ -55,6 +60,12 @@ class Worker:
             stdout=asyncio.subprocess.PIPE,
             env=worker_environment(self.number),
         )
+        assert self.process.stdout is not None
+        hello = await read_message_async(self.process.stdout)
+        if not hello or not hello.get("ready"):
+            await self.process.wait()
+            reason = (hello or {}).get("error", f"exit code {self.process.returncode}")
+            raise AgentDidNotStart(f"the agent did not start: {reason}")
 
     async def ask(self, case_id: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
         process = self.process

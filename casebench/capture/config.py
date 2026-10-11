@@ -2,6 +2,7 @@
 
 from pydantic import Field
 
+from casebench.capture.functions import StepFunction
 from casebench.capture.proxy.routes import Route, default_routes
 from casebench.core.model import Record
 
@@ -11,6 +12,7 @@ class CaptureConfig(Record):
 
     port: int = 0
     routes: list[dict[str, str]] = Field(default_factory=list)
+    functions: list[StepFunction] = Field(default_factory=list)
 
 
 def routes_for(capture: CaptureConfig | None) -> list[Route]:

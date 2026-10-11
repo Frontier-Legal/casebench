@@ -5,10 +5,12 @@ standard input and output; the agent's own prints are sent to standard error.
 """
 
 import asyncio
+import os
 import sys
 from typing import Any
 
 from casebench.capture.context import capturing
+from casebench.capture.functions import STEP_FUNCTIONS, install, specs_from_environment
 from casebench.targets.builtin.python.entry import accepted, call, load_entry
 from casebench.targets.builtin.python.framing import encode, read_message
 
@@ -20,7 +22,15 @@ def _jsonable(value: Any) -> Any:
 def main(entry: str) -> None:
     replies = sys.stdout.buffer
     sys.stdout = sys.stderr
-    function = load_entry(entry)
+    try:
+        install(specs_from_environment(os.environ.get(STEP_FUNCTIONS)))
+        function = load_entry(entry)
+    except Exception as error:
+        replies.write(encode({"ready": False, "error": f"{type(error).__name__}: {error}"}))
+        replies.flush()
+        return
+    replies.write(encode({"ready": True}))
+    replies.flush()
     loop = asyncio.new_event_loop()
     while (message := read_message(sys.stdin.buffer)) is not None:
         with capturing(message.get("case", "")) as captured:

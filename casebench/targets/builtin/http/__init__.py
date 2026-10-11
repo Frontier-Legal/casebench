@@ -12,13 +12,14 @@ from pydantic import Field
 from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, CitationParser, to_answer
+from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.placeholders import expand_env, fill_json, split_command
 
 # Decision 0017: a start that completes between polls is seen at most this late.
 READY_POLL_SECONDS = 0.1
 
 
-class StartFailed(RuntimeError):
+class StartFailed(TargetDidNotStart):
     pass
 
 

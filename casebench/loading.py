@@ -1,0 +1,70 @@
+"""Import an agent's module or script, and the functions in it, by the name a config gives."""
+
+import hashlib
+import importlib
+import importlib.util
+import sys
+from collections.abc import Callable
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+DEFAULT_FUNCTION = "answer"
+
+
+def split_entry(entry: str) -> tuple[str, str, bool]:
+    """(module or file, function, is a file). The function follows the last colon, so a
+    Windows path's drive letter (`C:\\agents\\agent.py:answer`) stays in the path."""
+    if entry.endswith(".py"):
+        return entry, DEFAULT_FUNCTION, True
+    location, _, function = entry.rpartition(":")
+    if not location or not function:
+        raise ValueError(f"entry {entry!r} must look like module:function or agent.py")
+    return location, function, location.endswith(".py")
+
+
+def load_entry(entry: str) -> Callable[..., Any]:
+    """`module:function`, or `path/to/agent.py[:function]` with `answer` as the default."""
+    location, attribute, is_file = split_entry(entry)
+    module = import_location(location, is_file)
+    owner, name = resolve(module, attribute)
+    function = getattr(owner, name, None)
+    if not callable(function):
+        raise TypeError(f"{entry} has no function {attribute!r}")
+    return function
+
+
+def import_location(location: str, is_file: bool) -> ModuleType:
+    if is_file:
+        return _module_from_file(Path(location))
+    cwd = str(Path.cwd())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+    return importlib.import_module(location)
+
+
+def resolve(module: ModuleType, attribute: str) -> tuple[Any, str]:
+    """The object that holds the attribute and its last name: `Class.method` is a class's."""
+    *owners, name = attribute.split(".")
+    holder: Any = module
+    for part in owners:
+        holder = getattr(holder, part)
+    return holder, name
+
+
+def _module_from_file(path: Path) -> ModuleType:
+    """Import a script by path; its folder goes on the path so its own imports work."""
+    resolved = path.resolve()
+    if not resolved.is_file():
+        raise FileNotFoundError(f"{path} does not exist")
+    name = f"casebench_agent_{hashlib.sha256(str(resolved).encode()).hexdigest()}"
+    if name in sys.modules:
+        return sys.modules[name]
+    if str(resolved.parent) not in sys.path:
+        sys.path.insert(0, str(resolved.parent))
+    spec = importlib.util.spec_from_file_location(name, resolved)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
