@@ -7,8 +7,9 @@
 - The court test types below are task types (`outcome`, `qa`, `research`) with a court reference. Citation integrity runs on every task and every reference source.
 
 ```
- corpus connector ──> jurisdiction adapter ──> extractor ──> generator ──> frozen suite
- (raw decisions)      (parse, cite format)    (answer keys)  (tests)       (id + hash)
+ corpus connector ──> extractors ──────> generator ──> frozen suite
+ (raw decisions)      (two models,      (tests)       (id + hash)
+                       answer keys)
                                                                                │
  target connector <────────────────── runner <─────────────────────────────────┘
  (the AI under test)                     │
@@ -22,8 +23,7 @@
 | Component | Does | Reads | Writes |
 |---|---|---|---|
 | Corpus connector | lists, samples and fetches decisions by id; resolves a citation to a decision | a folder, S3, a database, or a vendor's document API or MCP | nothing |
-| Jurisdiction adapter | parses the country's decision layout and citation formats; maps courts to levels; looks up statute versions by date | raw decisions, statute text | normalised decision records |
-| Extractor | pulls the operative part, cited statutes and cited decisions with two different models | normalised decisions | answer keys plus per-field agreement |
+| Extractor | two different models read each decision: the ruling as a shared label, the statutes and decisions it relied on as written, and the facts without the ruling | decision records | answer keys plus per-field agreement |
 | Generator | builds tests by type, samples and stratifies by court, area and date | answer keys | a suite |
 | Suite store | freezes a suite with an id and a content hash | the suite | `suite.jsonl` plus a manifest |
 | Target connector | sends a test to the AI under test, parses answer and citations | target config | raw responses |
@@ -69,7 +69,7 @@ Outcome, statute, precedent, version and appeal need no LLM to score. The judge 
 
 ## Data contracts
 
-Decision record, one JSON object per line. Adapters produce it and everything downstream consumes only it.
+Decision record, one JSON object per line. Connectors produce it and everything downstream consumes only it.
 
 ```json
 {"id": "tr-yargitay-9hd-2024-1234", "jurisdiction": "tr", "court": "Yargıtay 9. HD",
@@ -110,5 +110,5 @@ Result record, one per test per repeat:
 | Scale | samples from corpora of any size through the connector; never loads the whole corpus |
 | Distribution | a Python package with a CLI; the target can be in any language because it is reached over a connector |
 | License | open core: Apache-2.0 core, source-available `ee/` team server ([open-source.md](open-source.md)) |
-| Language | adapters use a maintained parser or a model for language work, never hand-kept word lists |
+| Language | models do the language work, with no per-country parsers or word lists (decision 0024) |
 | Model choice | extractor and judge go through one provider interface; users pick any model |

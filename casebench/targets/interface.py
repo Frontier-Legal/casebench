@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, Protocol, runtime_checkable
 
-from casebench.targets.answer import Answer, CitationParser
+from casebench.targets.answer import Answer
 
 
 class TargetDidNotStart(RuntimeError):
@@ -17,8 +17,6 @@ class Target(Protocol):
 
     async def start(self, slots: int = 1) -> None: ...
 
-    async def answer(
-        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
-    ) -> Answer: ...
+    async def answer(self, inputs: Mapping[str, Any]) -> Answer: ...
 
     async def stop(self) -> None: ...

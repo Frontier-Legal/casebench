@@ -27,18 +27,14 @@ from casebench.providers.call import complete
 from casebench.providers.interface import HttpRequest, Message
 from tests.plugins.entry_points import install
 from tests.plugins.fixture_files import (
-    FR_ADAPTER,
-    FR_SAMPLES,
+    NATIONAL_PARSER,
+    NATIONAL_SAMPLES,
     venv_python,
     write_decisions,
 )
 from tests.plugins.national_api import start_national_api
 
 ROOT = Path(__file__).resolve().parents[2]
-TEST_ADAPTERS = {
-    "tr": "tests.plugins.fixtures:TrAdapter",
-    "nl": "tests.plugins.fixtures:NlAdapter",
-}
 
 
 def test_every_plugin_kind_has_a_contract():
@@ -46,7 +42,6 @@ def test_every_plugin_kind_has_a_contract():
 
     assert result.exit_code == 0, result.output
     assert {kind.name for kind in KINDS} == {
-        "adapter",
         "connector",
         "parser",
         "provider",
@@ -68,12 +63,12 @@ def test_every_plugin_kind_has_a_contract():
 def test_scaffold_a_plugin(tmp_path: Path):
     runner = CliRunner()
     made = runner.invoke(
-        main, ["plugin", "new", "adapter", "--name", "fr", "--root", str(tmp_path)]
+        main, ["plugin", "new", "connector", "--name", "acme", "--root", str(tmp_path)]
     )
     assert made.exit_code == 0, made.output
-    package = tmp_path / "casebench-fr"
+    package = tmp_path / "casebench-acme"
     for path in (
-        "casebench_fr/__init__.py",
+        "casebench_acme/__init__.py",
         "casebench-plugin.json",
         "README.md",
         "tests/test_conformance.py",
@@ -97,39 +92,39 @@ def test_scaffold_a_plugin(tmp_path: Path):
             str(python),
             "-c",
             "from importlib.metadata import entry_points;"
-            "print([p.value for p in entry_points(group='casebench.adapters') if p.name == 'fr'])",
+            "print([p.value for p in entry_points(group='casebench.corpus') if p.name == 'acme'])",
         ],
         check=True,
         capture_output=True,
         text=True,
     )
-    assert found.stdout.strip() == "['casebench_fr:Adapter']"
+    assert found.stdout.strip() == "['casebench_acme:Connector']"
 
     core = tmp_path / "core"
     core.mkdir()
     shutil.copy(ROOT / "pyproject.toml", core / "pyproject.toml")
     built_in = runner.invoke(
-        main, ["plugin", "new", "adapter", "--name", "fr", "--built-in", "--root", str(core)]
+        main, ["plugin", "new", "connector", "--name", "acme", "--built-in", "--root", str(core)]
     )
     assert built_in.exit_code == 0, built_in.output
-    folder = core / "casebench" / "jurisdictions" / "fr"
+    folder = core / "casebench" / "corpus" / "connectors" / "acme"
     assert (folder / "__init__.py").is_file() and (folder / "casebench-plugin.json").is_file()
     registered = tomllib.loads((core / "pyproject.toml").read_text(encoding="utf-8"))
-    adapters = registered["project"]["entry-points"]["casebench.adapters"]
-    assert adapters == {"fr": "casebench.jurisdictions.fr:Adapter"}
+    connectors = registered["project"]["entry-points"]["casebench.corpus"]
+    assert connectors["acme"] == "casebench.corpus.connectors.acme:Connector"
 
 
 def test_conformance_before_listing(tmp_path: Path):
     runner = CliRunner()
-    runner.invoke(main, ["plugin", "new", "adapter", "--name", "fr", "--root", str(tmp_path)])
-    package = tmp_path / "casebench-fr"
-    (package / "casebench_fr" / "__init__.py").write_text(FR_ADAPTER, encoding="utf-8")
-    for name, sample in FR_SAMPLES.items():
+    runner.invoke(main, ["plugin", "new", "parser", "--name", "national", "--root", str(tmp_path)])
+    package = tmp_path / "casebench-national"
+    (package / "casebench_national" / "__init__.py").write_text(NATIONAL_PARSER, encoding="utf-8")
+    for name, sample in NATIONAL_SAMPLES.items():
         (package / "samples" / name).write_text(json.dumps(sample), encoding="utf-8")
 
     tested = runner.invoke(main, ["plugin", "test", str(package)])
     assert tested.exit_code == 0, tested.output
-    assert "adapter fr: passed, extraction accuracy 0.83 over 2 samples" in tested.output
+    assert "parser national: passed, calls parsed 0.50 over 2 samples" in tested.output
 
     connector = runner.invoke(
         main, ["plugin", "test", str(ROOT / "casebench" / "corpus" / "connectors" / "folder")]
@@ -203,8 +198,7 @@ def test_a_model_provider_opentelemetry_does_not_know(monkeypatch: pytest.Monkey
     assert sent[0].url.startswith("https://llm.national.example/")
 
 
-def test_connector_and_adapter_are_independent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    install(monkeypatch, {"casebench.adapters": TEST_ADAPTERS})
+def test_one_connector_serves_several_countries(tmp_path: Path):
     write_decisions(tmp_path)
 
     turkish = Corpus(
@@ -213,11 +207,11 @@ def test_connector_and_adapter_are_independent(tmp_path: Path, monkeypatch: pyte
     dutch = Corpus(
         CorpusConfig(connector="folder", jurisdiction="nl", options={"path": str(tmp_path)})
     )
+    everything = Corpus(CorpusConfig(connector="folder", options={"path": str(tmp_path)}))
 
     assert turkish.decision_ids() == ["tr-1"]
     assert dutch.decision_ids() == ["nl-1"]
-    assert [c.key for c in turkish.citations("tr-1")] == ["E2023/1-K2024/2"]
-    assert [c.key for c in dutch.citations("nl-1")] == ["ECLI:NL:HR:2024:123"]
+    assert sorted(everything.decision_ids()) == ["nl-1", "tr-1"]
     assert type(turkish.connector) is type(dutch.connector)
 
 

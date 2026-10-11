@@ -1,4 +1,4 @@
-# Maintainers review every change. Each jurisdiction under casebench/jurisdictions/
-# names its own owners here when it gains maintainers outside the core team.
+# Maintainers review every change. A built-in plugin names its own owners here when it
+# gains maintainers outside the core team.
 *       @Frontier-Legal/frontier-legal
 /ee/    @Frontier-Legal/frontier-legal

@@ -4,7 +4,7 @@
 
 | Item | Choice | Source |
 |---|---|---|
-| Licence | open core: Apache-2.0 for the core (SDK, CLI, metrics, adapters, local UI, report, spreadsheet round-trips); `ee/` (roles, SSO, audit, invites, the push/pull server side) source-available, free for your own organisation, no offering to third parties. The whole project under FSL or ELv2 was rejected: vendors will not adopt a yardstick they cannot fork, and adapter contributors will not build for a product someone else owns | [decision 0004](../decisions/0004-open-core-and-ee-boundary.md) |
+| Licence | open core: Apache-2.0 for the core (SDK, CLI, metrics, plugins, local UI, report, spreadsheet round-trips); `ee/` (roles, SSO, audit, invites, the push/pull server side) source-available, free for your own organisation, no offering to third parties. The whole project under FSL or ELv2 was rejected: vendors will not adopt a yardstick they cannot fork, and adapter contributors will not build for a product someone else owns | [decision 0004](../decisions/0004-open-core-and-ee-boundary.md) |
 | Trademark | a trademark policy: forks may not be called Casebench. Apache-2.0 grants no rights to the name | |
 | Contributions | DCO via the [DCO app](https://github.com/apps/dco), `git commit -s` for the core; a CLA only for `ee/` | DCO is lighter for firm and vendor engineers; the CLA keeps `ee/` relicensable |
 | Code of conduct | [Contributor Covenant 3.0](https://www.contributor-covenant.org/version/3/0/) (Jul 2025) | |
@@ -18,7 +18,7 @@
 | Governance | `GOVERNANCE.md` and `MAINTAINERS` once a second organisation maintains code; neutrality terms published at R1 | |
 | Later | [Best Practices badge](https://www.bestpractices.dev/), [OSPS Baseline](https://baseline.openssf.org/), [REUSE 3.3](https://reuse.software/spec-3.3/) headers | |
 
-Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, CITATION.cff, issue and PR templates, `ADAPTERS.md` (how to add a jurisdiction).
+Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, CITATION.cff, issue and PR templates, `PLUGINS.md` (how to add a data provider or model API).
 
 ## Packaging and release
 
@@ -35,7 +35,7 @@ Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT
 
 | Minute | Command | What the user sees |
 |---|---|---|
-| 0 | `uvx casebench demo` | a bundled sample (a lawyer-authored mini set that needs no adapter, public decisions through the built-in Türkiye adapter, an echo target, cached judge verdicts) runs with no key; the viewer opens on real failures |
+| 0 | `uvx casebench demo` | a bundled sample (a lawyer-authored mini set, a few public decisions, an echo target, cached judge verdicts) runs with no key; the viewer opens on real failures |
 | 2 | `casebench init`, or "set up Casebench for this agent" to a coding agent with the repo's skill | the stack detected from the repo and lockfile (SDKs, vector store, reranker); two questions, where the corpus is and which judge; `casebench.yaml` written with its `# yaml-language-server: $schema=` line, the proxy's environment lines printed, one sample case sent and its parsed answer and citations shown |
 | 5 | `casebench run` | on first use: extraction, generation, a cost estimate and a confirmation; then the run with live progress, resumable; a link to the workbench |
 | 10 | `casebench ui` | the workbench: failures beside evidence, ready for a lawyer to review; the harness waterfall and the authority funnel for engineers |

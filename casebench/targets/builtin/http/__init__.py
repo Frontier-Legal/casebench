@@ -11,7 +11,7 @@ from pydantic import Field
 
 from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
-from casebench.targets.answer import Answer, CitationParser, to_answer
+from casebench.targets.answer import Answer, to_answer
 from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.placeholders import expand_env, fill_json, split_command
 
@@ -81,9 +81,7 @@ class Target:
             except httpx2.TransportError:
                 await asyncio.sleep(READY_POLL_SECONDS)
 
-    async def answer(
-        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
-    ) -> Answer:
+    async def answer(self, inputs: Mapping[str, Any]) -> Answer:
         response = await self.client.request(
             self.config.method,
             self.config.url,
@@ -97,7 +95,7 @@ class Target:
         if citations is not None:
             value["citations"] = citations
         value["documents"] = every(self.config.documents, document) or []
-        return to_answer(value, parse_citations)
+        return to_answer(value)
 
     async def stop(self) -> None:
         await self.client.aclose()

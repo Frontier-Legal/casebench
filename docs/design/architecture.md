@@ -5,7 +5,7 @@
 - The unit is an evaluation case, not a court decision. A case is a task the AI performs, a reference to grade against, and the metrics to apply. Court decisions are one way to build references; lawyers are another ([decision 0002](../decisions/0002-evaluation-case-model.md)).
 - Three independent axes: task type × reference source × metric. Any combination is legal; the report never mixes them into one number.
 - A reference has two layers: facts, each tied to evidence (a court passage, a lawyer's note, a corpus id), and criteria derived from those facts. No criterion exists without the evidence it came from, so an LLM never invents the rubric it then grades against.
-- Everything outside the core is a plugin (task types, reference builders, targets, metrics, corpus connectors, jurisdiction adapters, capture parsers, model providers, exporters), found through Python entry points, each kind with a conformance command and a scaffold. A corpus connector says where decisions come from and serves any jurisdiction. A jurisdiction adapter says how to read them. The config binds the two per corpus.
+- Everything outside the core is a plugin (task types, reference builders, targets, metrics, corpus connectors, capture parsers, model providers, exporters), found through Python entry points, each kind with a conformance command and a scaffold. A corpus connector says where decisions come from and serves any jurisdiction. There is no per-country code: models extract, and the corpus resolves citations ([decision 0024](../decisions/0024-no-jurisdiction-adapters.md)).
 - Teams connect in 3 lines through `cb.instrument()` and `cb.run()` ([integrations.md](integrations.md)); trace capture sources are chosen in [instrumentation.md](instrumentation.md).
 - Harness diagnostics and counterfactual runs are in [harness-eval.md](harness-eval.md); court extraction and integrity controls in [design.md](design.md).
 
@@ -22,7 +22,6 @@
 | Score | the one record every metric, judge and human review emits: name, kind (code, llm, human), direction, value, label, explanation with quoted evidence, metric version | core |
 | Annotation | a lawyer's verdict on a case or score in the viewer, with a reason; an overruled judge verdict becomes calibration data | run log |
 | Corpus | read-only store of authorities (decisions, statutes) used for citation checks and court references | plugin (`casebench.corpus`) |
-| Jurisdiction adapter | citation grammar, operative-part layout, court hierarchy, statute versions for one country | plugin (`casebench.adapters`) |
 | Suite | a frozen set of cases with a manifest (id, content hash, versions, source mix) | `suite.jsonl` + `manifest.json` |
 | Run log | every output, trace, score, cost and error of one suite × target run; re-scorable without re-running | `runs/<run_id>/` |
 
@@ -76,7 +75,7 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 
 ```
  reference builders ──> suite (frozen) ──> runner ──> target (+ trace) ──> run log ──> metrics ──> report / viewer / exporters
-  court (adapter+corpus)        │                                            ▲              │
+  court (corpus + extractors)   │                                            ▲              │
   lawyer import (csv/yaml/docx) │                                            └── re-score ──┘
   structured, hybrid            └── manifest: hash, versions, source mix
 ```
@@ -104,8 +103,6 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 | `casebench.metrics` | deterministic, judge and trace metrics |
 | `casebench.traces` | OTLP intake with OTel GenAI and OpenInference mapping; JSON fallback |
 | `casebench.corpus` | folder, S3, SQL, HTTP connectors |
-| `casebench.adapters` | the adapter interface and its conformance suite |
-| `casebench.jurisdictions` | built-in adapters, one folder per country (`tr` first), registered as entry points and imported only when a config selects them; framework code never imports them ([decision 0013](../decisions/0013-built-in-jurisdictions-load-on-demand.md)) |
 | `casebench.cli` | the commands, including `casebench setup` (an agent prompt that adds the 3 lines to the user's code) |
 | `casebench.server`, `casebench.ui` | FastAPI service + bundled React app; SQLite by default, Postgres for teams; the local single-user mode is Apache-2.0, the multi-user layer (roles, SSO, audit, invites, the push/pull server side) lives in `ee/` ([open-source.md](open-source.md)) |
 | `casebench.pytest` | `@pytest.mark.casebench(suite=...)`; stable case ids, `git_sha` recorded, exit code is the CI gate |

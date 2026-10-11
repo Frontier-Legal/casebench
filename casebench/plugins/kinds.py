@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from casebench.adapters.interface import JurisdictionAdapter
 from casebench.capture.interface import CaptureParser
 from casebench.corpus.interface import CorpusConnector
 from casebench.exporters.interface import Exporter
@@ -31,13 +30,6 @@ class PluginKind:
 
 
 KINDS: tuple[PluginKind, ...] = (
-    PluginKind(
-        "adapter",
-        "casebench.adapters",
-        JurisdictionAdapter,
-        "casebench/jurisdictions",
-        "extraction accuracy",
-    ),
     PluginKind(
         "connector",
         "casebench.corpus",

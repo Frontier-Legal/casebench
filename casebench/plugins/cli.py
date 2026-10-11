@@ -10,7 +10,7 @@ from casebench.plugins.kinds import BY_NAME, KINDS, kind_named
 
 @click.group()
 def plugin() -> None:
-    """Add a jurisdiction, a data provider, a model provider or any other plugin."""
+    """Add a data provider, a model provider, a capture parser or any other plugin."""
 
 
 @plugin.command()
@@ -27,7 +27,7 @@ def kinds() -> None:
 
 @plugin.command()
 @click.argument("kind", type=click.Choice(sorted(BY_NAME)))
-@click.option("--name", required=True, help="Lowercase name, such as a jurisdiction code.")
+@click.option("--name", required=True, help="Lowercase name, such as a provider's.")
 @click.option("--built-in", is_flag=True, help="Write a folder inside the core instead.")
 @click.option(
     "--root",

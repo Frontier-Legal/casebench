@@ -9,14 +9,12 @@ from casebench.capture.otlp.mapping import to_step, without_duplicates
 from casebench.capture.session import CaptureSession
 from casebench.core.case import Case
 from casebench.runs.log import Result, RunLog
-from casebench.targets.answer import CitationParser
 from casebench.targets.interface import Target
 
 
 async def ask(
     case: Case,
     target: Target,
-    parse_citations: CitationParser | None,
     capture: CaptureSession | None = None,
 ) -> Result:
     """One case, with the steps captured while it ran. A failure is the case's, not the run's."""
@@ -25,7 +23,7 @@ async def ask(
         started = time.perf_counter()
         error: str | None = None
         try:
-            answer = await target.answer(case.task.inputs, parse_citations)
+            answer = await target.answer(case.task.inputs)
         except Exception as failure:
             answer, error = None, f"{type(failure).__name__}: {failure}"
         latency_ms = (time.perf_counter() - started) * 1000
@@ -55,7 +53,6 @@ async def run_cases(
     log: RunLog,
     *,
     max_concurrency: int = 1,
-    parse_citations: CitationParser | None = None,
     capture: CaptureSession | None = None,
 ) -> list[Result]:
     """At most `max_concurrency` cases at once; cases the log already holds are skipped."""
@@ -67,7 +64,7 @@ async def run_cases(
 
     async def one(case: Case) -> Result:
         async with slots:
-            result = await ask(case, target, parse_citations, capture)
+            result = await ask(case, target, capture)
         log.append(result)
         return result
 

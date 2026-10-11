@@ -4,7 +4,6 @@ Every method says what to implement.
 """
 
 CLASS_NAMES = {
-    "adapter": "Adapter",
     "connector": "Connector",
     "parser": "Parser",
     "provider": "Provider",
@@ -16,27 +15,6 @@ CLASS_NAMES = {
 }
 
 STUBS = {
-    "adapter": """from datetime import date
-
-from casebench.adapters.interface import Citation
-from casebench.corpus.record import DecisionRecord
-
-
-class Adapter:
-    code = "{name}"
-
-    def citations(self, text: str) -> list[Citation]:
-        raise NotImplementedError("find decision and statute citations in the text")
-
-    def operative_part(self, record: DecisionRecord) -> tuple[int, int] | None:
-        raise NotImplementedError("locate the ruling in the decision text")
-
-    def court_level(self, court: str) -> str | None:
-        raise NotImplementedError("map a court name to its level")
-
-    def statute_version(self, key: str, on: date) -> str | None:
-        return None
-""",
     "connector": """from collections.abc import Iterable
 from typing import Any
 
@@ -91,7 +69,7 @@ class Builder:
     "target": """from collections.abc import Mapping
 from typing import Any
 
-from casebench.targets.answer import Answer, CitationParser
+from casebench.targets.answer import Answer
 
 
 class Target:
@@ -101,9 +79,7 @@ class Target:
     async def start(self, slots: int = 1) -> None:
         return None
 
-    async def answer(
-        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
-    ) -> Answer:
+    async def answer(self, inputs: Mapping[str, Any]) -> Answer:
         raise NotImplementedError("send the case to the AI under test")
 
     async def stop(self) -> None:
@@ -137,9 +113,9 @@ class Exporter:
 SAMPLES_README = """# Conformance samples
 
 `casebench plugin test <path>` runs this plugin's conformance suite on the files here.
-The format for each kind is in the docstring of its suite: `casebench.adapters.conformance`,
-`casebench.corpus.conformance`, `casebench.capture.conformance` or
-`casebench.providers.conformance`. Use only data you are allowed to redistribute.
+The format for each kind is in the docstring of its suite: `casebench.corpus.conformance`,
+`casebench.capture.conformance` or `casebench.providers.conformance`.
+Use only data you are allowed to redistribute.
 """
 
 CONFORMANCE_TEST = """from pathlib import Path

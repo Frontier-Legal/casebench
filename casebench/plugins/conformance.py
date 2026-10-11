@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from casebench.adapters import conformance as adapters
 from casebench.capture import conformance as capture
 from casebench.corpus import conformance as corpus
 from casebench.plugins.manifest import (
@@ -18,7 +17,6 @@ from casebench.plugins.samples import SuiteResult, options_for
 from casebench.providers import conformance as providers
 
 SUITES: dict[str, Callable[[Any, Path], SuiteResult]] = {
-    "adapter": adapters.check,
     "connector": corpus.check,
     "parser": capture.check,
     "provider": providers.check,

@@ -10,7 +10,7 @@ from casebench.capture.context import current_traceparent, record, set_worker
 from casebench.capture.session import PROXY, PROXY_VARIABLES
 from casebench.capture.step import Step
 from casebench.core.model import Record
-from casebench.targets.answer import Answer, CitationParser, to_answer
+from casebench.targets.answer import Answer, to_answer
 from casebench.targets.builtin.python.framing import read_message_async, send
 from casebench.targets.interface import TargetDidNotStart
 
@@ -109,9 +109,7 @@ class Target:
         for worker in self.workers:
             self.idle.put_nowait(worker)
 
-    async def answer(
-        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
-    ) -> Answer:
+    async def answer(self, inputs: Mapping[str, Any]) -> Answer:
         if not self.workers:
             await self.start()
         worker = await self.idle.get()
@@ -125,7 +123,7 @@ class Target:
             record(Step.model_validate(step))
         if "error" in reply:
             raise AgentError(reply["error"])
-        return to_answer(reply["value"], parse_citations)
+        return to_answer(reply["value"])
 
     async def stop(self) -> None:
         await asyncio.gather(*(worker.stop() for worker in self.workers))

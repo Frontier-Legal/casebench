@@ -38,9 +38,9 @@ Sign off every commit with `git commit -s`. This is the [Developer Certificate o
 
 A material choice, such as a new dependency, a public interface or a storage format, gets an architecture decision record under [docs/decisions/](docs/decisions/) in the same pull request. Copy [template.md](docs/decisions/template.md).
 
-## Adapters
+## Plugins
 
-A jurisdiction adapter either lives in `casebench/jurisdictions/<code>/` or ships as a separate package named `casebench-<code>`. [ADAPTERS.md](ADAPTERS.md) describes both.
+A data provider, a model API's parser or a model provider is a plugin: built into the core or published as a `casebench-<name>` package. [PLUGINS.md](PLUGINS.md) describes the steps.
 
 ## Security
 
