@@ -42,6 +42,8 @@ class Judge:
         )
         self.send = send
         self.calls = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
 
     @property
     def family(self) -> str:
@@ -50,4 +52,7 @@ class Judge:
     def ask(self, system: str, user: str) -> Any:
         self.calls += 1
         messages = [Message(role="system", content=system), Message(role="user", content=user)]
-        return read_json(complete(self.provider, messages, self.config.model, self.send).text)
+        completion = complete(self.provider, messages, self.config.model, self.send)
+        self.input_tokens += completion.input_tokens or 0
+        self.output_tokens += completion.output_tokens or 0
+        return read_json(completion.text)
