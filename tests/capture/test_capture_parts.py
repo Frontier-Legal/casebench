@@ -124,3 +124,16 @@ def test_the_proxy_prints_the_lines_an_agent_already_running_needs(tmp_path: Pat
     config.write_text("target: {type: command, run: echo}\n", encoding="utf-8")
     refused = CliRunner().invoke(main, ["proxy", "env", "--config", str(config)])
     assert refused.exit_code != 0 and "set capture.port" in refused.output
+
+
+def test_a_model_call_seen_by_the_proxy_and_a_span_counts_once():
+    from casebench.capture.otlp.mapping import without_duplicates
+
+    proxied = [Step(kind=StepKind.LLM, provider="openai", started=10.2, ended=11.0)]
+    traced = [
+        Step(kind=StepKind.LLM, model="gpt-5", started=10.0, ended=11.1),  # wraps the call
+        Step(kind=StepKind.LLM, model="gpt-5", started=20.0, ended=21.0),  # proxy never saw it
+        Step(kind=StepKind.RETRIEVAL, name="search", started=10.0, ended=10.1),
+    ]
+    kept = without_duplicates(traced, proxied)
+    assert [(s.kind, s.started) for s in kept] == [(StepKind.LLM, 20.0), (StepKind.RETRIEVAL, 10.0)]

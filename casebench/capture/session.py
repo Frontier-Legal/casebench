@@ -15,6 +15,13 @@ from casebench.capture.step import HttpExchange, Step
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
+TRACES_ENDPOINT = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+
+
+def traces_endpoint(port: int) -> str:
+    return f"http://127.0.0.1:{port}/v1/traces"
+
+
 # Read by workers to put their own path in each variable (decision 0020).
 PROXY = "CASEBENCH_PROXY"
 PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
@@ -24,10 +31,15 @@ class CaptureSession:
     """For one run: the proxy, the recorder, and the variables that point clients at it."""
 
     def __init__(
-        self, routes: list[Route], port: int = 0, functions: list[StepFunction] | None = None
+        self,
+        routes: list[Route],
+        port: int = 0,
+        functions: list[StepFunction] | None = None,
+        traces: bool = False,
     ) -> None:
         self.routes = {route.name: route for route in routes}
         self.functions = functions or []
+        self.traces = traces
         self.port = port
         self.recorder = Recorder()
         self.parsers: dict[str, CaptureParser] = {
@@ -51,6 +63,9 @@ class CaptureSession:
         self.env = environment(list(self.routes.values()), self.port)
         self.env[PROXY] = f"http://127.0.0.1:{self.port}"
         self.env[PROXY_VARIABLES] = ",".join(name for name in self.env if name != PROXY)
+
+        if self.traces:
+            self.env[TRACES_ENDPOINT] = traces_endpoint(self.port)
         if self.functions:
             self.env[STEP_FUNCTIONS] = json.dumps(
                 [f.model_dump(mode="json") for f in self.functions]

@@ -8,11 +8,13 @@ from casebench.core.model import Record
 
 
 class CaptureConfig(Record):
-    """`port: 0` lets the operating system choose; name a port for an agent already running."""
+    """`port: 0` lets the operating system choose; name a port for an agent already running.
+    `traces: true` points the OpenTelemetry exporter of agents Casebench starts at it."""
 
     port: int = 0
     routes: list[dict[str, str]] = Field(default_factory=list)
     functions: list[StepFunction] = Field(default_factory=list)
+    traces: bool = False
 
 
 def routes_for(capture: CaptureConfig | None) -> list[Route]:
