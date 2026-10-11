@@ -38,3 +38,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0022](0022-config-named-functions.md) | A function named in the config is wrapped when the agent's process starts | accepted |
 | [0023](0023-otlp-trace-intake.md) | Traces a team already emits are received over OTLP and joined to cases | accepted |
 | [0024](0024-no-jurisdiction-adapters.md) | No jurisdiction adapters: the corpus resolves citations and models extract | accepted |
+| [0025](0025-corpus-connectors.md) | Corpus connectors fetch, search and are cached; any store is configured, not coded | accepted |
