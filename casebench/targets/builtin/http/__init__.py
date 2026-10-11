@@ -5,7 +5,7 @@ import subprocess
 from collections.abc import Mapping
 from typing import Any
 
-import httpx
+import httpx2
 from jsonpath_ng.ext.parser import parse as jsonpath
 from pydantic import Field
 
@@ -58,7 +58,7 @@ class Target:
     def __init__(self, **config: Any) -> None:
         self.config = HttpConfig.model_validate(config)
         self.process: subprocess.Popen[bytes] | None = None
-        self.client = httpx.AsyncClient(timeout=self.config.timeout_s)
+        self.client = httpx2.AsyncClient(timeout=self.config.timeout_s)
 
     async def start(self, slots: int = 1) -> None:
         if self.config.start is None:
@@ -77,7 +77,7 @@ class Target:
             try:
                 await self.client.request("HEAD", self.config.url)
                 return
-            except httpx.TransportError:
+            except httpx2.TransportError:
                 await asyncio.sleep(READY_POLL_SECONDS)
 
     async def answer(
