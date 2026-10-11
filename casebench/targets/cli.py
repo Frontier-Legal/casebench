@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from casebench.config import DEFAULT_CONFIG, load_config
+from casebench.config import DEFAULT_CONFIG, load_config, target_of
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.runner import ask
 from casebench.targets.load import target_from_config
@@ -20,7 +20,7 @@ def target() -> None:
 
 async def _check(config_path: Path, question: str) -> None:
     config = load_config(config_path)
-    agent = target_from_config(config.target)
+    agent = target_from_config(target_of(config))
     sample = Case(
         id="target-check",
         task=Task.model_validate({"type": "qa", "question": question}),

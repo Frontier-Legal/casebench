@@ -10,7 +10,7 @@ import click
 
 from casebench.capture.config import routes_for
 from casebench.capture.session import CaptureSession
-from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config
+from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, target_of
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
 from casebench.suites.freeze import load
@@ -95,8 +95,9 @@ def run(
     """Send every case of a frozen suite to the target and store each result."""
     config = _config(config_path, python)
     manifest, cases = load(suite_dir)
-    target = target_from_config(config.target)
-    concurrency = max_concurrency or int(config.target.get("max_concurrency", 1))
+    target_config = target_of(config)
+    target = target_from_config(target_config)
+    concurrency = max_concurrency or int(target_config.get("max_concurrency", 1))
     capture = None
     if not no_capture:
         port = config.capture.port if config.capture else 0
@@ -109,7 +110,7 @@ def run(
         {
             "suite_id": manifest.suite_id,
             "suite_hash": manifest.content_hash,
-            "target": str(config.target.get("type")),
+            "target": str(target_config.get("type")),
         },
     )
     try:

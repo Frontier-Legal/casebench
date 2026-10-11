@@ -10,6 +10,8 @@ Casebench works in any country with no country-specific code ([decision 0024](do
 
 `casebench plugin kinds` lists every kind, the others included, with its interface.
 
+A store reachable over HTTP or MCP needs no plugin at all: `casebench corpus add http` or `casebench corpus add mcp` makes one live search and fetch, suggests where each field is, and writes the connector into casebench.yaml. Write a connector plugin only for a store neither can reach.
+
 A connector holds no legal logic. One connector can serve many countries; each decision carries its jurisdiction, and a corpus in `casebench.yaml` may name one to filter by.
 
 ## Steps
