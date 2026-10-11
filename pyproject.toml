@@ -21,7 +21,10 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.5.0",
+    "httpx>=0.28.1",
+    "jsonpath-ng>=1.10.0",
     "pydantic>=2.14.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.urls]
@@ -34,6 +37,11 @@ casebench = "casebench.cli:main"
 
 [project.entry-points."casebench.corpus"]
 folder = "casebench.corpus.connectors.folder:Connector"
+
+[project.entry-points."casebench.targets"]
+command = "casebench.targets.builtin.command:Target"
+http = "casebench.targets.builtin.http:Target"
+python = "casebench.targets.builtin.python:Target"
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.13"]

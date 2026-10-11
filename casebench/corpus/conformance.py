@@ -1,25 +1,10 @@
-"""Conformance for corpus connectors, measured as the share of required fields present.
-
-`samples/config.json` holds `{"options": {...}}` for the connector; an option value
-starting with `./` is a path relative to the samples folder.
-"""
+"""Conformance for corpus connectors, measured as the share of required fields present."""
 
 from pathlib import Path
 from typing import Any
 
 from casebench.corpus.record import REQUIRED_FIELDS
-from casebench.plugins.samples import SuiteResult, ratio, read_json
-
-
-def options_for(samples: Path) -> dict[str, Any]:
-    config = samples / "config.json"
-    options = read_json(config).get("options", {}) if config.is_file() else {}
-    return {
-        key: str((samples / value).resolve())
-        if isinstance(value, str) and value.startswith("./")
-        else value
-        for key, value in options.items()
-    }
+from casebench.plugins.samples import SuiteResult, ratio
 
 
 def check(connector: Any, samples: Path) -> SuiteResult:

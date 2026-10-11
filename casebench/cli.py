@@ -4,6 +4,7 @@ import click
 
 from casebench import __version__
 from casebench.plugins.cli import plugin
+from casebench.targets.cli import target
 
 
 @click.group()
@@ -13,3 +14,4 @@ def main() -> None:
 
 
 main.add_command(plugin)
+main.add_command(target)

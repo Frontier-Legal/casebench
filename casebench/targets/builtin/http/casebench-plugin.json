@@ -1,0 +1,5 @@
+{
+  "kind": "target",
+  "name": "http",
+  "object": "casebench.targets.builtin.http:Target"
+}

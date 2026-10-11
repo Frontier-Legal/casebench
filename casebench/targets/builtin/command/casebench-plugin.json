@@ -1,0 +1,5 @@
+{
+  "kind": "target",
+  "name": "command",
+  "object": "casebench.targets.builtin.command:Target"
+}

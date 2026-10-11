@@ -30,3 +30,5 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0014](0014-pydantic-for-the-data-model.md) | Pydantic for the data model | accepted |
 | [0015](0015-suite-and-run-log-formats.md) | Suites and run logs are JSON Lines with a manifest | accepted |
 | [0016](0016-plugin-contract.md) | Plugins: entry points, a manifest, conformance figures and explicit sources | accepted |
+| [0017](0017-target-contract.md) | A target is a Python entry point, an HTTP endpoint or a command | accepted |
+| [0018](0018-httpx-jsonpath-ng-and-pyyaml.md) | httpx, jsonpath-ng and PyYAML | accepted |

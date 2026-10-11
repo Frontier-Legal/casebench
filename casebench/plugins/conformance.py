@@ -14,7 +14,7 @@ from casebench.plugins.manifest import (
     read_manifest,
     registered_entry_point,
 )
-from casebench.plugins.samples import SuiteResult
+from casebench.plugins.samples import SuiteResult, options_for
 from casebench.providers import conformance as providers
 
 SUITES: dict[str, Callable[[Any, Path], SuiteResult]] = {
@@ -46,10 +46,11 @@ class Report:
         return f"{self.kind} {self.name}: {verdict}{measured}"
 
 
-def instantiate(kind: str, implementation: Any, samples: Path) -> Any:
-    if kind == "connector":
-        return implementation(**corpus.options_for(samples))
-    return implementation() if isinstance(implementation, type) else implementation
+def instantiate(implementation: Any, samples: Path) -> Any:
+    """Build the plugin with the options in `samples/config.json`, if it has any."""
+    if not isinstance(implementation, type):
+        return implementation
+    return implementation(**options_for(samples))
 
 
 def run(folder: Path) -> Report:
@@ -69,7 +70,7 @@ def run(folder: Path) -> Report:
 
     samples = folder / SAMPLES_DIR
     try:
-        plugin = instantiate(kind.name, load_object(folder, manifest), samples)
+        plugin = instantiate(load_object(folder, manifest), samples)
     except Exception as error:
         report.problems.append(f"loading {manifest.object}: {type(error).__name__}: {error}")
         return report

@@ -1,4 +1,8 @@
-"""Read a plugin's conformance samples, and the report every suite returns."""
+"""Read a plugin's conformance samples.
+
+`samples/config.json` holds `{"options": {...}}` for building the plugin; an option
+value starting with `./` is a path relative to the samples folder.
+"""
 
 import json
 from dataclasses import dataclass, field
@@ -26,3 +30,14 @@ def read_json(path: Path) -> Any:
 
 def ratio(passed: int, total: int) -> float | None:
     return passed / total if total else None
+
+
+def options_for(samples: Path) -> dict[str, Any]:
+    config = samples / "config.json"
+    options = read_json(config).get("options", {}) if config.is_file() else {}
+    return {
+        key: str((samples / value).resolve())
+        if isinstance(value, str) and value.startswith("./")
+        else value
+        for key, value in options.items()
+    }
