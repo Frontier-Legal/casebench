@@ -10,7 +10,7 @@ from casebench.core.score import CitationLabel
 from casebench.corpus.binding import Corpus, CorpusConfig
 from casebench.judge.client import Judge, read_json
 from casebench.judge.config import JudgeConfig
-from casebench.metrics.citation_integrity import CitationIntegrity
+from casebench.metrics.builtin.citation_integrity import CitationIntegrity
 from casebench.report.citations import citation_rates
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.rescore import rescore
