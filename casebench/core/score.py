@@ -37,6 +37,23 @@ class CriterionVerdict(FrozenRecord):
         return self.met if self.weight > 0 else not self.met
 
 
+class CitationLabel(StrEnum):
+    VERIFIED = "verified"
+    MISGROUNDED = "misgrounded"
+    FABRICATED = "fabricated"
+
+
+class CitationCheck(FrozenRecord):
+    """One citation in an answer: as written, the claim it carried, what the corpus found."""
+
+    citation: str
+    claim: str
+    label: CitationLabel
+    document_id: str | None = None
+    quote: str | None = None
+    reason: str | None = None
+
+
 class Score(FrozenRecord):
     """One metric's verdict on one output, carrying where its answer key came from."""
 
@@ -50,6 +67,7 @@ class Score(FrozenRecord):
     label: str | None = None
     explanation: str | None = None
     criteria: list[CriterionVerdict] = Field(default_factory=list)
+    citations: list[CitationCheck] = Field(default_factory=list)
     task_type: str
     reference_source: ReferenceSource
     approval: Approval
