@@ -6,7 +6,7 @@ import sys
 from collections.abc import Mapping
 from typing import Any
 
-from casebench.capture.context import record, set_worker
+from casebench.capture.context import current_traceparent, record, set_worker
 from casebench.capture.session import PROXY, PROXY_VARIABLES
 from casebench.capture.step import Step
 from casebench.core.model import Record
@@ -71,7 +71,12 @@ class Worker:
         process = self.process
         assert process is not None and process.stdin and process.stdout
         try:
-            await send(process.stdin, {"case": case_id, "inputs": dict(inputs)})
+            message = {
+                "case": case_id,
+                "inputs": dict(inputs),
+                "traceparent": current_traceparent(),
+            }
+            await send(process.stdin, message)
             reply = await read_message_async(process.stdout)
         except (BrokenPipeError, ConnectionResetError, asyncio.IncompleteReadError):
             reply = None

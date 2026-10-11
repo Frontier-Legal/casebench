@@ -6,6 +6,7 @@ import click
 
 from casebench.capture.config import routes_for
 from casebench.capture.proxy.routes import environment
+from casebench.capture.session import TRACES_ENDPOINT, traces_endpoint
 from casebench.config import DEFAULT_CONFIG, load_config
 
 
@@ -32,3 +33,4 @@ def env(config_path: Path) -> None:
         )
     for name, value in environment(routes_for(config.capture), config.capture.port).items():
         click.echo(f"{name}={value}")
+    click.echo(f"{TRACES_ENDPOINT}={traces_endpoint(config.capture.port)}")

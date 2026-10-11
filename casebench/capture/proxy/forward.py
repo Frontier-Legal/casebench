@@ -12,6 +12,7 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response, StreamingResponse
 from starlette.routing import Route as StarletteRoute
 
+from casebench.capture.otlp.decode import decode
 from casebench.capture.proxy.redact import redact_url
 from casebench.capture.proxy.routes import Route
 from casebench.capture.proxy.sse import parse_events
@@ -98,6 +99,14 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
         returned = {k: v for k, v in upstream.headers.items() if k.lower() not in NOT_RETURNED}
         return StreamingResponse(relay(), status_code=upstream.status_code, headers=returned)
 
+    async def traces(request: Request) -> Response:
+        """OTLP/HTTP trace export; an empty success reply is what exporters expect."""
+        content_type = request.headers.get("content-type", "application/x-protobuf")
+        recorder.add_spans(decode(await request.body(), content_type))
+        if "json" in content_type:
+            return Response("{}", media_type="application/json")
+        return Response(b"", media_type="application/x-protobuf")
+
     @contextlib.asynccontextmanager
     async def lifespan(_: Starlette) -> AsyncIterator[None]:
         yield
@@ -106,6 +115,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
     return Starlette(
         routes=[
+            StarletteRoute("/v1/traces", traces, methods=["POST"]),
             StarletteRoute("/w/{worker}/{route}/{path:path}", forward, methods=methods),
             StarletteRoute("/{route}/{path:path}", forward, methods=methods),
         ],

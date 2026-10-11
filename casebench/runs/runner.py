@@ -5,6 +5,7 @@ import time
 
 from casebench.capture.assemble import assemble
 from casebench.capture.context import capturing
+from casebench.capture.otlp.mapping import to_step, without_duplicates
 from casebench.capture.session import CaptureSession
 from casebench.core.case import Case
 from casebench.runs.log import Result, RunLog
@@ -28,8 +29,14 @@ async def ask(
         except Exception as failure:
             answer, error = None, f"{type(failure).__name__}: {failure}"
         latency_ms = (time.perf_counter() - started) * 1000
-    exchanges = capture.recorder.end(case.id, captured.worker) if capture else []
-    steps = assemble(exchanges, capture.parse, captured.steps) if capture else captured.steps
+    steps = captured.steps
+    if capture is not None:
+        spans = capture.recorder.take_spans(case.id)
+        exchanges = capture.recorder.end(case.id, captured.worker)
+        proxied = [step for exchange in exchanges for step in capture.parse(exchange)]
+        traced = [step for span in spans if (step := to_step(span)) is not None]
+        in_process = captured.steps + without_duplicates(traced, proxied)
+        steps = assemble(exchanges, capture.parse, in_process)
     if answer is None:
         return Result(case_id=case.id, error=error, steps=steps, latency_ms=latency_ms)
     return Result(

@@ -13,6 +13,7 @@ from casebench.capture.context import capturing
 from casebench.capture.functions import STEP_FUNCTIONS, install, specs_from_environment
 from casebench.targets.builtin.python.entry import accepted, call, load_entry
 from casebench.targets.builtin.python.framing import encode, read_message
+from casebench.targets.builtin.python.trace_context import agent_trace_context
 
 
 def _jsonable(value: Any) -> Any:
@@ -35,9 +36,9 @@ def main(entry: str) -> None:
     while (message := read_message(sys.stdin.buffer)) is not None:
         with capturing(message.get("case", "")) as captured:
             try:
-                value = loop.run_until_complete(
-                    call(function, accepted(function, message["inputs"]))
-                )
+                kwargs = accepted(function, message["inputs"])
+                with agent_trace_context(message.get("traceparent")):
+                    value = loop.run_until_complete(call(function, kwargs))
                 reply: dict[str, Any] = {"value": _jsonable(value)}
             except Exception as error:
                 reply = {"error": f"{type(error).__name__}: {error}"}

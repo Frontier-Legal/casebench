@@ -105,7 +105,8 @@ def run(
     if not no_capture:
         port = config.capture.port if config.capture else 0
         functions = config.capture.functions if config.capture else []
-        capture = CaptureSession(routes_for(config.capture), port, functions)
+        traces = config.capture.traces if config.capture else False
+        capture = CaptureSession(routes_for(config.capture), port, functions, traces)
     log = _log(
         runs_dir,
         run_id,

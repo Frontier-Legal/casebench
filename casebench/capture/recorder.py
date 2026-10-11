@@ -3,6 +3,7 @@
 import secrets
 import threading
 
+from casebench.capture.otlp.decode import RawSpan
 from casebench.capture.step import HttpExchange
 
 
@@ -25,7 +26,9 @@ class Recorder:
         self._active: list[str] = []
         self._exchanges: dict[str, list[HttpExchange]] = {}
         self._by_worker: dict[str, list[HttpExchange]] = {}
+        self._spans: dict[str, list[RawSpan]] = {}
         self.unattributed: list[HttpExchange] = []
+        self.unattributed_spans: list[RawSpan] = []
 
     def begin(self, case_id: str) -> str:
         """Start a case and return the `traceparent` to send the agent."""
@@ -34,6 +37,7 @@ class Recorder:
             self._trace_to_case[trace_id] = case_id
             self._active.append(case_id)
             self._exchanges[case_id] = []
+            self._spans[case_id] = []
         return f"00-{trace_id}-{span_id}-01"
 
     def end(self, case_id: str, worker: str | None = None) -> list[HttpExchange]:
@@ -60,3 +64,19 @@ class Recorder:
                 self._exchanges[case_id].append(exchange)
             else:
                 self.unattributed.append(exchange)
+
+    def add_spans(self, spans: list[RawSpan]) -> None:
+        """Spans join the case whose trace they carry, or the only case running."""
+        with self._lock:
+            for span in spans:
+                case_id = self._trace_to_case.get(span.trace_id)
+                if case_id is None and len(self._active) == 1:
+                    case_id = self._active[0]
+                if case_id is not None and case_id in self._spans:
+                    self._spans[case_id].append(span)
+                else:
+                    self.unattributed_spans.append(span)
+
+    def take_spans(self, case_id: str) -> list[RawSpan]:
+        with self._lock:
+            return self._spans.pop(case_id, [])
