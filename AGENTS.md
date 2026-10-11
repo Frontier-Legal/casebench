@@ -5,7 +5,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 ## Layout
 
 - `casebench/` is the core package: the evaluation case model, runners, metrics, the command line and the local workbench. It contains no country-specific logic.
-- A jurisdiction ships as its own package named `casebench-<country>`, with the adapter interface and conformance tests defined in the core.
+- Jurisdiction adapters, corpus connectors, capture parsers and model providers are plugins, discovered through entry points, each kind with an interface and a conformance suite defined in the core. A third-party plugin is its own package named `casebench-<name>`, and the core imports none by name.
 - Anything that serves several users at once (accounts, roles, audit) lives under `ee/`, which carries its own licence. Everything else is Apache-2.0. `LICENSE` names the boundary.
 
 ## Rules
