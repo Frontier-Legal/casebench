@@ -6,12 +6,14 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 
 - `casebench/` is the core package: the evaluation case model, runners, metrics, the command line and the local workbench. It contains no country-specific logic.
 - Jurisdiction adapters, corpus connectors, capture parsers and model providers are plugins, discovered through entry points, each kind with an interface and a conformance suite defined in the core. A third-party plugin is its own package named `casebench-<name>`, and the core imports none by name.
+- First-party plugins that ship as their own distribution, such as the Türkiye adapter `casebench-tr`, are uv workspace members under `packages/`.
+- `docs/design/` describes the system; `docs/decisions/` records why, one MADR file per decision.
 - Anything that serves several users at once (accounts, roles, audit) lives under `ee/`, which carries its own licence. Everything else is Apache-2.0. `LICENSE` names the boundary.
 
 ## Rules
 
 1. One file has one job and stays under 400 lines.
-2. A change to behaviour arrives with a test that fails before the change and passes after it. Name the test after what a user would notice.
+2. A change to behaviour arrives with a test that fails before the change and passes after it. Name the test after what a user would notice. A behaviour written as a scenario gets exactly one test named after that scenario.
 3. No magic numbers. A budget, limit or timeout is derived from a documented contract or from a measurement, and the decision record says which, with the date.
 4. Identifiers are English. Other languages appear only in user-facing strings and test fixtures.
 5. Nothing leaves the user's machine except calls to the system under test and the judge the user configured. There is no telemetry.
