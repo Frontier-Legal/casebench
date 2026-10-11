@@ -23,6 +23,7 @@ dependencies = [
     "click>=8.5.0",
     "httpx2>=2.13.1",
     "jsonpath-ng>=1.10.0",
+    "mcp>=2.3.0",
     "opentelemetry-proto>=1.45.1",
     "pydantic>=2.14.0",
     "pyyaml>=6.0.3",
@@ -45,6 +46,8 @@ openai = "casebench.capture.parsers.openai:Parser"
 
 [project.entry-points."casebench.corpus"]
 folder = "casebench.corpus.connectors.folder:Connector"
+http = "casebench.corpus.connectors.http:Connector"
+mcp = "casebench.corpus.connectors.mcp:Connector"
 
 [project.entry-points."casebench.targets"]
 command = "casebench.targets.builtin.command:Target"
