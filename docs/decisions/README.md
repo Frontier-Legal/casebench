@@ -36,3 +36,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0020](0020-python-process-wrapper.md) | Python agents run in worker processes, one per parallel slot | accepted |
 | [0021](0021-httpx2.md) | httpx2 for Casebench's own HTTP calls | accepted |
 | [0022](0022-config-named-functions.md) | A function named in the config is wrapped when the agent's process starts | accepted |
+| [0023](0023-otlp-trace-intake.md) | Traces a team already emits are received over OTLP and joined to cases | accepted |
