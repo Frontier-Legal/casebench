@@ -47,6 +47,5 @@ A common agent shape fits none of the three (a websocket chat, say), or users as
 
 ## More information
 
-- [MLflow `predict_fn` convention](https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/): inputs passed as keyword arguments.
 - [Python `contextvars`](https://docs.python.org/3/library/contextvars.html): asyncio copies the context into each task and into `asyncio.to_thread`.
 - [RFC 9535, JSONPath](https://www.rfc-editor.org/rfc/rfc9535)

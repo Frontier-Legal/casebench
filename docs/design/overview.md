@@ -12,10 +12,10 @@
 
 Legal AI vendors and the firms that buy or build legal AI cannot say how often it gets the law wrong.
 
-- Leading tools still do. Stanford RegLab measured Lexis+ AI hallucinating on 17% of queries and Westlaw AI-Assisted Research on 33% ([RegLab](https://reglab.stanford.edu/publications/hallucination-free-assessing-the-reliability-of-leading-ai-legal-research-tools/)). HAQQ graded 3,000 answers and found 24% cited law that does not say what the model claimed ([HAQQ](https://www.haqq.ai/blog/best-ai-for-legal-work-benchmark)).
-- Generic eval tools (Langfuse, LangSmith, Braintrust) store traces and run LLM judges. Their answer keys come from an LLM or from the user, and in legal work "from the user" means lawyer hours.
-- Public legal benchmarks are fixed sets, mostly English and US-centred (LegalBench, Harvey LAB). Models may have trained on them, and they say nothing about Turkish, French or Brazilian law. We found no Turkish legal QA benchmark ([HukukBERT paper](https://arxiv.org/html/2604.04790v1)).
-- The rigorous legal evaluations are closed: Vals AI, Thomson Reuters' use of Scorecard, Legora BAR. A small vendor, or a firm building on GPT or Claude, cannot run them on its own corpus.
+- Leading tools still do. Stanford RegLab measured two leading commercial legal research tools hallucinating on 17% and 33% of queries ([RegLab](https://reglab.stanford.edu/publications/hallucination-free-assessing-the-reliability-of-leading-ai-legal-research-tools/)).
+- Generic eval tools store traces and run LLM judges. Their answer keys come from an LLM or from the user, and in legal work "from the user" means lawyer hours.
+- Public legal benchmarks are fixed sets, mostly English and US-centred. Models may have trained on them, and they say nothing about Turkish, French or Brazilian law. We found no Turkish legal QA benchmark ([HukukBERT paper](https://arxiv.org/html/2604.04790v1)).
+- The rigorous legal evaluations are closed, run by vendors or for them. A small vendor, or a firm building on GPT or Claude, cannot run them on its own corpus.
 - Buyers now ask for evidence, and vendors answer with self-run benchmarks that nobody else can reproduce.
 
 ## The insight
@@ -34,7 +34,7 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 
 ## Non-goals
 
-- A tracing or observability platform for production. Casebench keeps only the traces that explain eval results, shown per model call and tool call in the harness view. It needs no Langfuse, LangSmith or Inspect, and can export to them.
+- A tracing or observability platform for production. Casebench keeps only the traces that explain eval results, shown per model call and tool call in the harness view. It needs no other tracing or eval tool, and can export to them.
 - Grading drafting, editing or advice without an evidenced reference. Court records do not label those; a lawyer-authored reference can.
 - Shipping any corpus. Users bring their own data, Türkiye included.
 - A leaderboard. The project publishes no rankings of products.

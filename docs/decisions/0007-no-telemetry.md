@@ -8,7 +8,7 @@ decision-makers: Casebench maintainers
 
 ## Context and problem statement
 
-Casebench runs next to privileged client data: decisions, matter facts, a firm's agent and its API keys. Firm security reviews check what a tool sends home before approving it. Two comparable open-source eval tools have open issues from users objecting to their usage telemetry.
+Casebench runs next to privileged client data: decisions, matter facts, a firm's agent and its API keys. Firm security reviews check what a tool sends home before approving it.
 
 ## Considered options
 
@@ -30,8 +30,3 @@ Nothing leaves the user's machines except calls to the system under test and the
 ## Revisit when
 
 Never by default. Only if users themselves ask for an opt-in registry of runs, and then as a separate, explicit command.
-
-## More information
-
-- [promptfoo issue on telemetry](https://github.com/promptfoo/promptfoo/issues/9968)
-- [DeepEval issue on telemetry](https://github.com/confident-ai/deepeval/issues/2497)

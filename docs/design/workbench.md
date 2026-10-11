@@ -3,7 +3,7 @@
 ## Summary
 
 - Lawyers on legal AI teams use Casebench directly in a browser: write and approve golden data, try questions against the team's agent, review answers beside the evidence, overrule the judge, compare runs, export a partner report.
-- Standalone. Casebench stores its own cases, runs, eval traces and reviews. Langfuse, LangSmith or anything else is optional export, never required.
+- Standalone. Casebench stores its own cases, runs, eval traces and reviews. Any other tool is optional export, never required.
 - One app, three places. `casebench ui` runs locally with no login and a SQLite file. Casebench Cloud is the same app as a hosted service, reached from an email invite. The same image self-hosts for firms that cannot push. The cloud and the team server store and show; the runner on the engineer's machine computes every score ([decision 0005](../decisions/0005-cloud-never-computes-a-score.md)).
 - A lawyer's first session is a queue, never an empty case editor: answers to review with the judge's verdict pre-filled, one key per verdict. Writing cases comes after, in the workbench or in a spreadsheet.
 - Not an observability platform. No production dashboards, cost analytics or prompt management. Traces exist only to explain eval results.
@@ -23,13 +23,7 @@
 
 | Evidence | Source |
 |---|---|
-| Legal AI teams now hire people to "own the golden data" and write "gold-standard legal answers" | DiliTrust and Legora job ads, 2026-09-30 |
-| Lawyers grade with atomic, binary, weighted rubric items; a task passes only if every criterion passes | [Legora BAR](https://legora.com/bar), [Harvey LAB](https://www.harvey.ai/blog/introducing-harveys-legal-agent-benchmark) |
-| Lawyers compare two outputs blind and must write a reason; 3 to 10 lawyers per pair | [Harvey BLB Arena](https://www.harvey.ai/blog/introducing-biglaw-bench-arena), [Orbital](https://tech.orbitalwitness.com/posts/2025-18-12-real-world-blind-evals/) |
-| Gold annotations get a second approver ("four-eye" review) | [Robin AI](https://robinai.com/news-and-resources/blog/earning-your-confidence-evaluations-at-robin) |
-| Domain experts "shouldn't need to understand trace structures"; keyboard-first, auto-advance | [Langfuse](https://langfuse.com/blog/2025-11-25-vibe-coding-custom-annotation-ui) |
 | A custom annotation tool is "the single most impactful investment" in an eval workflow | [Hamel Husain](https://hamel.dev/blog/posts/evals-faq/should-i-build-a-custom-annotation-tool-or-use-something-off-the-shelf.html) |
-| Nobody publishes a lawyer grading UI; Legora engineers work with evals "purely through agents" | [Legora engineering](https://legora.com/engineering/building-scalable-evals-infrastructure-for-legal-agents) |
 
 ## Screens (v1)
 
@@ -48,7 +42,7 @@
 
 ## Interaction rules
 
-- Keyboard first: 1 to 9 picks a label, A/B/E for compare, Cmd+Enter completes and advances, ? lists shortcuts (the Langfuse and LangSmith queue pattern).
+- Keyboard first: 1 to 9 picks a label, A/B/E for compare, Cmd+Enter completes and advances, ? lists shortcuts.
 - Binary criteria with weights, never Likert scales. A judge's suggestion is pre-filled and marked, and a human decision always wins.
 - Blind mode for compare and multi-reviewer items: reviewers do not see each other's or the judge's verdict until they submit.
 - A lawyer can reserve items while working on them; drafts save automatically.
@@ -64,7 +58,7 @@
 | Reviewer (lawyer) | review answers, overrule judges, compare runs, try questions |
 | Viewer | read results and reports |
 
-- Every change to golden data and every overruled verdict is an append-only event: who, when, before, after, reason. Scores keep their history, the Inspect `edit_score` provenance pattern ([Inspect](https://inspect.aisi.org.uk/reference/inspect_ai.log.html)).
+- Every change to golden data and every overruled verdict is an append-only event: who, when, before, after, reason. Scores keep their history.
 - Golden data takes effect only after a second editor approves it.
 - The report states who approved the golden data it was scored against.
 - No regulation we found requires this for eval data. It follows from lawyers' duties of competence and supervision (ABA Opinion 512) and is what firms will ask.
@@ -74,7 +68,7 @@
 | Part | Choice |
 |---|---|
 | Backend | FastAPI inside the `casebench` package; the same service layer the Python SDK and CLI use |
-| Frontend | React + Vite + TypeScript, built into a static bundle shipped inside the wheel (target under 10 MB; Phoenix's wheel is 7.9 MB) |
+| Frontend | React + Vite + TypeScript, built into a static bundle shipped inside the wheel (target under 10 MB) |
 | Storage | SQLAlchemy + Alembic; SQLite at `./.casebench/casebench.db` by default, never a temp folder; Postgres by URL for teams |
 | Files | cases, runs and reviews export to and import from JSONL, so a suite can live in Git and be diffed |
 | Traces | OTLP receiver and SDK spans stored per run in the same database; kept only for eval runs |
@@ -85,7 +79,7 @@
 | Spreadsheet review | `casebench export --review` writes an XLSX with answer, evidence links and verdict columns; lawyers fill it; `casebench import` merges the verdicts as reviews. The lawyer path when there is no server and no cloud |
 | Model calls | only through targets and the judge the admin configured, with per-user and per-day spend limits |
 
-The same package serves local, team and cloud use, the Phoenix pattern. Review, overrule, compare and agreement are in the Apache-2.0 core and work locally with no login. The multi-user layer (roles, SSO, audit, invites) is in `ee/`, free to self-host for your own organisation ([open-source.md](open-source.md)).
+The same package serves local, team and cloud use. Review, overrule, compare and agreement are in the Apache-2.0 core and work locally with no login. The multi-user layer (roles, SSO, audit, invites) is in `ee/`, free to self-host for your own organisation ([open-source.md](open-source.md)).
 
 ## What it will not become
 

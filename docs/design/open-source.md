@@ -29,7 +29,7 @@ Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT
 | Quality gates | pre-commit, ruff, pyright, pytest on Linux, macOS and Windows |
 | Publish | [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) through `pypa/gh-action-pypi-publish`, which [attests by default](https://docs.pypi.org/attestations/producing-attestations/); build and publish in separate jobs; `id-token: write` only on publish. `uv publish` alone does not generate attestations |
 | Later | [immutable releases](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases), SBOM in the wheel ([PEP 770](https://peps.python.org/pep-0770/)), SLSA provenance |
-| Plugins | [entry points](https://packaging.python.org/en/latest/specifications/entry-points/) per plugin kind ([architecture.md](architecture.md)), the [pytest](https://docs.pytest.org/en/stable/how-to/writing_plugins.html) and [Inspect](https://inspect.aisi.org.uk/extensions.html) pattern; `casebench-<name>` naming for third-party packages, built-in jurisdictions inside the core ([decision 0013](../decisions/0013-built-in-jurisdictions-load-on-demand.md)); `casebench plugin new` scaffolds a kind and `casebench plugin test` runs its conformance suite |
+| Plugins | [entry points](https://packaging.python.org/en/latest/specifications/entry-points/) per plugin kind ([architecture.md](architecture.md)), the [pytest](https://docs.pytest.org/en/stable/how-to/writing_plugins.html) pattern; `casebench-<name>` naming for third-party packages, built-in jurisdictions inside the core ([decision 0013](../decisions/0013-built-in-jurisdictions-load-on-demand.md)); `casebench plugin new` scaffolds a kind and `casebench plugin test` runs its conformance suite |
 
 ## First-run path
 
@@ -41,7 +41,7 @@ Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT
 | 10 | `casebench ui` | the workbench: failures beside evidence, ready for a lawyer to review; the harness waterfall and the authority funnel for engineers |
 | 15 | `casebench push`, then `casebench invite ayse@firm.com --role reviewer` | the run and its cases are in Casebench Cloud; the lawyer gets an email naming the items and the time they take, logs in from the link, Microsoft or Google, and lands in the queue; `casebench pull` later brings approvals back for CI |
 | 20 | `casebench export --review` | the same review as an XLSX for a lawyer with no login and no cloud; `casebench import` merges their verdicts |
-| later | GitHub Action | a PR comment with per-metric before/after and significance, the pattern of [promptfoo's action](https://www.promptfoo.dev/docs/integrations/github-action/) |
+| later | GitHub Action | a PR comment with per-metric before/after and significance |
 
 Choices behind it:
 
@@ -49,13 +49,12 @@ Choices behind it:
 - **Lawyers never touch YAML.** `casebench template lawyer --task qa|drafting|editing` writes an XLSX/CSV with columns for facts, question, reference answer, key points, weights and authorities; `casebench import` turns it into cases. Firms' ground truth lives in spreadsheets and Word files already. The same shape carries reviews back (`casebench export --review`), so a lawyer with no login still takes part.
 - **YAML and Python are equal citizens.** Config is YAML with a published JSON Schema; the same objects are importable in Python and in pytest.
 - **One app for engineers and lawyers.** `casebench ui` binds to 127.0.0.1 with no login. The same app is Casebench Cloud, and self-hosts as a team server for firms that cannot push ([workbench.md](workbench.md)). A static report export covers sharing with people who have no access.
-- Later, an MCP server so coding agents can run suites ([promptfoo mcp](https://www.promptfoo.dev/docs/integrations/mcp-server/) precedent), and notebook display helpers.
-- Maintainers of comparable tools publish adoption numbers, not causes ([Langfuse](https://langfuse.com/handbook/chapters/open-source) credits self-hosting and no lock-in). The path above is inference from their patterns, to be measured by the R1 gate ([releases.md](releases.md)).
+- Later, an MCP server so coding agents can run suites, and notebook display helpers.
 
 ## Data interoperability
 
 - Suites: JSONL, one case per line, stable `id`; publishable to the Hugging Face Hub with a [dataset card](https://huggingface.co/docs/hub/datasets-cards) (Croissant metadata comes free).
-- Run logs: a versioned JSON format with a published schema, as [`inspect log schema`](https://inspect.aisi.org.uk/eval-logs.html) does. Exporter to [Every Eval Ever](https://github.com/evaleval/every_eval_ever) later.
+- Run logs: a versioned JSON format with a published schema. Exporter to [Every Eval Ever](https://github.com/evaleval/every_eval_ever) later.
 
 ## Security rules
 
@@ -64,6 +63,6 @@ Choices behind it:
 | API keys | read from environment or keyring only; never written to config, logs or run logs; auth headers redacted |
 | Untrusted model output | never `eval`, `exec` or unpickle outputs; `yaml.safe_load` only; the viewer HTML-escapes everything under a strict CSP ([OWASP LLM05](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)) |
 | Egress | per-target host allowlist; cross-host redirects refused; default timeouts |
-| Custom Python metrics | run in-process at R1 with a warning; container sandbox with no network later ([Inspect sandboxing](https://inspect.aisi.org.uk/sandboxing.html)) |
+| Custom Python metrics | run in-process at R1 with a warning; container sandbox with no network later |
 | Team server and cloud | no default password; first admin set at setup; OIDC for firm SSO; API keys for CI; the cloud isolates tenants per organisation and holds only what push sends ([workbench.md](workbench.md)) |
-| Telemetry | none in v0.x ([decision 0007](../decisions/0007-no-telemetry.md)). [promptfoo](https://github.com/promptfoo/promptfoo/issues/9968) and [DeepEval](https://github.com/confident-ai/deepeval/issues/2497) both have open issues over theirs, and firm security reviews check for it |
+| Telemetry | none in v0.x ([decision 0007](../decisions/0007-no-telemetry.md)); firm security reviews check for it |

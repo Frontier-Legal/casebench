@@ -17,7 +17,7 @@
                     scorers: exact · citation · version · reference judge
                                          │
                                          v
-                    report (HTML, JSON) · CI gate · exports (Langfuse, LangSmith, Inspect)
+                    report (HTML, JSON) · CI gate · exports (other tools, through exporter plugins)
 ```
 
 | Component | Does | Reads | Writes |
@@ -30,7 +30,7 @@
 | Runner | runs tests with concurrency and rate limits, persists each result before the next | suite, target connector | `results.jsonl` |
 | Scorers | score each result by the method its test type names | results, answer keys, corpus | scores and error labels |
 | Reporter | builds the report, baselines and confidence intervals | scores | `report.html`, `report.json` |
-| Exporters | write tests and scores into other tools | scores | Langfuse, LangSmith or Inspect records |
+| Exporters | write tests and scores into other tools | scores | records in the other tool's format |
 
 ## Two connections, never one
 

@@ -37,7 +37,7 @@
 | `extraction` | a document + field schema | structured fields | per-field exact or normalised match |
 | `citation_check` | an answer with citations | verdict per citation | agreement with Casebench's own resolution |
 
-A task type is a small declarative spec (input schema, output parser, default metrics), in the spirit of [lm-eval-harness task YAML](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/new_task_guide.md) and [Inspect's Task = Dataset + Solver + Scorer](https://inspect.aisi.org.uk/scorers.html).
+A task type is a small declarative spec (input schema, output parser, default metrics).
 
 ## Case examples
 
@@ -88,7 +88,7 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 | Judge | one provider interface, user's own key; always given the case's evidence, never asked to judge from memory |
 | Report | a table per task × metric with n, confidence interval and baseline; filterable by reference source and tag; no overall score |
 | Workbench | `casebench ui`: the lawyer-facing web app for golden data, answer review, judge overrule, run compare and reports; local or team server ([workbench.md](workbench.md)) |
-| Exporters | Langfuse, LangSmith and Inspect logs; OTel `gen_ai.evaluation.result` events back into the user's traces |
+| Exporters | other evaluation and tracing tools, as plugins; OTel `gen_ai.evaluation.result` events back into the user's traces |
 
 ## Package and plugin layout
 
@@ -107,7 +107,7 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 | `casebench.server`, `casebench.ui` | FastAPI service + bundled React app; SQLite by default, Postgres for teams; the local single-user mode is Apache-2.0, the multi-user layer (roles, SSO, audit, invites, the push/pull server side) lives in `ee/` ([open-source.md](open-source.md)) |
 | `casebench.pytest` | `@pytest.mark.casebench(suite=...)`; stable case ids, `git_sha` recorded, exit code is the CI gate |
 
-Third parties publish `casebench-<name>` packages that register entry points in the groups above (the pytest and Inspect plugin model). Framework code never imports a jurisdiction; the registry loads one by the name in the config.
+Third parties publish `casebench-<name>` packages that register entry points in the groups above (the pytest plugin model). Framework code never imports a jurisdiction; the registry loads one by the name in the config.
 
 ## Boundaries that keep it trustworthy
 

@@ -14,7 +14,7 @@ Some harnesses already export OpenTelemetry spans, with the GenAI conventions or
 
 - An OTLP/HTTP receiver at `/v1/traces` on the Casebench process, protobuf and JSON, mapped by a small normaliser
 - An OpenTelemetry Collector the user runs, exporting to a file Casebench reads
-- Importing from Langfuse or LangSmith after the run
+- Importing from a tracing platform after the run
 
 ## Decision outcome
 
