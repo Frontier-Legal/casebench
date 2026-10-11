@@ -26,7 +26,9 @@ Chosen option: "pre-commit locally and the same tools in CI, pinned by SHA", bec
 - Every action is pinned by full commit SHA, with the version in a comment; Dependabot updates the pins and the uv lockfile weekly.
 - CodeQL is the static analysis; the Scorecard action runs weekly and on `main`.
 - Each pull request's commits are checked for a `Signed-off-by` trailer (DCO).
-- `main` takes changes only through pull requests with one review and green CI, and push protection refuses secrets. Those are repository settings; `.github/rulesets/main.json` holds the ruleset so it is reviewable.
+- `main` takes changes only through pull requests with green CI, and push protection refuses secrets. Those are repository settings; `.github/rulesets/main.json` holds the ruleset so it is reviewable.
+- While the project has one maintainer, the ruleset requires no approving review: GitHub never lets the author of a pull request approve it, so a required review would block every merge. The count goes to 1, with code-owner review, when a second maintainer joins.
+- Pull requests opened by `GITHUB_TOKEN`, such as the release pull request, do not trigger other workflows. A maintainer closes and reopens the release pull request to run CI on it.
 
 ### Consequences
 
@@ -35,7 +37,7 @@ Chosen option: "pre-commit locally and the same tools in CI, pinned by SHA", bec
 
 ## Revisit when
 
-The free concurrency limits slow pull requests noticeably, or a check produces more noise than findings.
+A second maintainer joins (raise the review count), the free concurrency limits slow pull requests noticeably, or a check produces more noise than findings.
 
 ## More information
 

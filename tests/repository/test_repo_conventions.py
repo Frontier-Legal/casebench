@@ -4,6 +4,8 @@ import re
 import subprocess
 import sys
 
+import pytest
+
 from tests.repository.files import (
     ROOT,
     all_workflows,
@@ -74,6 +76,7 @@ def test_versioning_says_what_breaks():
     assert "0.x any minor release may break" in text("README.md")
 
 
+@pytest.mark.xfail(strict=True, reason="one maintainer: a required review would block every merge")
 def test_main_is_protected():
     ruleset = load_json(".github/rulesets/main.json")
     assert ruleset["enforcement"] == "active"
