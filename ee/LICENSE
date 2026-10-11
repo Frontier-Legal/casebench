@@ -1,0 +1,12 @@
+Casebench team server licence
+
+No code is published under this directory yet.
+
+Code under ee/ will be source-available, not Apache-2.0: free for any
+organisation to run for itself, and not to be offered to third parties as a
+service. The full licence text will be added here, reviewed by counsel,
+before the first file under ee/ is published. Contributions to ee/ will
+require a contributor licence agreement.
+
+Everything outside ee/ is licensed under the Apache License, Version 2.0, as
+stated in the LICENSE file at the root of this repository.
