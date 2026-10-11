@@ -7,7 +7,11 @@ from casebench.capture.step import HttpExchange, Step
 
 @runtime_checkable
 class CaptureParser(Protocol):
-    """Turns one backend's HTTP exchanges into normalised steps."""
+    """Turns one backend's HTTP exchanges into normalised steps.
+
+    A parser may also list `packages`: the SDKs whose calls it reads, as their package
+    registries spell them, so `casebench init` can name the SDKs it finds in a project.
+    """
 
     @property
     def hosts(self) -> list[str]:

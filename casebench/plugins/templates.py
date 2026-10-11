@@ -34,6 +34,7 @@ class Connector:
 
 class Parser:
     hosts = ["api.{name}.example"]
+    packages = ["{name}"]  # the SDK packages whose calls it reads
 
     def parse(self, exchange: HttpExchange) -> list[Step]:
         raise NotImplementedError("turn one exchange into steps")

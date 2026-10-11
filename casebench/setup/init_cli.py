@@ -1,0 +1,158 @@
+"""`casebench init`: ask for the target, the corpus and the judge, and write casebench.yaml."""
+
+from pathlib import Path
+from typing import Any
+
+import click
+import yaml
+
+from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
+from casebench.corpus.add_cli import add
+from casebench.plugins import registry
+from casebench.plugins.kinds import kind_named
+from casebench.setup.checks import Status, live, offline, unreachable
+from casebench.setup.sdks import detect
+
+HEADER = (
+    "# Written by casebench init. It holds no secrets: API keys are read from the\n"
+    "# environment variables named here, so this file can be committed and deployed.\n"
+)
+
+
+def _ask(given: str | None, label: str, default: str | None = None) -> str:
+    return given if given is not None else click.prompt(label, default=default)
+
+
+def _sdks(checkout: Path) -> list[str]:
+    found = detect(checkout)
+    if not found:
+        return ["no SDK a parser reads; the proxy still records calls to the routes it knows"]
+    return [f"{package}: read by the {parser} parser" for package, parser in found.items()]
+
+
+def _target(kind: str, entry: str | None, run: str | None, url: str | None) -> dict[str, Any]:
+    if kind == "python":
+        return {"type": "python", "entry": _ask(entry, "the agent's function, as path.py:function")}
+    if kind == "command":
+        return {"type": "command", "run": _ask(run, "the command, with {question} where it goes")}
+    return {
+        "type": "http",
+        "url": _ask(url, "the agent's endpoint"),
+        "body": yaml.safe_load(click.prompt("the request body, as JSON with {question}")),
+        "answer": click.prompt("JSONPath to the answer in the response"),
+    }
+
+
+def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
+    """NAME=VALUE pairs; each value read as YAML, so numbers stay numbers."""
+    options = {}
+    for pair in pairs:
+        name, sep, value = pair.partition("=")
+        if not sep:
+            raise click.BadParameter(f"{pair!r} must look like NAME=VALUE")
+        options[name] = yaml.safe_load(value)
+    return options
+
+
+def _judge(provider: str | None, model: str | None, options: tuple[str, ...]) -> dict[str, Any]:
+    names = sorted({p.name for p in registry.available(kind_named("provider"))})
+    chosen = provider or click.prompt("the judge's provider", type=click.Choice(names))
+    asked = options
+    if not options and provider is None:
+        typed = click.prompt("its options as NAME=VALUE, comma-separated", default="")
+        asked = tuple(part.strip() for part in typed.split(",") if part.strip())
+    return {
+        "provider": chosen,
+        "model": _ask(model, "the judge's model"),
+        "options": _options(asked),
+    }
+
+
+def _add_corpus(kind: str, config_path: Path) -> str:
+    """An HTTP or MCP store is described from one live search and fetch (decision 0025)."""
+    later = f"run `casebench corpus add {kind}` where the store is reachable"
+    try:
+        add.commands[kind].main(
+            ["--config", str(config_path)],
+            prog_name=f"casebench corpus add {kind}",
+            standalone_mode=False,
+        )
+    except Exception as error:
+        if unreachable(error):
+            return f"corpus   {Status.UNREACHABLE.value}: {later}"
+        raise click.ClickException(f"corpus: {error}") from error
+    return "corpus   added"
+
+
+@click.command(name="init")
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=DEFAULT_CONFIG,
+    show_default=True,
+)
+@click.option("--target", "target_kind", type=click.Choice(["python", "command", "http"]))
+@click.option("--entry", help="A Python target's function, as path.py:function.")
+@click.option("--run", "run_line", help="A command target's command line.")
+@click.option("--url", help="An HTTP target's endpoint.")
+@click.option("--corpus", "corpus_kind", type=click.Choice(["folder", "http", "mcp", "none"]))
+@click.option("--corpus-path", help="A folder corpus's path.")
+@click.option("--judge-provider")
+@click.option("--judge-model")
+@click.option("--judge-option", "judge_options", multiple=True, help="NAME=VALUE.")
+@click.option("--no-judge", is_flag=True, help="Set no judge; outcome suites need none.")
+@click.option("--no-live", is_flag=True, help="Only the checks that need no network.")
+def init_command(
+    config_path: Path,
+    target_kind: str | None,
+    entry: str | None,
+    run_line: str | None,
+    url: str | None,
+    corpus_kind: str | None,
+    corpus_path: str | None,
+    judge_provider: str | None,
+    judge_model: str | None,
+    judge_options: tuple[str, ...],
+    no_judge: bool,
+    no_live: bool,
+) -> None:
+    """Set Casebench up for the agent in this folder."""
+    if config_path.exists():
+        raise click.ClickException(f"{config_path} exists already; edit it or remove it first")
+    for line in _sdks(config_path.resolve().parent):
+        click.echo(f"found    {line}")
+    kind = target_kind or click.prompt(
+        "how Casebench reaches the agent", type=click.Choice(["python", "command", "http"])
+    )
+    data: dict[str, Any] = {"target": _target(kind, entry, run_line, url)}
+    where = corpus_kind or click.prompt(
+        "where the corpus is", type=click.Choice(["folder", "http", "mcp", "none"])
+    )
+    if where == "folder":
+        path = _ask(corpus_path, "the folder")
+        data["corpus"] = {"connector": "folder", "options": {"path": path}}
+    if not no_judge:
+        data["judge"] = _judge(judge_provider, judge_model, judge_options)
+    config_path.write_text(
+        HEADER + yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
+    try:
+        problems = offline(load_config(config_path))
+    except ConfigError as error:
+        config_path.unlink()
+        raise click.ClickException(str(error)) from error
+    if problems:
+        config_path.unlink()
+        raise click.ClickException("; ".join(p.line() for p in problems))
+    click.echo(f"wrote    {config_path}")
+    if where in ("http", "mcp"):
+        click.echo(_add_corpus(where, config_path))
+    if no_live:
+        click.echo("run `casebench check` where the corpus, the target and the judge are reachable")
+        return
+    checks = live(load_config(config_path))
+    for item in checks:
+        click.echo(item.line())
+    if any(item.status is not Status.PASSED for item in checks):
+        click.echo("run `casebench check` where the rest is reachable, before `casebench run`")

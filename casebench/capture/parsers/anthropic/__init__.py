@@ -54,6 +54,7 @@ def _from_events(events: list[Any]) -> tuple[str | None, int | None, int | None,
 
 class Parser:
     hosts: ClassVar[list[str]] = ["api.anthropic.com"]
+    packages: ClassVar[list[str]] = ["anthropic", "@anthropic-ai/sdk"]
     default_route: ClassVar[dict[str, str]] = {
         "name": "anthropic",
         "upstream": "https://api.anthropic.com",

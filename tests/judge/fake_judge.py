@@ -39,6 +39,8 @@ def reply(system: str, user: str) -> object:
         document_id = re.search(r"Document (\S+) ", user).group(1)  # type: ignore[union-attr]
         quote = SUPPORTING.get(document_id)
         return {"supports": quote is not None, "quote": quote, "reason": "read the document"}
+    if system == "Reply with JSON only.":
+        return {"ok": True}
     raise AssertionError(f"unexpected judge prompt: {system[:40]}")
 
 

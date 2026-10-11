@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 from casebench.capture.backend import backend_step
+from casebench.capture.config import CaptureConfig, routes_for
 from casebench.capture.functions import STEP_FUNCTIONS, StepFunction
 from casebench.capture.interface import CaptureParser
 from casebench.capture.proxy.forward import make_app
@@ -92,3 +93,10 @@ class CaptureSession:
         if self.server is not None:
             await self.server.stop()
             self.server = None
+
+
+def session_for(capture: CaptureConfig | None) -> CaptureSession:
+    """The session the config's `capture:` section describes, or the defaults without one."""
+    if capture is None:
+        return CaptureSession(routes_for(None))
+    return CaptureSession(routes_for(capture), capture.port, capture.functions, capture.traces)

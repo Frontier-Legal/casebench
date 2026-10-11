@@ -8,8 +8,7 @@ from typing import Any
 
 import click
 
-from casebench.capture.config import routes_for
-from casebench.capture.session import CaptureSession
+from casebench.capture.session import session_for
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, target_of
 from casebench.metrics.loading import MetricNeeds
 from casebench.report import render
@@ -125,12 +124,7 @@ def run(
     target_config = target_of(config)
     target = target_from_config(target_config)
     concurrency = max_concurrency or int(target_config.get("max_concurrency", 1))
-    capture = None
-    if not no_capture:
-        port = config.capture.port if config.capture else 0
-        functions = config.capture.functions if config.capture else []
-        traces = config.capture.traces if config.capture else False
-        capture = CaptureSession(routes_for(config.capture), port, functions, traces)
+    capture = None if no_capture else session_for(config.capture)
     log = _log(
         runs_dir,
         run_id,
