@@ -28,4 +28,5 @@ reply = post(
         "messages": [{"role": "user", "content": f"{question}\n\nDocuments:\n{context}"}],
     },
 )
+sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]  # read as UTF-8 on Windows too
 print(reply["content"][0]["text"])
