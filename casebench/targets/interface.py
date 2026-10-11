@@ -8,9 +8,10 @@ from casebench.targets.answer import Answer, CitationParser
 
 @runtime_checkable
 class Target(Protocol):
-    """Built from its config, started once per run, asked once per case, stopped at the end."""
+    """Built from its config, started once per run, asked once per case, stopped at the end.
+    `slots` is how many cases the run will send at once."""
 
-    async def start(self) -> None: ...
+    async def start(self, slots: int = 1) -> None: ...
 
     async def answer(
         self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None

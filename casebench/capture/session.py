@@ -13,6 +13,10 @@ from casebench.capture.step import HttpExchange, Step
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
+# Read by workers to put their own path in each variable (decision 0020).
+PROXY = "CASEBENCH_PROXY"
+PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
+
 
 class CaptureSession:
     """For one run: the proxy, the recorder, and the variables that point clients at it."""
@@ -40,6 +44,8 @@ class CaptureSession:
         self.server = ProxyServer(app, self.port)
         self.port = await self.server.start()
         self.env = environment(list(self.routes.values()), self.port)
+        self.env[PROXY] = f"http://127.0.0.1:{self.port}"
+        self.env[PROXY_VARIABLES] = ",".join(name for name in self.env if name != PROXY)
         for name, value in self.env.items():
             self._previous[name] = os.environ.get(name)
             os.environ[name] = value

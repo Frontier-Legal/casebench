@@ -10,6 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from casebench.adapters.citations import citation_parser
+from casebench.capture.step import StepKind
 from casebench.cli import main
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.log import RunInfo, RunLog
@@ -17,7 +18,6 @@ from casebench.runs.runner import run_cases
 from casebench.targets.builtin.http import Target as HttpTarget
 from casebench.targets.load import target_from_config
 from tests.plugins.entry_points import install
-from tests.targets import agents
 from tests.targets.server import serve
 
 HERE = Path(__file__).resolve().parent
@@ -145,7 +145,8 @@ def test_checked_before_a_run(tmp_path: Path):
     )
 
     assert checked.exit_code != 0  # the agent needs `facts`, which the sample case lacks
-    assert "the sample case failed: TypeError" in checked.output
+    assert "the sample case failed" in checked.output
+    assert "missing 1 required positional argument: 'facts'" in checked.output
 
     config.write_text(
         "target:\n  type: python\n  entry: tests.targets.agents:plain\n", encoding="utf-8"
@@ -157,13 +158,31 @@ def test_checked_before_a_run(tmp_path: Path):
 
 
 def test_concurrency_and_async(tmp_path: Path):
-    agents.gate = agents.Gate(width=8)
     target = target_from_config({"type": "python", "entry": "tests.targets.agents:concurrent"})
     cases = [case(f"c{n}", question=f"q{n}") for n in range(16)]
 
     results = asyncio.run(run_cases(cases, target, new_log(tmp_path), max_concurrency=8))
 
-    assert agents.gate.peak == 8
+    spans = [(s.started, s.ended) for r in results for s in r.steps if s.kind is StepKind.TOOL]
+    moments = sorted([(start, 1) for start, _ in spans] + [(end, -1) for _, end in spans])
+    running = peak = 0
+    for _, change in moments:
+        running += change
+        peak = max(peak, running)
+    assert peak == 8
     for result in results:
         own = result.case_id.replace("c", "q")
         assert [step.name for step in result.steps] == [f"tool-for-{own}", f"model-for-{own}"]
+
+
+def test_a_crashing_agent_costs_one_case_not_the_run(tmp_path: Path):
+    target = target_from_config(
+        {"type": "python", "entry": "tests.targets.agents:crashes_on_request"}
+    )
+    cases = [case("a", question="first"), case("b", question="crash"), case("c", question="last")]
+
+    results = {r.case_id: r for r in asyncio.run(run_cases(cases, target, new_log(tmp_path)))}
+
+    assert results["a"].output == "answered first"
+    assert results["b"].error == "WorkerDied: the agent's process exited with 3 during this case"
+    assert results["c"].output == "answered last"

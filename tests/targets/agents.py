@@ -1,6 +1,8 @@
 """Agents the target tests call: a dict answer, a plain answer, a concurrent one."""
 
 import asyncio
+import os
+import time
 
 from casebench.capture.context import record
 from casebench.capture.step import Step, StepKind
@@ -24,26 +26,18 @@ def chunks(question: str):
     yield "second"
 
 
-class Gate:
-    """Lets every case through once `width` of them are inside at the same time."""
-
-    def __init__(self, width: int) -> None:
-        self.width, self.inside, self.peak = width, 0, 0
-        self.full = asyncio.Event()
-
-
-gate: Gate | None = None
-
-
 async def concurrent(question: str) -> str:
-    assert gate is not None
-    gate.inside += 1
-    gate.peak = max(gate.peak, gate.inside)
-    if gate.inside >= gate.width:
-        gate.full.set()
-    await gate.full.wait()
-    record(Step(kind=StepKind.TOOL, name=f"tool-for-{question}"))
-    await asyncio.sleep(0)
+    """Holds its slot long enough for the others to start, and records when it ran."""
+    started = time.time()
+    await asyncio.sleep(0.3)
+    record(
+        Step(kind=StepKind.TOOL, name=f"tool-for-{question}", started=started, ended=time.time())
+    )
     record(Step(kind=StepKind.LLM, name=f"model-for-{question}"))
-    gate.inside -= 1
     return question
+
+
+def crashes_on_request(question: str) -> str:
+    if question == "crash":
+        os._exit(3)
+    return f"answered {question}"

@@ -92,6 +92,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
                         duration_ms=(ended - started) * 1000,
                     ),
                     request.headers.get("traceparent"),
+                    request.path_params.get("worker"),
                 )
 
         returned = {k: v for k, v in upstream.headers.items() if k.lower() not in NOT_RETURNED}
@@ -104,6 +105,9 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
 
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
     return Starlette(
-        routes=[StarletteRoute("/{route}/{path:path}", forward, methods=methods)],
+        routes=[
+            StarletteRoute("/w/{worker}/{route}/{path:path}", forward, methods=methods),
+            StarletteRoute("/{route}/{path:path}", forward, methods=methods),
+        ],
         lifespan=lifespan,
     )

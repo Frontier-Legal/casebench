@@ -2,6 +2,7 @@
 the recording proxy tier."""
 
 import asyncio
+import socket
 import sys
 from pathlib import Path
 
@@ -111,3 +112,40 @@ def test_concurrent_cases_keep_their_own_calls_when_the_agent_passes_trace_conte
     for result in results:
         assert len([s for s in result.steps if s.kind is StepKind.LLM]) == 2
         assert len([s for s in result.steps if s.kind is StepKind.RETRIEVAL]) == 1
+
+
+def test_a_started_http_agent_runs_under_the_capture_wrapper(tmp_path: Path):
+    upstream = start_upstream()
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    server = Path(__file__).resolve().parent / "http_agent_server.py"
+    target = target_from_config(
+        {
+            "type": "http",
+            "url": f"http://127.0.0.1:{port}/ask",
+            "start": f"{sys.executable} {server} {port}",
+            "body": {"question": "{{question}}"},
+            "answer": "$.answer",
+        }
+    )
+    session = CaptureSession(
+        routes_for(
+            CaptureConfig(
+                routes=[
+                    {"name": "anthropic", "upstream": f"http://127.0.0.1:{upstream.server_port}"}
+                ]
+            )
+        )
+    )
+    log = RunLog.create(
+        tmp_path / "run", RunInfo(run_id="r", suite_id="s", suite_hash="h", target="http")
+    )
+    try:
+        [result] = asyncio.run(run_cases([case("c1", "Valid?")], target, log, capture=session))
+    finally:
+        upstream.shutdown()
+
+    assert result.output == "The dismissal is invalid."
+    [call] = [s for s in result.steps if s.kind is StepKind.LLM]
+    assert (call.provider, call.input_tokens, call.output_tokens) == ("anthropic", 200, 40)

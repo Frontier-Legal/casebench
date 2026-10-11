@@ -6,6 +6,8 @@ decision-makers: Casebench maintainers
 
 # A target is a Python entry point, an HTTP endpoint or a command
 
+Amended by [0020](0020-python-process-wrapper.md): python agents run in worker processes, not in the runner's own.
+
 ## Context and problem statement
 
 Every score depends on how a case reaches the AI under test and how its answer comes back. Agents are Python functions, HTTP services in any language, or scripts. A team should connect its agent without changing it, and captured steps must stay with the case that caused them when cases run concurrently.

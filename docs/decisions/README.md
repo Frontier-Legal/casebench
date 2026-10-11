@@ -33,3 +33,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0017](0017-target-contract.md) | A target is a Python entry point, an HTTP endpoint or a command | accepted |
 | [0018](0018-httpx-jsonpath-ng-and-pyyaml.md) | httpx, jsonpath-ng and PyYAML | accepted |
 | [0019](0019-recording-proxy.md) | A recording proxy captures model and backend calls from any language | accepted |
+| [0020](0020-python-process-wrapper.md) | Python agents run in worker processes, one per parallel slot | accepted |
