@@ -99,7 +99,7 @@ Criteria use per-criterion pass/fail with signed integer weights, the scheme [PR
 | `casebench.tasks` | built-in task types |
 | `casebench.references` | court, lawyer, structured and hybrid builders |
 | `casebench.targets` | python callable, http, openai_compatible, mcp, proxy, offline, echo (demo) |
-| `casebench.instrument` | `cb.instrument()` over a registry of OTel GenAI instrumentors (OpenInference as fallback) on a private tracer provider; the recording proxy with a parser per backend (plugins in `casebench.capture`); the semconv normaliser; `@cb.step`, `cb.span`; local OTLP receiver |
+| `casebench.instrument` | `cb.instrument()` over a registry of OTel GenAI instrumentors (OpenInference as fallback) on a private tracer provider; the recording proxy with a parser per model API (plugins in `casebench.capture`) and a JSONPath route for any backend; the semconv normaliser; `@cb.step`, `cb.span`; local OTLP receiver |
 | `casebench.providers` | the one provider interface for the judge and the extractors; openai_compatible, anthropic, gemini and bedrock shipped, any other as a plugin |
 | `casebench.metrics` | deterministic, judge and trace metrics |
 | `casebench.traces` | OTLP intake with OTel GenAI and OpenInference mapping; JSON fallback |

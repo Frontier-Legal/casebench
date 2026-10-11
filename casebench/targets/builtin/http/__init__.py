@@ -9,6 +9,7 @@ import httpx
 from jsonpath_ng.ext.parser import parse as jsonpath
 from pydantic import Field
 
+from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, CitationParser, to_answer
 from casebench.targets.placeholders import expand_env, fill_json, split_command
@@ -48,6 +49,11 @@ def every(expression: str | None, document: Any) -> list[Any] | None:
     return [match.value for match in jsonpath(expression).find(document)]
 
 
+def _with_trace_context(headers: dict[str, str]) -> dict[str, str]:
+    traceparent = current_traceparent()
+    return {**headers, "traceparent": traceparent} if traceparent else headers
+
+
 class Target:
     def __init__(self, **config: Any) -> None:
         self.config = HttpConfig.model_validate(config)
@@ -80,7 +86,7 @@ class Target:
         response = await self.client.request(
             self.config.method,
             self.config.url,
-            headers=expand_env(self.config.headers),
+            headers=_with_trace_context(expand_env(self.config.headers)),
             json=fill_json(self.config.body, inputs),
         )
         response.raise_for_status()

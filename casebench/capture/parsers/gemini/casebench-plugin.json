@@ -1,0 +1,5 @@
+{
+  "kind": "parser",
+  "name": "gemini",
+  "object": "casebench.capture.parsers.gemini:Parser"
+}

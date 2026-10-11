@@ -1,0 +1,86 @@
+{
+  "exchange": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro:streamGenerateContent?alt=sse",
+    "status": 200,
+    "request_body": {
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Is the dismissal valid?"
+            }
+          ]
+        }
+      ]
+    },
+    "response_events": [
+      {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "functionCall": {
+                    "name": "search",
+                    "args": {
+                      "query": "dismissal"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "modelVersion": "gemini-3-pro"
+      },
+      {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": ""
+                }
+              ]
+            },
+            "finishReason": "STOP"
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 80,
+          "candidatesTokenCount": 9
+        },
+        "modelVersion": "gemini-3-pro"
+      }
+    ],
+    "route": "gemini",
+    "started": 1760000000.0,
+    "ended": 1760000001.0,
+    "duration_ms": 1000.0
+  },
+  "expected": [
+    {
+      "kind": "llm",
+      "provider": "gemini",
+      "model": "gemini-3-pro",
+      "input_tokens": 80,
+      "output_tokens": 9,
+      "requested_tools": [
+        {
+          "id": "search",
+          "name": "search",
+          "arguments": {
+            "query": "dismissal"
+          }
+        }
+      ],
+      "started": 1760000000.0,
+      "ended": 1760000001.0,
+      "duration_ms": 1000.0
+    }
+  ]
+}

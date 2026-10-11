@@ -1,0 +1,5 @@
+{
+  "kind": "parser",
+  "name": "openai",
+  "object": "casebench.capture.parsers.openai:Parser"
+}

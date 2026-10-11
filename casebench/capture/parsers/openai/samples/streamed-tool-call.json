@@ -1,0 +1,104 @@
+{
+  "exchange": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "status": 200,
+    "request_body": {
+      "model": "gpt-5",
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "messages": [
+        {
+          "role": "user",
+          "content": "Is the dismissal valid?"
+        }
+      ]
+    },
+    "response_events": [
+      {
+        "model": "gpt-5",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "call_1",
+                  "type": "function",
+                  "function": {
+                    "name": "search",
+                    "arguments": ""
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "model": "gpt-5",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "function": {
+                    "arguments": "{\"query\": \"dismissal\"}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "model": "gpt-5",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {},
+            "finish_reason": "tool_calls"
+          }
+        ]
+      },
+      {
+        "model": "gpt-5",
+        "choices": [],
+        "usage": {
+          "prompt_tokens": 90,
+          "completion_tokens": 12
+        }
+      }
+    ],
+    "route": "openai",
+    "started": 1760000000.0,
+    "ended": 1760000001.5,
+    "duration_ms": 1500.0
+  },
+  "expected": [
+    {
+      "kind": "llm",
+      "provider": "openai",
+      "model": "gpt-5",
+      "input_tokens": 90,
+      "output_tokens": 12,
+      "requested_tools": [
+        {
+          "id": "call_1",
+          "name": "search",
+          "arguments": {
+            "query": "dismissal"
+          }
+        }
+      ],
+      "started": 1760000000.0,
+      "ended": 1760000001.5,
+      "duration_ms": 1500.0
+    }
+  ]
+}

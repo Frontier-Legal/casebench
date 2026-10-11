@@ -3,6 +3,7 @@
 import click
 
 from casebench import __version__
+from casebench.capture.cli import proxy
 from casebench.plugins.cli import plugin
 from casebench.targets.cli import target
 
@@ -15,3 +16,4 @@ def main() -> None:
 
 main.add_command(plugin)
 main.add_command(target)
+main.add_command(proxy)
