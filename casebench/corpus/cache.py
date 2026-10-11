@@ -48,6 +48,11 @@ class CachedConnector:
         return list(list_ids(self.connector))
 
 
+def cached_documents(connector: str, options: dict[str, Any], root: Path = DEFAULT_CACHE) -> int:
+    """How many of one store's documents are on disk already."""
+    return sum(1 for _ in (root / corpus_key(connector, options)).glob("*.json"))
+
+
 def clear(root: Path = DEFAULT_CACHE) -> int:
     """Delete every cached document; returns how many there were."""
     if not root.is_dir():

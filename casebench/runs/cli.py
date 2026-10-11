@@ -11,8 +11,12 @@ import click
 from casebench.capture.config import routes_for
 from casebench.capture.session import CaptureSession
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, target_of
+from casebench.metrics.loading import MetricNeeds
+from casebench.report import render
+from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
+from casebench.runs.scoring import prepare, score
 from casebench.suites.freeze import load
 from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.load import target_from_config
@@ -83,6 +87,7 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     show_default=True,
 )
 @click.option("--no-capture", is_flag=True, help="Do not start the recording proxy.")
+@click.option("--dry-run", is_flag=True, help="Count what the run would send; send nothing.")
 def run(
     suite_dir: Path,
     config_path: Path,
@@ -91,10 +96,25 @@ def run(
     run_id: str | None,
     runs_dir: Path,
     no_capture: bool,
+    dry_run: bool,
 ) -> None:
-    """Send every case of a frozen suite to the target and store each result."""
+    """Send every case of a frozen suite to the target, store each result and score the run."""
     config = _config(config_path, python)
     manifest, cases = load(suite_dir)
+    if dry_run:
+        existing = runs_dir / run_id if run_id else None
+        stored = (
+            {r.case_id for r in RunLog(existing).results()}
+            if existing and existing.is_dir()
+            else set()
+        )
+        for line in estimate(cases, stored, config).lines():
+            click.echo(line)
+        return
+    try:
+        metrics = prepare(cases, config)
+    except MetricNeeds as error:
+        raise click.ClickException(str(error)) from error
     target_config = target_of(config)
     target = target_from_config(target_config)
     concurrency = max_concurrency or int(target_config.get("max_concurrency", 1))
@@ -126,3 +146,7 @@ def run(
     except TargetDidNotStart as error:
         raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
+    scored = score(log, cases, metrics, manifest.suite_id)
+    for line in render.lines(scored.tables, scored.scores):
+        click.echo(line)
+    click.echo(str(scored.report))

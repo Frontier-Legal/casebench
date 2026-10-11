@@ -24,7 +24,7 @@ class CitationIntegrity:
     kind = ScoreKind.LLM
     direction = Direction.HIGHER
 
-    def __init__(self, judge: Judge, corpus: Corpus, candidates: int) -> None:
+    def __init__(self, judge: Judge, corpus: Corpus, candidates: int, **_: object) -> None:
         self.model = judge
         self.corpus = corpus
         self.candidates = candidates

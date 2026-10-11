@@ -45,7 +45,7 @@ Community files at R1: README, LICENSE, AGENTS.md, CONTRIBUTING, CODE_OF_CONDUCT
 
 Choices behind it:
 
-- **Three commands, everything else a flag.** `init`, `run` and `ui` are the whole surface for most users. `corpus check`, `target check`, `extract`, `generate` and `--dry-run` stay as power-user subcommands that `init` and `run` call for everyone else. The same flow ships as a `SKILL.md` in the Agent Skills format.
+- **Three commands, everything else a flag.** `init`, `run` and `ui` are the whole surface for most users. `corpus check`, `target check`, `extract`, `generate`, `report`, `compare` and `--dry-run` stay as power-user subcommands that `init` and `run` call for everyone else. The same flow ships as a `SKILL.md` in the Agent Skills format.
 - **Lawyers never touch YAML.** `casebench template lawyer --task qa|drafting|editing` writes an XLSX/CSV with columns for facts, question, reference answer, key points, weights and authorities; `casebench import` turns it into cases. Firms' ground truth lives in spreadsheets and Word files already. The same shape carries reviews back (`casebench export --review`), so a lawyer with no login still takes part.
 - **YAML and Python are equal citizens.** Config is YAML with a published JSON Schema; the same objects are importable in Python and in pytest.
 - **One app for engineers and lawyers.** `casebench ui` binds to 127.0.0.1 with no login. The same app is Casebench Cloud, and self-hosts as a team server for firms that cannot push ([workbench.md](workbench.md)). A static report export covers sharing with people who have no access.

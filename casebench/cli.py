@@ -10,6 +10,7 @@ from casebench.config import ConfigError
 from casebench.corpus.cli import corpus
 from casebench.extract.cli import extract_command
 from casebench.plugins.cli import plugin
+from casebench.report.cli import compare_command, report_command
 from casebench.runs.cli import run
 from casebench.suites.cli import generate_command
 from casebench.targets.cli import target
@@ -38,3 +39,5 @@ main.add_command(run)
 main.add_command(corpus)
 main.add_command(extract_command)
 main.add_command(generate_command)
+main.add_command(report_command)
+main.add_command(compare_command)
