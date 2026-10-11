@@ -3,9 +3,17 @@
 from collections.abc import Mapping
 from typing import Any, Protocol, runtime_checkable
 
+from casebench.targets.answer import Answer, CitationParser
+
 
 @runtime_checkable
 class Target(Protocol):
-    def answer(self, inputs: Mapping[str, Any]) -> Any:
-        """The target's answer to one case's inputs."""
-        ...
+    """Built from its config, started once per run, asked once per case, stopped at the end."""
+
+    async def start(self) -> None: ...
+
+    async def answer(
+        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
+    ) -> Answer: ...
+
+    async def stop(self) -> None: ...

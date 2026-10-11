@@ -88,10 +88,23 @@ class Builder:
     "target": """from collections.abc import Mapping
 from typing import Any
 
+from casebench.targets.answer import Answer, CitationParser
+
 
 class Target:
-    def answer(self, inputs: Mapping[str, Any]) -> Any:
+    def __init__(self, **config: Any) -> None:
+        self.config = config
+
+    async def start(self) -> None:
+        return None
+
+    async def answer(
+        self, inputs: Mapping[str, Any], parse_citations: CitationParser | None = None
+    ) -> Answer:
         raise NotImplementedError("send the case to the AI under test")
+
+    async def stop(self) -> None:
+        return None
 """,
     "metric": """from casebench.core.case import Case
 from casebench.core.score import Direction, ScoreKind

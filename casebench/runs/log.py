@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import Field
 
 from casebench import __version__
+from casebench.capture.step import Step
 from casebench.core.model import FrozenRecord
 from casebench.core.score import Score
 
@@ -33,6 +34,8 @@ class Result(FrozenRecord):
     repeat: int = 0
     output: str | None = None
     citations: list[str] = Field(default_factory=list)
+    documents: list[str] = Field(default_factory=list)
+    steps: list[Step] = Field(default_factory=list)
     error: str | None = None
     latency_ms: float | None = None
 
