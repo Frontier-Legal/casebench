@@ -26,7 +26,7 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0010](0010-releases-from-conventional-commits.md) | Versions and changelog come from Conventional Commits | accepted |
 | [0011](0011-ci-and-supply-chain.md) | One set of checks, locally and in CI, with a pinned supply chain | accepted |
 | [0012](0012-click-for-the-command-line.md) | Click for the command line | accepted |
-| [0013](0013-built-in-jurisdictions-load-on-demand.md) | Built-in jurisdictions ship in the core and load on demand | accepted |
+| [0013](0013-built-in-jurisdictions-load-on-demand.md) | Built-in jurisdictions ship in the core and load on demand | superseded by [0024](0024-no-jurisdiction-adapters.md) |
 | [0014](0014-pydantic-for-the-data-model.md) | Pydantic for the data model | accepted |
 | [0015](0015-suite-and-run-log-formats.md) | Suites and run logs are JSON Lines with a manifest | accepted |
 | [0016](0016-plugin-contract.md) | Plugins: entry points, a manifest, conformance figures and explicit sources | accepted |
@@ -37,3 +37,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0021](0021-httpx2.md) | httpx2 for Casebench's own HTTP calls | accepted |
 | [0022](0022-config-named-functions.md) | A function named in the config is wrapped when the agent's process starts | accepted |
 | [0023](0023-otlp-trace-intake.md) | Traces a team already emits are received over OTLP and joined to cases | accepted |
+| [0024](0024-no-jurisdiction-adapters.md) | No jurisdiction adapters: the corpus resolves citations and models extract | accepted |

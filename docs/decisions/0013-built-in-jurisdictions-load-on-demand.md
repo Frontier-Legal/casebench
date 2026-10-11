@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded by 0024
 date: 2026-10-11
 decision-makers: Casebench maintainers
 ---
 
 # Built-in jurisdictions ship in the core and load on demand
+
+Superseded by [0024](0024-no-jurisdiction-adapters.md): there are no jurisdiction adapters.
 
 Supersedes [0006](0006-every-adapter-is-its-own-package.md).
 
