@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import Any
 
 import click
+import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.add_cli import add
-from casebench.plugins import registry
-from casebench.plugins.kinds import kind_named
+from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import Status, live, offline, unreachable
+from casebench.setup.models import choose
 from casebench.setup.sdks import detect
 
 HEADER = (
@@ -54,20 +55,6 @@ def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
     return options
 
 
-def _judge(provider: str | None, model: str | None, options: tuple[str, ...]) -> dict[str, Any]:
-    names = sorted({p.name for p in registry.available(kind_named("provider"))})
-    chosen = provider or click.prompt("the judge's provider", type=click.Choice(names))
-    asked = options
-    if not options and provider is None:
-        typed = click.prompt("its options as NAME=VALUE, comma-separated", default="")
-        asked = tuple(part.strip() for part in typed.split(",") if part.strip())
-    return {
-        "provider": chosen,
-        "model": _ask(model, "the judge's model"),
-        "options": _options(asked),
-    }
-
-
 def _add_corpus(kind: str, config_path: Path) -> str:
     """An HTTP or MCP store is described from one live search and fetch (decision 0025)."""
     later = f"run `casebench corpus add {kind}` where the store is reachable"
@@ -98,10 +85,27 @@ def _add_corpus(kind: str, config_path: Path) -> str:
 @click.option("--url", help="An HTTP target's endpoint.")
 @click.option("--corpus", "corpus_kind", type=click.Choice(["folder", "http", "mcp", "none"]))
 @click.option("--corpus-path", help="A folder corpus's path.")
-@click.option("--judge-provider")
+@click.option("--judge-provider", help="The judge's provider, as the model catalog names it.")
 @click.option("--judge-model")
-@click.option("--judge-option", "judge_options", multiple=True, help="NAME=VALUE.")
+@click.option(
+    "--judge-option", "judge_options", multiple=True, help="NAME=VALUE, over the catalog's."
+)
 @click.option("--no-judge", is_flag=True, help="Set no judge; outcome suites need none.")
+@click.option(
+    "--extract",
+    "extract_models",
+    nargs=2,
+    multiple=True,
+    metavar="PROVIDER MODEL",
+    help="An extraction model; give it twice, for two different models.",
+)
+@click.option("--no-extract", is_flag=True, help="Set no extraction models.")
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="A saved copy of the model catalog, instead of fetching it.",
+)
 @click.option("--no-live", is_flag=True, help="Only the checks that need no network.")
 def init_command(
     config_path: Path,
@@ -115,6 +119,9 @@ def init_command(
     judge_model: str | None,
     judge_options: tuple[str, ...],
     no_judge: bool,
+    extract_models: tuple[tuple[str, str], ...],
+    no_extract: bool,
+    catalog_path: Path | None,
     no_live: bool,
 ) -> None:
     """Set Casebench up for the agent in this folder."""
@@ -132,8 +139,38 @@ def init_command(
     if where == "folder":
         path = _ask(corpus_path, "the folder")
         data["corpus"] = {"connector": "folder", "options": {"path": path}}
+    catalog: dict[str, Any] | None = None
+
+    def listed() -> dict[str, Any]:
+        nonlocal catalog
+        if catalog is None:
+            try:
+                catalog = model_catalog.load(catalog_path)
+            except httpx2.HTTPError as error:
+                raise click.ClickException(
+                    f"the model catalog could not be fetched ({error}); pass --catalog FILE"
+                ) from error
+        return catalog
+
     if not no_judge:
-        data["judge"] = _judge(judge_provider, judge_model, judge_options)
+        data["judge"], notes = choose(
+            "judge", listed(), judge_provider, judge_model, _options(judge_options)
+        )
+        click.echo(f"judge    {'; '.join(notes)}")
+    wants_extract = bool(extract_models) or (
+        not no_extract
+        and click.confirm("build suites from court decisions? two different models read them")
+    )
+    if wants_extract:
+        given = list(extract_models) or [(None, None), (None, None)]
+        if len(given) != 2:
+            raise click.UsageError("--extract takes two models: give it twice")
+        chosen = []
+        for number, (provider, model) in enumerate(given, start=1):
+            block, notes = choose(f"extraction model {number}", listed(), provider, model, {})
+            click.echo(f"extract  {'; '.join(notes)}")
+            chosen.append(block)
+        data["extract"] = {"models": chosen}
     config_path.write_text(
         HEADER + yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )

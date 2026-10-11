@@ -9,24 +9,25 @@ API_VERSION = "2023-06-01"
 
 
 class Provider:
-    """`max_tokens` is required by the API and has no default here: set it in the judge's
-    options, so the budget is the user's choice, not a number Casebench made up."""
+    """`max_tokens` is required by the API and has no default here: set it in the options,
+    or let `casebench init` take the model's output limit from the catalog, so the budget is
+    never a number Casebench made up."""
 
-    family = "anthropic"
+    speaks = ("@ai-sdk/anthropic",)
 
     def __init__(
         self,
+        max_tokens: int,
         base_url: str = "https://api.anthropic.com",
-        max_tokens: int | None = None,
         api_key_env: str = "ANTHROPIC_API_KEY",
+        family: str = "anthropic",
     ) -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url.rstrip("/").removesuffix("/v1")  # requests add /v1 themselves
         self.max_tokens = max_tokens
         self.api_key_env = api_key_env
+        self.family = family
 
     def request(self, messages: list[Message], model: str, api_key: str) -> HttpRequest:
-        if self.max_tokens is None:
-            raise ValueError("set max_tokens in the judge's options; the Messages API requires it")
         system = "\n\n".join(m.content for m in messages if m.role == "system")
         body: dict[str, Any] = {
             "model": model,

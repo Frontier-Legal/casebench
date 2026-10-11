@@ -1,8 +1,14 @@
 """The model provider contract for Casebench's own judge and extraction calls.
 
-A provider is pure: it builds a request and reads a response. The core sends the
-request, so the network allowlist applies to every provider and conformance runs
-offline on recorded exchanges.
+An HTTP provider is pure: it builds a request and reads a response. The core sends the
+request, so the network allowlist applies to it and conformance runs offline on recorded
+exchanges. An SDK provider instead has `complete(messages, model)`: it calls the vendor's
+SDK already installed in the project, which reads the environment's credentials
+(decision 0032).
+
+A provider may name the public model catalog's API types it speaks (`speaks`); `casebench
+init` then fills, from the catalog, the options its constructor takes: `base_url`,
+`api_key_env`, `family`, and `max_tokens` where it requires one.
 """
 
 from typing import Any, Protocol, runtime_checkable

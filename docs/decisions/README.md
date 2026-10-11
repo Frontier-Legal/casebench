@@ -45,3 +45,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0029](0029-statute-and-precedent-scores.md) | Statute and precedent scores compare corpus documents; the judge's replies stay with the run | accepted |
 | [0030](0030-set-up-here-run-there.md) | Set up where the code is; check and run where the agent and the corpus are reachable | accepted |
 | [0031](0031-authority-funnel.md) | The authority funnel follows each court authority through the captured steps | accepted |
+| [0032](0032-provider-catalog-and-sdk-providers.md) | Models are picked from a public catalog; cloud providers are called through the project's own SDK | accepted |

@@ -1,0 +1,34 @@
+{
+  "anthropic": {
+    "name": "Anthropic",
+    "npm": "@ai-sdk/anthropic",
+    "env": ["ANTHROPIC_API_KEY"],
+    "doc": "https://docs.anthropic.com",
+    "models": {"judge-model": {"name": "Judge", "family": "claude", "limit": {"output": 256}}}
+  },
+  "fireworks-ai": {
+    "name": "Fireworks AI",
+    "npm": "@ai-sdk/openai-compatible",
+    "api": "https://api.fireworks.ai/inference/v1/",
+    "env": ["FIREWORKS_API_KEY"],
+    "doc": "https://fireworks.ai/docs/",
+    "models": {
+      "accounts/fireworks/models/qwen-x": {"name": "Qwen X", "family": "qwen"},
+      "accounts/fireworks/models/kimi-x": {"name": "Kimi X", "family": "kimi"}
+    }
+  },
+  "groq": {
+    "name": "Groq",
+    "npm": "@ai-sdk/groq",
+    "env": ["GROQ_API_KEY"],
+    "doc": "https://console.groq.com/docs",
+    "models": {"llama-x": {"name": "Llama X", "family": "llama"}}
+  },
+  "amazon-bedrock": {
+    "name": "Amazon Bedrock",
+    "npm": "@ai-sdk/amazon-bedrock",
+    "env": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"],
+    "doc": "https://docs.aws.amazon.com/bedrock/",
+    "models": {"anthropic.claude-x": {"name": "Claude X", "family": "claude", "limit": {"output": 4096}}}
+  }
+}

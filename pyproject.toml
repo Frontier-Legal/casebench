@@ -28,6 +28,7 @@ dependencies = [
     "packaging>=26.3",
     "pydantic>=2.14.0",
     "pyyaml>=6.0.3",
+    "questionary>=2.1.1",
     "scikit-learn>=1.9.1",
     "scipy>=1.17.1",
     "starlette>=1.7.0",
@@ -60,6 +61,9 @@ statute = "casebench.metrics.builtin.statute:Metric"
 
 [project.entry-points."casebench.providers"]
 anthropic = "casebench.providers.builtin.anthropic:Provider"
+azure = "casebench.providers.builtin.azure:Provider"
+bedrock = "casebench.providers.builtin.bedrock:Provider"
+google = "casebench.providers.builtin.google:Provider"
 openai = "casebench.providers.builtin.openai:Provider"
 
 [project.entry-points."casebench.targets"]

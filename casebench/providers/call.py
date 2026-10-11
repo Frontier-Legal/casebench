@@ -19,7 +19,11 @@ class MissingApiKey(RuntimeError):
 def complete(
     provider: ModelProvider, messages: list[Message], model: str, send: Send
 ) -> Completion:
-    """Read the key from the environment, build the request, send it, read the reply."""
+    """Read the key from the environment, build the request, send it, read the reply.
+    An SDK provider makes its own call with the environment's credentials."""
+    own_call = getattr(provider, "complete", None)
+    if own_call is not None:
+        return own_call(messages, model)
     api_key = os.environ.get(provider.api_key_env)
     if not api_key:
         raise MissingApiKey(f"set {provider.api_key_env} to call this provider")
