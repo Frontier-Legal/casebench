@@ -13,19 +13,14 @@ from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
 CATALOG_URL = "https://models.dev/api.json"
-CACHE = Path(".casebench") / "catalog.json"
 
 
-def load(path: Path | None = None, cache: Path = CACHE) -> dict[str, Any]:
-    """A saved copy when given, else the cached one, else fetched once and cached."""
+def load(path: Path | None = None) -> dict[str, Any]:
+    """A saved copy when given; otherwise fetched for this run and kept in memory only."""
     if path is not None:
         return json.loads(path.read_text(encoding="utf-8"))
-    if cache.is_file():
-        return json.loads(cache.read_text(encoding="utf-8"))
     response = httpx2.get(CATALOG_URL, follow_redirects=True)
     response.raise_for_status()
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    cache.write_text(response.text, encoding="utf-8")
     return response.json()
 
 

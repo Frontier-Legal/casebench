@@ -8,7 +8,7 @@ import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
-from casebench.corpus.add_cli import add
+from casebench.corpus.add_cli import http_block, mcp_block
 from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import Status, live, offline, unreachable
 from casebench.setup.models import choose
@@ -55,20 +55,19 @@ def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
     return options
 
 
-def _add_corpus(kind: str, config_path: Path) -> str:
-    """An HTTP or MCP store is described from one live search and fetch (decision 0025)."""
-    later = f"run `casebench corpus add {kind}` where the store is reachable"
+def _corpus(kind: str) -> tuple[dict[str, Any] | None, str]:
+    """An HTTP or MCP store is described from one live search and fetch (decision 0025).
+    One that refuses or cannot be reached is left out, with what to do about it."""
+    later = f"run `casebench corpus add {kind}` once that is fixed"
     try:
-        add.commands[kind].main(
-            ["--config", str(config_path)],
-            prog_name=f"casebench corpus add {kind}",
-            standalone_mode=False,
-        )
+        block = http_block() if kind == "http" else mcp_block()
+    except click.ClickException as error:
+        return None, f"corpus   not added: {error.format_message()}; {later}"
     except Exception as error:
         if unreachable(error):
-            return f"corpus   {Status.UNREACHABLE.value}: {later}"
-        raise click.ClickException(f"corpus: {error}") from error
-    return "corpus   added"
+            return None, f"corpus   {Status.UNREACHABLE.value}; {later}, where it is reachable"
+        raise
+    return block, "corpus   added after one live search and fetch"
 
 
 @click.command(name="init")
@@ -139,6 +138,11 @@ def init_command(
     if where == "folder":
         path = _ask(corpus_path, "the folder")
         data["corpus"] = {"connector": "folder", "options": {"path": path}}
+    if where in ("http", "mcp"):
+        block, note = _corpus(where)
+        click.echo(note)
+        if block is not None:
+            data["corpus"] = block
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:
@@ -159,7 +163,11 @@ def init_command(
         click.echo(f"judge    {'; '.join(notes)}")
     wants_extract = bool(extract_models) or (
         not no_extract
-        and click.confirm("build suites from court decisions? two different models read them")
+        and click.confirm(
+            "make test cases from your court decisions? two different models read each "
+            "decision to find the ruling, statutes and precedents",
+            default=True,
+        )
     )
     if wants_extract:
         given = list(extract_models) or [(None, None), (None, None)]
@@ -183,12 +191,13 @@ def init_command(
         config_path.unlink()
         raise click.ClickException("; ".join(p.line() for p in problems))
     click.echo(f"wrote    {config_path}")
-    if where in ("http", "mcp"):
-        click.echo(_add_corpus(where, config_path))
     if no_live:
         click.echo("run `casebench check` where the corpus, the target and the judge are reachable")
         return
-    checks = live(load_config(config_path))
+    checked = load_config(config_path)
+    if where in ("http", "mcp"):  # its live search and fetch just ran
+        checked = checked.model_copy(update={"corpus": None})
+    checks = live(checked)
     for item in checks:
         click.echo(item.line())
     if any(item.status is not Status.PASSED for item in checks):
