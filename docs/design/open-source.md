@@ -54,7 +54,7 @@ Choices behind it:
 ## Data interoperability
 
 - Suites: JSONL, one case per line, stable `id`; publishable to the Hugging Face Hub with a [dataset card](https://huggingface.co/docs/hub/datasets-cards) (Croissant metadata comes free).
-- Run logs: a versioned JSON format with a published schema. Exporter to [Every Eval Ever](https://github.com/evaleval/every_eval_ever) later.
+- Formats: corpus documents, provider profiles, cases, suite manifests and reports are published as JSON Schemas, each versioned apart from the package ([decision 0034](../decisions/0034-versioned-formats.md)). Run logs get a schema that follows the package version. Exporter to [Every Eval Ever](https://github.com/evaleval/every_eval_ever) once it is shown to keep results per reference source.
 
 ## Security rules
 
