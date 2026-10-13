@@ -1,7 +1,6 @@
-"""`casebench corpus add http|mcp`: describe a store from one live search and fetch."""
+"""`casebench corpus add http|mcp|profile`: describe a store from one live search and fetch."""
 
 import os
-import re
 from pathlib import Path
 from typing import Any
 
@@ -10,15 +9,16 @@ import httpx2
 
 from casebench.config import DEFAULT_CONFIG
 from casebench.corpus.add import ConfigHasCorpus, corpus_block, describe, write_corpus
+from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.record import REQUIRED_FIELDS
 from casebench.corpus.suggest import document_fields, search_ids
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
-from casebench.targets.placeholders import split_command
+from casebench.setup.checks import unreachable
+from casebench.targets.placeholders import VARIABLE, split_command
 
 FIELDS = (*REQUIRED_FIELDS, "level")
-VARIABLE = re.compile(r"\$\{(\w+)\}")
 
 
 def connector(name: str, options: dict[str, Any]) -> Any:
@@ -321,3 +321,31 @@ def mcp(
         ask=not yes,
     )
     _save(config_path, block, not yes)
+
+
+@add.command()
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=DEFAULT_CONFIG,
+    show_default=True,
+)
+@click.option("--jurisdiction", help="Read only this jurisdiction's documents.")
+def profile(path: Path, config_path: Path, jurisdiction: str | None) -> None:
+    """A store described by a provider's profile file: nothing is asked, one live search and
+    fetch prove it works with your key."""
+    try:
+        block, notes = profile_block(path, jurisdiction)
+    except ProfileProblem as error:
+        raise click.ClickException(str(error)) from error
+    except Exception as error:
+        if unreachable(error):
+            raise click.ClickException(
+                f"the provider is not reachable from here; run this where it is: {error}"
+            ) from error
+        raise
+    for note in notes:
+        click.echo(note)
+    _save(config_path, block, ask=False)

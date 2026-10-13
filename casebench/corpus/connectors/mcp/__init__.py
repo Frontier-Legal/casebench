@@ -1,6 +1,7 @@
 """The mcp connector: any MCP server with a search tool and a fetch tool."""
 
 import asyncio
+import contextlib
 import json
 import sys
 import threading
@@ -10,20 +11,28 @@ from typing import Any, TypeVar
 
 import mcp
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamable_http_client
+
+# The SDK's own client factory keeps its timeouts for long-lived response streams; it lives in
+# a private module, and the header test fails first if it moves.
+from mcp.shared._httpx_utils import create_mcp_http_client
 from pydantic import Field
 
 from casebench.core.model import Record
 from casebench.corpus.mapping import every, record_fields
+from casebench.targets.placeholders import expand_env
 
 Result = TypeVar("Result")
 
 
 class McpCorpusConfig(Record):
-    """`command` starts a server over stdio; `url` reaches one over Streamable HTTP.
-    Tool arguments may hold `{text}`, `{limit}` and `{id}`."""
+    """`command` starts a server over stdio; `url` reaches one over Streamable HTTP, sending
+    `headers` (with `${VAR}` read from the environment) on every request. Tool arguments may
+    hold `{text}`, `{limit}` and `{id}`."""
 
     command: list[str] | None = None
     url: str | None = None
+    headers: dict[str, str] = Field(default_factory=dict)
     search_tool: str = ""
     search_arguments: dict[str, Any] = Field(default_factory=lambda: {"query": "{text}"})
     search_ids: str = "$"
@@ -93,7 +102,12 @@ class Connector:
 
     async def _serve(self, target: Any) -> None:
         self.requests = asyncio.Queue()
-        async with mcp.Client(target) as client:
+        async with contextlib.AsyncExitStack() as stack:
+            if isinstance(target, str) and self.config.headers:
+                http = create_mcp_http_client(headers=expand_env(self.config.headers))
+                await stack.enter_async_context(http)
+                target = streamable_http_client(target, http_client=http)
+            client = await stack.enter_async_context(mcp.Client(target))
             self.ready.set()
             while (request := await self.requests.get()) is not None:
                 call, answer = request

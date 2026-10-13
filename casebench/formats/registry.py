@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from casebench.core.case import FORMAT as CASE
 from casebench.core.case import Case
+from casebench.corpus.profile import FORMAT as PROFILE
+from casebench.corpus.profile import Profile
 from casebench.corpus.record import FORMAT as DOCUMENT
 from casebench.corpus.record import DecisionRecord
 from casebench.formats.version import FormatVersion, UnreadableFormat
@@ -32,6 +34,7 @@ FORMATS = {
         Format(Case, CASE, declares_itself=False),
         Format(SuiteManifest, SUITE, declares_itself=True),
         Format(Report, REPORT, declares_itself=True),
+        Format(Profile, PROFILE, declares_itself=True),
     )
 }
 

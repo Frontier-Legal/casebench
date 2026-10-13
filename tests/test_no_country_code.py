@@ -18,5 +18,6 @@ def test_no_country_in_the_core():
         "jurisdiction",
         "options",
         "connector_source",
+        "profile",  # which profile file the options came from, by name
     }
     assert plugin_leaks(ROOT) == []

@@ -1,0 +1,201 @@
+"""A provider's profile file sets up the corpus with no questions, or fails before writing."""
+
+import socket
+import subprocess
+import sys
+import time
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+import yaml
+from click.testing import CliRunner
+
+from casebench.cli import main
+from tests.corpus.document_api import KEY, start_document_api
+
+# A subprocess server is up within seconds on a CI runner; this is only a ceiling.
+SERVER_START_S = 30.0
+
+FIELDS = {
+    "id": "$.work_id",
+    "jurisdiction": "$.jurisdiction.code",
+    "court": "$.issuers[0].name",
+    "date": "$.dates[1].date",
+    "text": "$.expressions[0].text",
+}
+
+
+def profile(folder: Path, connector: str, options: dict[str, Any], **extra: Any) -> Path:
+    path = folder / "provider.yaml"
+    data = {
+        "format": "casebench.profile/1.0",
+        "name": "Test Provider",
+        "jurisdictions": ["TR"],
+        "terms": "https://example.com/terms",
+        "key_env": "DOC_KEY",
+        "metered": "search",
+        "connector": connector,
+        "options": options,
+        "probe": "feshi",
+        **extra,
+    }
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+def http_options(base: str, fields: dict[str, str] = FIELDS) -> dict[str, Any]:
+    return {
+        "base_url": base,
+        "headers": {"Authorization": "Bearer ${DOC_KEY}"},
+        "search_path": "/search",
+        "search_params": {"q": "{text}"},
+        "search_ids": "$.results[*].work.work_id",
+        "fetch_path": "/documents/{id}",
+        "fields": fields,
+    }
+
+
+def invoke(*args: str):
+    return CliRunner().invoke(main, list(args))
+
+
+@pytest.fixture
+def api(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[str]:
+    monkeypatch.setenv("DOC_KEY", KEY)
+    monkeypatch.chdir(tmp_path)
+    server = start_document_api()
+    yield f"http://127.0.0.1:{server.server_port}/v1"
+    server.shutdown()
+
+
+@pytest.fixture
+def keyed_mcp(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[str]:
+    monkeypatch.setenv("DOC_KEY", KEY)
+    monkeypatch.chdir(tmp_path)
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    root = Path(__file__).resolve().parents[2]
+    process = subprocess.Popen(
+        [sys.executable, "-m", "tests.corpus.mcp_http_documents", str(port)], cwd=root
+    )
+    deadline = time.monotonic() + SERVER_START_S
+    while True:
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=1).close()
+            break
+        except OSError:
+            if time.monotonic() > deadline or process.poll() is not None:
+                process.kill()
+                raise
+            time.sleep(0.1)
+    yield f"http://127.0.0.1:{port}/mcp"
+    process.terminate()
+    process.wait()
+
+
+def test_a_profile_sets_up_the_corpus_with_no_questions(api: str, tmp_path: Path):
+    path = profile(tmp_path, "http", http_options(api))
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 0, added.output
+    assert "Test Provider: searched 'feshi' and fetched document 101" in added.output
+    assert "Test Provider charges per search" in added.output
+    corpus = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))["corpus"]
+    assert corpus["connector"] == "http"
+    assert corpus["profile"] == "provider.yaml"
+    assert corpus["options"] == http_options(api)
+    checked = invoke("corpus", "check", "--query", "feshi kıdem madde")
+    assert checked.exit_code == 0, checked.output
+
+
+def test_init_sets_up_the_corpus_from_a_profile(api: str, tmp_path: Path):
+    (tmp_path / "agent.py").write_text("def answer(q: str) -> str:\n    return 'x'\n", "utf-8")
+    path = profile(tmp_path, "http", http_options(api))
+
+    ran = invoke(
+        "init",
+        "--target",
+        "python",
+        "--entry",
+        "agent.py:answer",
+        "--profile",
+        str(path),
+        "--no-judge",
+        "--no-extract",
+    )
+
+    assert ran.exit_code == 0, ran.output
+    assert "corpus   Test Provider: searched 'feshi'" in ran.output
+    config = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
+    assert config["corpus"]["profile"] == "provider.yaml"
+
+
+def test_a_profile_whose_key_is_not_set_writes_nothing(
+    api: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("DOC_KEY")
+    path = profile(tmp_path, "http", http_options(api))
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 1
+    assert "DOC_KEY is not set in this shell" in added.output
+    assert not (tmp_path / "casebench.yaml").exists()
+
+
+def test_a_profile_that_does_not_match_the_provider_fails_before_writing(
+    api: str, tmp_path: Path
+):
+    path = profile(tmp_path, "http", http_options(api, {**FIELDS, "text": "$.body"}))
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 1
+    assert "came back without text" in added.output
+    assert not (tmp_path / "casebench.yaml").exists()
+
+
+def test_init_stops_on_a_profile_it_cannot_read(api: str, tmp_path: Path):
+    path = profile(tmp_path, "http", http_options(api), probe=None)
+
+    ran = invoke("init", "--target", "python", "--entry", "agent.py:answer", "--profile", str(path))
+
+    assert ran.exit_code == 1
+    assert "is not a valid profile" in ran.output
+    assert not (tmp_path / "casebench.yaml").exists()
+
+
+def test_a_profile_reaches_a_hosted_mcp_server_that_needs_a_key(keyed_mcp: str, tmp_path: Path):
+    options = {
+        "url": keyed_mcp,
+        "headers": {"Authorization": "Bearer ${DOC_KEY}"},
+        "search_tool": "search",
+        "search_arguments": {"query": "{text}"},
+        "search_ids": "$.hits[*].document_id",
+        "fetch_tool": "get_document",
+        "fetch_arguments": {"id": "{id}"},
+        "fields": FIELDS,
+    }
+    path = profile(tmp_path, "mcp", options)
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 0, added.output
+    assert "fetched document 101" in added.output
+
+
+def test_a_provider_that_refuses_the_key_says_which_key(
+    api: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setenv("DOC_KEY", "a-wrong-key")
+    path = profile(tmp_path, "http", http_options(api))
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 1
+    assert "refused the live check (it answered 401); check that DOC_KEY holds" in added.output
+    assert not (tmp_path / "casebench.yaml").exists()

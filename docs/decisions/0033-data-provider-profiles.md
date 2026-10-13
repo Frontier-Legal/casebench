@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-12
 decision-makers: Casebench maintainers
 ---
@@ -33,13 +33,14 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 - **Profile.** A YAML file holding:
   - the provider's name, the jurisdictions it covers, and links to its docs and terms;
   - the connector (`http`, `mcp` or a plugin's name) and that connector's options, with `${VAR}` standing in for the key;
-  - the environment variables the key can live in;
+  - the environment variable the key lives in;
+  - a search the provider knows finds a document, used for the live check;
   - `metered`: `search`, `fetch` or `none`.
 
   The options are exactly what `corpus add` would write: a profile is a saved answer to it.
 - **Where profiles come from.** Two places, both read without running any code:
   - **Bundled** with Casebench under `casebench/corpus/profiles/`, after review. Only these are listed in onboarding.
-  - **A file** the user names: `casebench init --profile acme.yaml` or `casebench corpus add --profile acme.yaml`. A provider that never contributes to Casebench hands its users this file, from its docs for example. The path must be a local file; Casebench does not fetch a profile from a URL (rule 5).
+  - **A file** the user names: `casebench init --profile acme.yaml` or `casebench corpus add profile acme.yaml`. A provider that never contributes to Casebench hands its users this file, from its docs for example. The path must be a local file; Casebench does not fetch a profile from a URL (rule 5).
 - **Admission to the bundled list.** One bar for every provider:
   - `samples/` holds a recorded search and fetch that the provider may redistribute;
   - `casebench plugin test` passes on them offline;
@@ -51,7 +52,7 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
   - another HTTP or MCP service, which is today's `corpus add`;
   - "not now, I'll bring lawyer-written cases", which says that citation checks wait until a corpus is added.
 
-  Picking a profile asks nothing more when its key is set, and runs one live search and fetch, as `corpus add` does. `init --profile FILE` skips the question and runs the same live search and fetch on that file's profile, so a broken file fails there, before anything is written.
+  Picking a profile asks nothing more when its key is set, and runs one live search and fetch, as `corpus add` does. `init --profile FILE` skips the question and runs the same live search and fetch on that file's profile, so a broken file fails there, before anything is written. A profile file that cannot be read stops `init`; one whose live check cannot reach the provider from here is left out, like any corpus that is out of reach ([0030](0030-set-up-here-run-there.md)).
 - **What init writes.** `init` writes the profile's options into `casebench.yaml`, along with `profile: <id>` and, for a file, the file name it came from. The config stays reproducible when a later release or a newer file changes the profile.
 - **Metering.** For a metered provider:
   - `init` and `corpus check` say how many searches they will spend before spending them;

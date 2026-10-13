@@ -10,8 +10,7 @@ Casebench publishes the shapes other tools read and write as JSON Schemas, each 
 | `casebench.case/1.0` | one evaluation case, one line of `suite.jsonl` | the suite's `manifest.json`, as `case_format` |
 | `casebench.suite/1.0` | a frozen suite's `manifest.json` | its own `format` field |
 | `casebench.report/1.0` | a scored run's `report.json` | its own `format` field |
-
-A provider profile ([decision 0033](../decisions/0033-data-provider-profiles.md)) becomes a format when profiles are built.
+| `casebench.profile/1.0` | a data provider's profile, in YAML ([decision 0033](../decisions/0033-data-provider-profiles.md)) | its own `format` field |
 
 The schemas ship with Casebench under `casebench/formats/schemas/<name>/<major>.<minor>.json`. `casebench schema export --into DIR` writes a copy. They are not yet published at a stable address: that waits for the project's own domain.
 

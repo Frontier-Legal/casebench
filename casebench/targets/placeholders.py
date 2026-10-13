@@ -9,6 +9,8 @@ from typing import Any
 
 WHOLE = re.compile(r"^\{\{(\w+)\}\}$")
 INLINE = re.compile(r"\{\{(\w+)\}\}")
+# `${VAR}`: an environment variable, as `expand_env` reads it.
+VARIABLE = re.compile(r"\$\{(\w+)\}")
 
 
 class MissingInput(KeyError):
