@@ -11,7 +11,14 @@ from casebench.extract.cli import DEFAULT_KEYS
 from casebench.extract.run import read_keys
 from casebench.judge.client import Judge
 from casebench.judge.resolve import Resolver
-from casebench.suites.court import FACT_KINDS, NotEnoughLevels, court_suite, unchanged
+from casebench.suites.court import (
+    FACT_KINDS,
+    NoKeysFrom,
+    NotEnoughLevels,
+    court_suite,
+    mixed_suite,
+    unchanged,
+)
 from casebench.suites.freeze import freeze
 from casebench.suites.resolve import RESOLVED_KINDS, CaseResolver
 
@@ -28,6 +35,18 @@ def _resolver(config_path: Path) -> CaseResolver:
     return CaseResolver(Resolver(judge, Corpora(config.corpora), config.judge.candidates))
 
 
+def _shares(given: tuple[str, ...]) -> dict[str, int]:
+    shares: dict[str, int] = {}
+    for share in given:
+        name, sep, count = share.partition("=")
+        if not sep or not count.isdigit() or int(count) < 1 or name in shares:
+            raise click.BadParameter(
+                f"{share!r}: give each corpus once, as NAME=COUNT", param_hint="--corpus"
+            )
+        shares[name] = int(count)
+    return shares
+
+
 @click.command(name="generate")
 @click.option(
     "--keys",
@@ -42,7 +61,14 @@ def _resolver(config_path: Path) -> CaseResolver:
     show_default=True,
     help="Comma-separated case types.",
 )
-@click.option("--n", "count", type=click.IntRange(min=1), required=True)
+@click.option("--n", "count", type=click.IntRange(min=1), help="How many cases, from every corpus.")
+@click.option(
+    "--corpus",
+    "shares",
+    multiple=True,
+    metavar="NAME=COUNT",
+    help="How many cases from one corpus; give it once for each corpus the suite mixes.",
+)
 @click.option(
     "--after",
     type=click.DateTime(formats=["%Y-%m-%d"]),
@@ -61,7 +87,8 @@ def _resolver(config_path: Path) -> CaseResolver:
 def generate_command(
     keys_dir: Path,
     types: str,
-    count: int,
+    count: int | None,
+    shares: tuple[str, ...],
     after: datetime | None,
     stratify: str | None,
     suite_id: str,
@@ -73,19 +100,19 @@ def generate_command(
     unknown = sorted(set(wanted) - set(FACT_KINDS))
     if unknown:
         raise click.BadParameter(f"unknown types {unknown}; choose from {sorted(FACT_KINDS)}")
+    if (count is None) == (not shares):
+        raise click.UsageError("give --n for a suite from every corpus, or --corpus NAME=COUNT")
     cutoff: date | None = after.date() if after else None
     resolver = _resolver(config_path) if set(wanted) & set(RESOLVED_KINDS) else None
+    options = {"after": cutoff, "stratify": stratify == "court", "resolve": resolver or unchanged}
+    keys = read_keys(keys_dir)
     try:
-        cases, generation = court_suite(
-            suite_id,
-            read_keys(keys_dir),
-            wanted,
-            count,
-            after=cutoff,
-            stratify=stratify == "court",
-            resolve=resolver or unchanged,
-        )
-    except NotEnoughLevels as error:
+        if shares:
+            cases, generation = mixed_suite(suite_id, keys, wanted, _shares(shares), **options)
+        else:
+            assert count is not None
+            cases, generation = court_suite(suite_id, keys, wanted, count, **options)
+    except (NotEnoughLevels, NoKeysFrom) as error:
         raise click.ClickException(str(error)) from error
     if resolver:
         generation["citations"] = resolver.report()
@@ -95,10 +122,12 @@ def generate_command(
                 f"{counts.get('dropped', 0)} not found and dropped"
             )
     manifest = freeze(suite_id, cases, out, generation)
-    if cutoff:
+    if cutoff and not shares:
         click.echo(
             f"cutoff {cutoff}: {generation['decisions_allowed']} decisions allowed, "
             f"{generation['decisions_excluded_by_date']} excluded"
         )
     click.echo(f"suite {manifest.suite_id}: {manifest.case_count} cases {manifest.task_types}")
+    if shares:
+        click.echo(f"from corpora {manifest.corpora}, jurisdictions {manifest.jurisdictions}")
     click.echo(f"{manifest.content_hash}\n{out}")

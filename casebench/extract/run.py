@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from casebench.corpus.binding import Corpus
+from casebench.corpus.ids import SEPARATOR
 from casebench.extract.agreement import FIELDS, agreed_fields, key_facts
 from casebench.extract.prompt import EXTRACT, decision_prompt
 from casebench.extract.reading import Reading, read_reply
@@ -85,10 +86,17 @@ def extract(
     return result
 
 
-def write(result: Extraction, models: list[Judge], folder: Path) -> None:
+def write(result: Extraction, models: list[Judge], folder: Path, corpus: str) -> None:
+    """The keys this run made replace the ones earlier runs made from the same corpus; keys
+    from other corpora stay, so one folder can hold keys from several (decision 0036)."""
     folder.mkdir(parents=True, exist_ok=True)
+    others = [
+        key
+        for key in (read_keys(folder) if (folder / KEYS_FILE).is_file() else [])
+        if key.decision_id.partition(SEPARATOR)[0] != corpus
+    ]
     with (folder / KEYS_FILE).open("w", encoding="utf-8") as stream:
-        for key in result.keys:
+        for key in [*others, *result.keys]:
             stream.write(key.model_dump_json() + "\n")
     report = {
         "decisions": result.decisions,

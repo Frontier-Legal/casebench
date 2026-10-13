@@ -108,9 +108,12 @@ def test_init_connects_a_bundled_profile_picked_from_the_list(
     (tmp_path / "agent.py").write_text("def answer(q: str) -> str:\n    return 'x'\n", "utf-8")
     asked: dict[str, Any] = {}
 
+    answers = iter(["profile:test-provider", "none"])  # the provider, then "that's all"
+    second: dict[str, Any] = {}
+
     def picked(message: str, listed: list, default: str | None = None) -> str:
-        asked.update(message=message, listed=listed, default=default)
-        return "profile:test-provider"
+        (second if asked else asked).update(message=message, listed=listed, default=default)
+        return next(answers)
 
     monkeypatch.setattr("casebench.setup.corpus_question.pick", picked)
 
@@ -122,6 +125,9 @@ def test_init_connects_a_bundled_profile_picked_from_the_list(
     assert ran.exit_code == 0, ran.output
     assert asked["message"].startswith("Connect a source of court decisions?")
     assert asked["default"] == "profile:test-provider"
+    assert second["message"].startswith("Connect another source?")
+    assert ("that's all", "none") in second["listed"]
+    assert "profile:test-provider" not in [value for _, value in second["listed"]]
     assert "corpus   Test Provider: searched 'feshi' and fetched document 101" in ran.output
     config = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
     assert config["corpora"]["test-provider"]["profile"] == "test-provider"

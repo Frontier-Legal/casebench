@@ -13,6 +13,7 @@ from casebench.core.canonical import canonical_json, content_hash
 from casebench.core.case import FORMAT as CASE_FORMAT
 from casebench.core.case import Case
 from casebench.core.model import FrozenRecord
+from casebench.corpus.ids import SEPARATOR
 from casebench.formats.extensions import Extensions
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
@@ -36,6 +37,12 @@ class SuiteManifest(FrozenRecord):
     reference_sources: dict[str, int]
     approvals: dict[str, int]
     generation: dict[str, Any] = Field(default_factory=dict)
+    corpora: dict[str, int] = Field(
+        default_factory=dict, description="Cases per corpus their decision came from."
+    )
+    jurisdictions: dict[str, int] = Field(
+        default_factory=dict, description="Cases per jurisdiction, for those that name one."
+    )
     extensions: Extensions = Field(default_factory=dict)
 
 
@@ -45,6 +52,15 @@ class SuiteHashMismatch(ValueError):
 
 def case_lines(cases: list[Case]) -> list[str]:
     return [canonical_json(case.model_dump(mode="json")) for case in cases]
+
+
+def _sources(cases: list[Case]) -> list[str]:
+    """The decision each court-derived case came from, as a qualified id."""
+    return [
+        c.provenance.source_decision_id
+        for c in cases
+        if c.provenance and c.provenance.source_decision_id
+    ]
 
 
 def manifest_for(
@@ -61,6 +77,14 @@ def manifest_for(
         reference_sources=dict(Counter(case.reference.source.value for case in cases)),
         approvals=dict(Counter(case.approval.value for case in cases)),
         generation=generation or {},
+        corpora=dict(Counter(source.partition(SEPARATOR)[0] for source in _sources(cases))),
+        jurisdictions=dict(
+            Counter(
+                c.provenance.jurisdiction
+                for c in cases
+                if c.provenance and c.provenance.jurisdiction
+            )
+        ),
     )
 
 
