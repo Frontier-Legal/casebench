@@ -10,6 +10,7 @@ import click
 
 from casebench.capture.session import session_for
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, target_of
+from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
 from casebench.report import render
 from casebench.runs.dry_run import estimate
@@ -117,7 +118,7 @@ def run(
         return
     try:
         prepare(cases, config)
-    except MetricNeeds as error:
+    except (MetricNeeds, SameFamily) as error:
         raise click.ClickException(str(error)) from error
     if config.judge is not None:
         click.echo(SAME_FAMILY, err=True)

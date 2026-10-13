@@ -40,9 +40,10 @@ Chosen option 1, because comparability becomes a property of the data rather tha
 
   A newer Casebench version moves no metric by itself, because a metric that scores differently gets a new version.
 - **Strict pass rate.** For every task and metric whose cases carry criteria, the report adds the share of cases where every criterion passed: each positive criterion met and no negative one triggered. It has its own interval ([0028](0028-scores-baselines-and-intervals.md)) and sits beside the weighted mean, per reference source and approval state, as every figure does (rule 8). It is never folded into the mean and never shown alone.
-- **Second judge.** `judges:` in `casebench.yaml` may name a second judge, which must be of a different model family from the first; `init` refuses two of the same family. Both judges' verdicts are kept.
-  - A criterion or citation counts as passed only when both judges pass it.
-  - Every disagreement is listed in the report and kept in the run folder for review. A lawyer's verdict replaces both judges' verdicts (rule 6).
+- **Second judge.** `judges:` in `casebench.yaml` may name a second judge, which must be of a different model family from the first; `casebench run` refuses two of the same family before it sends anything. `judge:` stays the form for one. Both judges' verdicts are kept.
+  - The first judge lists an answer's citations; each judge then decides each one on its own.
+  - A criterion or citation counts as passed only when both judges pass it. A citation is verified only when both verify it, and an authority counts as the court's only when both judges name the same document.
+  - Every disagreement is listed in the report and kept with its score in the run folder for review. A lawyer's verdict replaces both judges' verdicts (rule 6).
   - Lawyers review in the workbench ([workbench.md](../design/workbench.md)): an engineer sets Casebench up once, and lawyers then work in a browser, with no YAML and no terminal. The review queue is part of the Apache-2.0 workbench; hosting it for a team or as a service is the `ee/` side. Until the workbench ships, the disagreements wait in the run folder, and the strict "both judges pass" rule stands.
   - The report gives the two judges' agreement per metric.
 

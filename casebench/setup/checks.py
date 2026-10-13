@@ -124,8 +124,9 @@ def offline(config: CasebenchConfig) -> list[Check]:
 
 
 def _models(config: CasebenchConfig) -> list[tuple[str, JudgeConfig]]:
-    """Every model Casebench calls itself: the judge and the extraction models."""
-    models = [("judge", config.judge)] if config.judge is not None else []
+    """Every model Casebench calls itself: the judges and the extraction models."""
+    names = ["judge", "second judge"]
+    models = [(names[n], model) for n, model in enumerate(config.judges)]
     if config.extract is not None:
         models += [(f"extract{n}", m) for n, m in enumerate(config.extract.models, start=1)]
     return models

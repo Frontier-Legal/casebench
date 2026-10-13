@@ -6,6 +6,7 @@ from casebench.core.model import FrozenRecord
 from casebench.core.score import Score
 from casebench.formats.extensions import Extensions
 from casebench.formats.version import FormatVersion
+from casebench.report.agreement import JudgeAgreement
 from casebench.report.citations import CitationRate
 from casebench.report.funnel import CaseFunnel, FunnelSummary
 from casebench.report.tables import Table
@@ -29,6 +30,9 @@ class Report(FrozenRecord):
     produced_by: Producer
     tables: list[Table]
     citations: list[CitationRate]
+    agreement: list[JudgeAgreement] = Field(
+        default_factory=list, description="Per metric, with two judges (decision 0035)."
+    )
     funnel: Funnel
     scores: list[Score]
     extensions: Extensions = Field(default_factory=dict)

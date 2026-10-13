@@ -6,7 +6,14 @@ from pydantic import Field
 
 from casebench.core.case import Case
 from casebench.core.model import FrozenRecord
-from casebench.core.score import CitationCheck, CriterionVerdict, Direction, Score, ScoreKind
+from casebench.core.score import (
+    CitationCheck,
+    CriterionVerdict,
+    Direction,
+    Disagreement,
+    Score,
+    ScoreKind,
+)
 from casebench.runs.log import Result
 
 
@@ -18,6 +25,8 @@ class Verdict(FrozenRecord):
     explanation: str | None = None
     criteria: list[CriterionVerdict] = Field(default_factory=list)
     citations: list[CitationCheck] = Field(default_factory=list)
+    judged_twice: int = 0
+    disagreements: list[Disagreement] = Field(default_factory=list)
 
 
 @runtime_checkable
@@ -55,6 +64,8 @@ def score(metric: Metric, case: Case, result: Result) -> Score:
         explanation=verdict.explanation,
         criteria=verdict.criteria,
         citations=verdict.citations,
+        judged_twice=verdict.judged_twice,
+        disagreements=verdict.disagreements,
         task_type=case.task.type,
         reference_source=case.reference.source,
         approval=case.approval,

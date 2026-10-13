@@ -131,7 +131,7 @@ def test_cloud_providers_use_the_projects_sdk(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_check_names_a_missing_sdk():
-    config = CasebenchConfig(judge=JudgeConfig(provider="bedrock", model="anthropic.claude-x"))
+    config = CasebenchConfig(judges=[JudgeConfig(provider="bedrock", model="anthropic.claude-x")])
 
     [problem] = offline(config)
 

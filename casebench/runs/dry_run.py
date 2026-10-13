@@ -21,10 +21,15 @@ class DryRun:
     stored: int
     judge_calls_at_least: int
     judge_input_tokens_at_least: int
+    judges: int = 1
     candidates: int | None = None
     cached: int | None = None
     searches_cached: int = 0
     corpora: dict[str, tuple[int, int, int]] = field(default_factory=dict)
+
+    @property
+    def _each(self) -> str:
+        return f" for each of the {self.judges} judges" if self.judges > 1 else ""
 
     def lines(self) -> list[str]:
         out = [
@@ -35,7 +40,8 @@ class DryRun:
             out.append(
                 f"judge: at least {self.judge_calls_at_least} calls and "
                 f"{self.judge_input_tokens_at_least} input tokens (one call per answer to list "
-                "its citations, then up to two per citation, known only once the answers exist)"
+                f"its citations, then up to two per citation{self._each}, known only once the "
+                "answers exist)"
             )
         if self.judge_calls_at_least and self.candidates is not None:
             out.append(
@@ -73,6 +79,7 @@ def estimate(
         stored=len(cases) - len(pending),
         judge_calls_at_least=checked,
         judge_input_tokens_at_least=checked * _tokens(len(prompts.LIST_CITATIONS)),
+        judges=max(len(config.judges), 1),
         candidates=config.judge.candidates if config.judge and corpora else None,
         cached=(
             sum(cached_documents(c.connector, c.options, cache_root) for c in corpora)

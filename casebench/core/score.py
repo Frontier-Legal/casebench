@@ -62,6 +62,15 @@ class CitationCheck(FrozenRecord):
     )
 
 
+class Disagreement(FrozenRecord):
+    """One item two judges decided differently; the stricter verdict is the one that counted,
+    until a lawyer decides it (decision 0035)."""
+
+    item: str
+    first: str
+    second: str
+
+
 class Score(FrozenRecord):
     """One metric's verdict on one output, carrying where its answer key came from."""
 
@@ -76,6 +85,8 @@ class Score(FrozenRecord):
     explanation: str | None = None
     criteria: list[CriterionVerdict] = Field(default_factory=list)
     citations: list[CitationCheck] = Field(default_factory=list)
+    judged_twice: int = Field(default=0, description="Items both judges decided (decision 0035).")
+    disagreements: list[Disagreement] = Field(default_factory=list)
     task_type: str
     reference_source: ReferenceSource
     approval: Approval
