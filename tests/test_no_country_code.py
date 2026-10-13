@@ -20,5 +20,6 @@ def test_no_country_in_the_core():
         "options",
         "connector_source",
         "profile",  # which profile file the options came from, by name
+        "metered",  # what the provider charges for, so paid searches are kept
     }
     assert plugin_leaks(ROOT) == []

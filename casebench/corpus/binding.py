@@ -15,13 +15,15 @@ from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
 Holding = Literal["decisions", "statutes"]
+Charge = Literal["search", "fetch", "none"]
 
 
 class CorpusConfig(Record):
     """One corpus in casebench.yaml. `jurisdictions` are the ones it covers, every one when
     empty; `holds` the kinds of documents it has, both when empty. `connector_source` names
     the distribution when two register the same connector; `profile` records which profile
-    the options came from, and is never read again."""
+    the options came from, and is never read again. `metered` is what the provider charges
+    for: a store that charges per search has each search kept, like each document."""
 
     connector: str
     jurisdictions: list[Jurisdiction] = Field(default_factory=list)
@@ -29,6 +31,7 @@ class CorpusConfig(Record):
     options: dict[str, Any] = Field(default_factory=dict)
     connector_source: str | None = None
     profile: str | None = None
+    metered: Charge = "none"
 
 
 def _code_or_none(value: str) -> str | None:
@@ -49,7 +52,9 @@ class Corpus:
             kind_named("connector"), config.connector, config.connector_source
         )
         folder = cache_root / corpus_key(config.connector, config.options)
-        self.connector = CachedConnector(connector_class(**config.options), folder)
+        self.connector = CachedConnector(
+            connector_class(**config.options), folder, keep_searches=config.metered == "search"
+        )
         self.name = name
         self.jurisdictions = list(config.jurisdictions)
 
