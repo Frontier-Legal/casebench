@@ -47,3 +47,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0031](0031-authority-funnel.md) | The authority funnel follows each court authority through the captured steps | accepted |
 | [0032](0032-provider-catalog-and-sdk-providers.md) | Models are picked from a public catalog; cloud providers are called through the project's own SDK | accepted |
 | [0033](0033-data-provider-profiles.md) | Data providers are profiles the built-in connectors run; a code plugin only where a profile cannot reach | proposed |
+| [0034](0034-versioned-formats.md) | Casebench formats are versioned JSON Schemas generated from the models | proposed |
