@@ -10,12 +10,12 @@ Amends [0025](0025-corpus-connectors.md): provider profiles replace "no provider
 
 ## Context and problem statement
 
-`casebench init` asks where the corpus is, and for a provider's API it then asks for a base URL, a key variable, tool names and a JSONPath for each field ([0025](0025-corpus-connectors.md)). A provider's engineers know these answers; few users do. Providers such as Frontier Legal want their store to be one choice in onboarding. The corpus does two jobs, and the question has to say both: generated cases come from it, and every citation in an answer is checked against it (rule 6). A team without a corpus can still bring lawyer-written cases, but its citations then have nothing to resolve against.
+`casebench init` asks where the corpus is, and for a provider's API it then asks for a base URL, a key variable, tool names and a JSONPath for each field ([0025](0025-corpus-connectors.md)). A provider's engineers know these answers; few users do. A data provider wants its store to be one choice in onboarding. The corpus does two jobs, and the question has to say both: generated cases come from it, and every citation in an answer is checked against it (rule 6). A team without a corpus can still bring lawyer-written cases, but its citations then have nothing to resolve against.
 
 - Every provider seen so far has the same shape: search, then fetch. The built-in `http` and `mcp` connectors already run that. Providers differ in authentication, metering and access rules.
-- Frontier Legal's MCP server tells its clients that each search counts against the firm's monthly quota, and that a document can be fetched only after a search has returned it. Casebench fetches each document once ever, but it repeats every citation search on every run (0025). A metered provider therefore bills the user again on every run.
+- Commercial providers meter their APIs. A legal-data MCP server checked for this record counts each search against the customer's monthly quota, and lets a document be fetched only after a search has returned it. Casebench fetches each document once ever, but it repeats every citation search on every run (0025). A metered provider therefore bills the user again on every run.
 - The `mcp` connector cannot send a key to a remote server. `McpCorpusConfig` has a `url` but no `headers`, so a commercial provider's hosted MCP server cannot be reached without code.
-- Casebench lives in the `frontier-legal` GitHub organisation. Anything that puts that organisation's product into onboarding must hold every other provider to the same bar, or the project's neutrality (rule 8, 0025) is open to question.
+- Casebench is neutral (rule 8, 0025). Once any provider appears in onboarding, every provider must be held to the same bar, whoever they are.
 
 ## Considered options
 
@@ -36,7 +36,7 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
   - `metered`: `search`, `fetch` or `none`.
 
   The options are exactly what `corpus add` would write: a profile is a reviewed, saved answer to it.
-- **Admission.** One bar for every provider, Frontier Legal included:
+- **Admission.** One bar for every provider:
   - `samples/` holds a recorded search and fetch that the provider may redistribute;
   - `casebench plugin test` passes on them offline;
   - the profile names a maintainer who answers issues.
@@ -59,14 +59,14 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 ### Consequences
 
 - Good, because a user whose provider key is set answers one question, and a provider adds itself with a data file and samples, reviewed like any other change.
-- Good, because the core never runs provider-specific code, and every provider gets the same treatment, the organisation's own included.
+- Good, because the core never runs provider-specific code, and every provider gets the same treatment.
 - Bad, because profile fixes ship with Casebench releases. Until a fix ships, the options already in a user's `casebench.yaml` can be edited by hand.
 - Bad, because the maintainers review profiles and their samples, and a broken profile lands in their issue queue until its maintainer fixes it.
 - Bad, because a provider that renumbers its documents makes cached citations wrong until the cache is cleared.
 
 ## Why not the others
 
-- Code in the core: the maintainers would own each provider's breakages and release schedule, and a product owned by the repository's own organisation sitting inside the core is the hardest version to defend.
+- Code in the core: the maintainers would own each provider's breakages and release schedule, and whichever provider got into the core first would look favoured.
 - Package only: the user has to know a package exists and install it before onboarding can offer it, which is the friction this decision removes. It stays available for providers that need code.
 - MCP Registry: it adds a network call during onboarding (rule 5), it lists servers rather than field mappings, and it covers MCP providers only.
 - Rewording alone: the user still types tool names and JSONPath, which is the step where set-up fails.
@@ -81,7 +81,7 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 
 Checked on 2026-10-12:
 
-- Frontier Legal's MCP server, in the instructions it gives clients: each search draws on the firm's monthly quota; a document can be fetched only by an id a search returned, once per search.
+- A commercial legal-data MCP server, in the instructions it gives clients: each search draws on the customer's monthly quota; a document can be fetched only by an id a search returned, once per search.
 - Casebench's connectors: `HttpCorpusConfig` has `headers`; `McpCorpusConfig` has none; `CachedConnector` passes searches straight through.
 - [models.dev](https://github.com/anomalyco/models.dev): one data file per provider, added by pull request and validated by CI.
 - [Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers): partner providers are "written, maintained, validated and published by third-party companies against their own APIs".
@@ -90,4 +90,4 @@ Checked on 2026-10-12:
 - [dbt](https://docs.getdbt.com/docs/trusted-adapters): the Trusted Adapter Program has ended; adapters maintained by dbt Labs, partners and the community are listed together.
 - [MCP Registry](https://github.com/modelcontextprotocol/registry): server owners publish their own entries with `mcp-publisher`, and namespace ownership is verified.
 
-Assumed and not checked: that Frontier Legal's terms allow a local cache of full texts, and that its MCP server accepts a key header over Streamable HTTP.
+Assumed and not checked: that commercial providers' terms allow a local cache of full texts, and that their hosted MCP servers accept a key header over Streamable HTTP.
