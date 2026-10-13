@@ -9,6 +9,9 @@ from casebench.capture.cli import proxy
 from casebench.config import ConfigError
 from casebench.corpus.cli import corpus
 from casebench.extract.cli import extract_command
+from casebench.formats.schema_cli import schema
+from casebench.formats.validate_cli import validate_command
+from casebench.formats.version import UnreadableFormat
 from casebench.plugins.cli import plugin
 from casebench.report.cli import compare_command, report_command
 from casebench.runs.cli import run
@@ -19,12 +22,12 @@ from casebench.targets.cli import target
 
 
 class _Main(click.Group):
-    """Turns a config problem into a one-line error instead of a traceback."""
+    """Turns a config problem or an unreadable format into a one-line error, not a traceback."""
 
     def invoke(self, ctx: click.Context) -> Any:
         try:
             return super().invoke(ctx)
-        except ConfigError as error:
+        except (ConfigError, UnreadableFormat) as error:
             raise click.ClickException(str(error)) from error
 
 
@@ -45,3 +48,5 @@ main.add_command(report_command)
 main.add_command(compare_command)
 main.add_command(init_command)
 main.add_command(check_command)
+main.add_command(schema)
+main.add_command(validate_command)

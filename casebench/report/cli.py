@@ -6,10 +6,11 @@ from pathlib import Path
 import click
 
 from casebench.core.score import Score
+from casebench.formats.read import ignored_note, read
+from casebench.formats.version import FormatVersion, UnreadableFormat
 from casebench.report.compare import compare
-from casebench.report.funnel import FunnelSummary
+from casebench.report.record import FORMAT, Report
 from casebench.report.render import REPORT_FILE, lines
-from casebench.report.tables import Table
 from casebench.runs.log import RunLog
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -30,10 +31,13 @@ def report_command(run_dir: Path) -> None:
     if not path.is_file():
         raise click.ClickException(f"{run_dir} has no {REPORT_FILE}; score it first")
     saved = json.loads(path.read_text(encoding="utf-8"))
-    tables = [Table.model_validate(t) for t in saved["tables"]]
-    scores = [Score.model_validate(s) for s in saved["scores"]]
-    funnel = FunnelSummary.model_validate(saved["funnel"]["summary"]) if "funnel" in saved else None
-    for line in lines(tables, scores, funnel):
+    if "format" not in saved:
+        raise UnreadableFormat(f"{path} names no format; score the run again")
+    declared = FormatVersion.parse(saved["format"])
+    report, ignored = read(Report, saved, declared, FORMAT)
+    if ignored:
+        click.echo(ignored_note(str(path), declared, FORMAT, ignored), err=True)
+    for line in lines(report.tables, report.scores, report.funnel.summary):
         click.echo(line)
 
 

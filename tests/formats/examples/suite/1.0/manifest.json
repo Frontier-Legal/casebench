@@ -1,0 +1,12 @@
+{
+  "format": "casebench.suite/1.0",
+  "case_format": "casebench.case/1.0",
+  "suite_id": "employment-2024",
+  "content_hash": "sha256:0f7c2a9d4e1b6c3a8f5e2d7b9c4a1e6f3b8d5c2a7e4f1b9d6c3a8e5f2b7d4c1a",
+  "casebench_version": "0.1.0",
+  "case_count": 1,
+  "task_types": {"outcome": 1},
+  "reference_sources": {"court": 1},
+  "approvals": {"approved": 1},
+  "generation": {"seed": "employment-2024"}
+}

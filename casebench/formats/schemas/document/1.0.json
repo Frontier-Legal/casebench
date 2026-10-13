@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One court decision or statute, in the shape everything downstream of a connector reads.\n`level` is the court's level when the provider's metadata gives it.",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "jurisdiction": {
+      "type": "string"
+    },
+    "court": {
+      "type": "string"
+    },
+    "date": {
+      "format": "date",
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    },
+    "level": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "jurisdiction",
+    "court",
+    "date",
+    "text"
+  ],
+  "title": "DecisionRecord",
+  "type": "object"
+}

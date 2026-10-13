@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Approval": {
+      "description": "Whether a lawyer has approved a case's reference.",
+      "enum": [
+        "draft",
+        "approved"
+      ],
+      "title": "Approval",
+      "type": "string"
+    },
+    "Criterion": {
+      "additionalProperties": false,
+      "description": "A pass/fail check on the output, derived from the reference's facts.\n\nA positive weight rewards meeting the criterion; a negative weight penalises\ntriggering it. A negative criterion may stand without facts, because it names\nsomething the output must not do.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer"
+        },
+        "from": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "weight"
+      ],
+      "title": "Criterion",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "description": "Where a fact can be checked: a span or anchor in a document, a quote, or a note.",
+      "properties": {
+        "doc": {
+          "type": "string"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "anchor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "doc"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Fact": {
+      "additionalProperties": false,
+      "description": "One thing the reference asserts, tied to the evidence for it.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The corpus document a cited authority resolved to."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "value",
+        "evidence"
+      ],
+      "title": "Fact",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "How a case was made.",
+      "properties": {
+        "builder": {
+          "type": "string"
+        },
+        "source_decision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "jurisdiction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "builder"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "description": "What the output is graded against: evidenced facts and the criteria derived from them.",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/ReferenceSource"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "type": "array"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/Criterion"
+          },
+          "type": "array"
+        },
+        "author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "Reference",
+      "type": "object"
+    },
+    "ReferenceSource": {
+      "description": "Where a reference's facts came from.",
+      "enum": [
+        "court",
+        "lawyer",
+        "structured",
+        "hybrid"
+      ],
+      "title": "ReferenceSource",
+      "type": "string"
+    },
+    "Task": {
+      "additionalProperties": true,
+      "description": "What the AI is asked to do. Inputs beyond `type` are passed to the target by name.",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Task",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One evaluation case.",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "task": {
+      "$ref": "#/$defs/Task"
+    },
+    "reference": {
+      "$ref": "#/$defs/Reference"
+    },
+    "metrics": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Provenance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "approval": {
+      "$ref": "#/$defs/Approval",
+      "default": "draft"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "task",
+    "reference",
+    "metrics"
+  ],
+  "title": "Case",
+  "type": "object"
+}

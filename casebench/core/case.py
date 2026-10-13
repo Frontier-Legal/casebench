@@ -6,6 +6,10 @@ from typing import Any
 from pydantic import AliasChoices, ConfigDict, Field, model_validator
 
 from casebench.core.model import Record
+from casebench.formats.extensions import Extensions
+from casebench.formats.version import FormatVersion
+
+FORMAT = FormatVersion("case", 1, 0)
 
 
 class ReferenceSource(StrEnum):
@@ -125,3 +129,4 @@ class Case(Record):
     tags: list[str] = Field(default_factory=list)
     provenance: Provenance | None = None
     approval: Approval = Approval.DRAFT
+    extensions: Extensions = Field(default_factory=dict)

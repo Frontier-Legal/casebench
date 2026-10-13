@@ -1,0 +1,529 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Approval": {
+      "description": "Whether a lawyer has approved a case's reference.",
+      "enum": [
+        "draft",
+        "approved"
+      ],
+      "title": "Approval",
+      "type": "string"
+    },
+    "AuthorityTrace": {
+      "additionalProperties": false,
+      "description": "One court authority: which stages it reached; None where a stage could not be checked.",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "retrieved": {
+          "type": "boolean"
+        },
+        "kept": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "cited": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "document_id",
+        "retrieved",
+        "kept",
+        "read",
+        "cited",
+        "label"
+      ],
+      "title": "AuthorityTrace",
+      "type": "object"
+    },
+    "CaseFunnel": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "diagnostic": {
+          "type": "boolean"
+        },
+        "authorities": {
+          "items": {
+            "$ref": "#/$defs/AuthorityTrace"
+          },
+          "type": "array"
+        },
+        "ungrounded": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "diagnostic",
+        "authorities",
+        "ungrounded"
+      ],
+      "title": "CaseFunnel",
+      "type": "object"
+    },
+    "CitationCheck": {
+      "additionalProperties": false,
+      "description": "One citation in an answer: as written, the claim it carried, what the corpus found.",
+      "properties": {
+        "citation": {
+          "type": "string"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "label": {
+          "$ref": "#/$defs/CitationLabel"
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "citation",
+        "claim",
+        "label"
+      ],
+      "title": "CitationCheck",
+      "type": "object"
+    },
+    "CitationLabel": {
+      "enum": [
+        "verified",
+        "misgrounded",
+        "fabricated"
+      ],
+      "title": "CitationLabel",
+      "type": "string"
+    },
+    "CitationRate": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/CitationLabel"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "count",
+        "rate"
+      ],
+      "title": "CitationRate",
+      "type": "object"
+    },
+    "CriterionVerdict": {
+      "additionalProperties": false,
+      "description": "Whether the output met one criterion, with the quote that shows it.",
+      "properties": {
+        "criterion_id": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer"
+        },
+        "met": {
+          "type": "boolean"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "criterion_id",
+        "weight",
+        "met"
+      ],
+      "title": "CriterionVerdict",
+      "type": "object"
+    },
+    "Direction": {
+      "description": "Which way is better.",
+      "enum": [
+        "higher",
+        "lower"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Funnel": {
+      "additionalProperties": false,
+      "description": "How many gold authorities survived each step, over the run and per case.",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/FunnelSummary"
+        },
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/CaseFunnel"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "cases"
+      ],
+      "title": "Funnel",
+      "type": "object"
+    },
+    "FunnelSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cases": {
+          "type": "integer"
+        },
+        "diagnosed": {
+          "type": "integer"
+        },
+        "authorities": {
+          "type": "integer"
+        },
+        "survived": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "ungrounded": {
+          "type": "integer"
+        },
+        "without_rerank": {
+          "type": "integer"
+        },
+        "cited_checked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cases",
+        "diagnosed",
+        "authorities",
+        "survived",
+        "labels",
+        "ungrounded",
+        "without_rerank",
+        "cited_checked"
+      ],
+      "title": "FunnelSummary",
+      "type": "object"
+    },
+    "ReferenceSource": {
+      "description": "Where a reference's facts came from.",
+      "enum": [
+        "court",
+        "lawyer",
+        "structured",
+        "hybrid"
+      ],
+      "title": "ReferenceSource",
+      "type": "string"
+    },
+    "Row": {
+      "additionalProperties": false,
+      "properties": {
+        "reference_source": {
+          "$ref": "#/$defs/ReferenceSource"
+        },
+        "approval": {
+          "type": "string"
+        },
+        "n": {
+          "type": "integer"
+        },
+        "mean": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "majority_baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text_only_baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "reference_source",
+        "approval",
+        "n",
+        "mean",
+        "low",
+        "high"
+      ],
+      "title": "Row",
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "description": "One metric's verdict on one output, carrying where its answer key came from.",
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "repeat": {
+          "default": 0,
+          "type": "integer"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "metric_version": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ScoreKind"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "value": {
+          "type": "number"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/CriterionVerdict"
+          },
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/CitationCheck"
+          },
+          "type": "array"
+        },
+        "task_type": {
+          "type": "string"
+        },
+        "reference_source": {
+          "$ref": "#/$defs/ReferenceSource"
+        },
+        "approval": {
+          "$ref": "#/$defs/Approval"
+        }
+      },
+      "required": [
+        "case_id",
+        "metric",
+        "metric_version",
+        "kind",
+        "direction",
+        "value",
+        "task_type",
+        "reference_source",
+        "approval"
+      ],
+      "title": "Score",
+      "type": "object"
+    },
+    "ScoreKind": {
+      "description": "Who produced a score.",
+      "enum": [
+        "code",
+        "llm",
+        "human"
+      ],
+      "title": "ScoreKind",
+      "type": "string"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "task_type": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/Row"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_type",
+        "metric",
+        "rows"
+      ],
+      "title": "Table",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One scored run: a table per task and metric, never one overall figure (rule 8).",
+  "properties": {
+    "format": {
+      "pattern": "^casebench\\.report/1\\.[0-9]+$",
+      "type": "string"
+    },
+    "score_set": {
+      "type": "string"
+    },
+    "tables": {
+      "items": {
+        "$ref": "#/$defs/Table"
+      },
+      "type": "array"
+    },
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/CitationRate"
+      },
+      "type": "array"
+    },
+    "funnel": {
+      "$ref": "#/$defs/Funnel"
+    },
+    "scores": {
+      "items": {
+        "$ref": "#/$defs/Score"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "score_set",
+    "tables",
+    "citations",
+    "funnel",
+    "scores"
+  ],
+  "title": "Report",
+  "type": "object"
+}
