@@ -5,11 +5,14 @@ from typing import Any
 
 LIST_CITATIONS = """You read an answer written by a legal AI system and list every authority it \
 cites: court decisions, statutes, articles and regulations. Copy each citation exactly as the \
-answer writes it, state the claim the answer makes with it in one sentence, and say whether it \
-is a statute (any legislation, article or regulation) or a court decision. Do not judge whether \
-the citations are right. Reply with JSON only: \
-[{"citation": "...", "claim": "...", "kind": "statute" or "decision"}]. Reply [] if the answer \
-cites nothing."""
+answer writes it, state the claim the answer makes with it in one sentence, say whether it \
+is a statute (any legislation, article or regulation) or a court decision, and name the \
+jurisdiction whose law or court it is as a code: one of the codes listed after the answer when \
+there is such a list, otherwise an ISO 3166 code such as NO or US-CA, or EU for the European \
+Union. Name a jurisdiction only where the citation itself shows it; otherwise give null. Do not \
+judge whether the citations are right. Reply with JSON only: \
+[{"citation": "...", "claim": "...", "kind": "statute" or "decision", \
+"jurisdiction": "<code or null>"}]. Reply [] if the answer cites nothing."""
 
 MATCH = """You decide which document a legal citation refers to. You get the citation and \
 candidate documents from a search, each with its id, court, date, metadata and opening \
@@ -23,8 +26,10 @@ when citing it. Read the whole document. Reply with JSON only: \
 "reason": "..."}"""
 
 
-def list_citations(answer: str) -> str:
-    return f"Answer:\n{answer}"
+def list_citations(answer: str, jurisdictions: list[str] | None = None) -> str:
+    """`jurisdictions` are the codes the setup's corpora cover; None when any code may do."""
+    listed = f"\n\nJurisdiction codes: {', '.join(jurisdictions)}" if jurisdictions else ""
+    return f"Answer:\n{answer}{listed}"
 
 
 def match(citation: str, candidates: list[dict[str, Any]]) -> str:

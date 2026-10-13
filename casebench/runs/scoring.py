@@ -60,7 +60,8 @@ def funnels(log: RunLog, cases: list[Case], context: dict[str, Any]) -> list[Cas
         if judge is not None and corpus is not None:
             resolver = Resolver(judge, corpus, context["candidates"])
             output = result.output or ""
-            cited = cited_documents(judge, resolver, output) if output else {}
+            place = case.provenance.jurisdiction if case.provenance else None
+            cited = cited_documents(resolver, output, place) if output else {}
         traced.append(case_funnel(case, result, cited))
     return traced
 

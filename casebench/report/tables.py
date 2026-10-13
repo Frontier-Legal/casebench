@@ -1,4 +1,4 @@
-"""Report tables: one per task and metric, split by reference source and approval."""
+"""Report tables: one per task and metric, split by reference source, approval and jurisdiction."""
 
 from collections import defaultdict
 
@@ -12,8 +12,11 @@ APPROVAL_LABELS = {Approval.APPROVED: "lawyer-approved", Approval.DRAFT: "unrevi
 
 
 class Row(FrozenRecord):
+    """`jurisdiction` is None for the cases that name none (decision 0036)."""
+
     reference_source: ReferenceSource
     approval: str
+    jurisdiction: str | None = None
     n: int
     mean: float
     low: float
@@ -45,16 +48,19 @@ def _baselines(cases: list[Case]) -> tuple[float | None, float | None]:
 def build_tables(
     scores: list[Score], cases: list[Case] | None = None, suite_id: str = ""
 ) -> list[Table]:
-    """Never one overall figure: sources and approval states are never averaged together."""
+    """Never one overall figure: sources, approval states and jurisdictions are never
+    averaged together (rule 8)."""
     by_id = {case.id: case for case in cases or []}
-    groups: dict[tuple[str, str], dict[tuple[ReferenceSource, Approval], list[Score]]]
+    groups: dict[tuple[str, str], dict[tuple[ReferenceSource, Approval, str], list[Score]]]
     groups = defaultdict(lambda: defaultdict(list))
     for item in scores:
-        groups[(item.task_type, item.metric)][(item.reference_source, item.approval)].append(item)
+        # "" sorts first and stands for no jurisdiction; the row carries None.
+        split = (item.reference_source, item.approval, item.jurisdiction or "")
+        groups[(item.task_type, item.metric)][split].append(item)
     tables = []
     for (task_type, metric), rows in sorted(groups.items()):
         built = []
-        for (source, approval), members in sorted(rows.items()):
+        for (source, approval, place), members in sorted(rows.items()):
             values = [m.value for m in members]
             interval = mean_interval(values, suite_id)
             majority, text = (None, None)
@@ -66,6 +72,7 @@ def build_tables(
                 Row(
                     reference_source=source,
                     approval=APPROVAL_LABELS[approval],
+                    jurisdiction=place or None,
                     n=len(values),
                     mean=mean(values),
                     low=interval.low,

@@ -141,6 +141,18 @@
             }
           ],
           "default": null
+        },
+        "routed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What chose the corpora searched: citation, case or all (decision 0036)."
         }
       },
       "required": [
@@ -152,10 +164,12 @@
       "type": "object"
     },
     "CitationLabel": {
+      "description": "`unchecked`: no connected corpus covers the citation's jurisdiction or kind, so\nCasebench cannot say; it never counts against the answer (decision 0036).",
       "enum": [
         "verified",
         "misgrounded",
-        "fabricated"
+        "fabricated",
+        "unchecked"
       ],
       "title": "CitationLabel",
       "type": "string"
@@ -304,12 +318,24 @@
     },
     "Row": {
       "additionalProperties": false,
+      "description": "`jurisdiction` is None for the cases that name none (decision 0036).",
       "properties": {
         "reference_source": {
           "$ref": "#/$defs/ReferenceSource"
         },
         "approval": {
           "type": "string"
+        },
+        "jurisdiction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "n": {
           "type": "integer"
@@ -425,6 +451,18 @@
         },
         "approval": {
           "$ref": "#/$defs/Approval"
+        },
+        "jurisdiction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The case's jurisdiction, so scores split by it (0036)."
         }
       },
       "required": [
