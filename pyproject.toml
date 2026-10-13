@@ -103,6 +103,7 @@ name = "cz_conventional_commits"
 dev = [
     "anthropic>=1.13.0",
     "commitizen>=4.19.2",
+    "jsonschema>=4.26.0",
     "openai>=3.29.0",
     "opentelemetry-exporter-otlp-proto-http>=1.45.1",
     "opentelemetry-sdk>=1.45.1",

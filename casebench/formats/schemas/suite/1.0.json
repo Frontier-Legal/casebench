@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "What a frozen suite is: its format, its id, its hash and the mix of what it holds.\n`case_format` is the format of every line of `suite.jsonl`.",
+  "properties": {
+    "format": {
+      "pattern": "^casebench\\.suite/1\\.[0-9]+$",
+      "type": "string"
+    },
+    "case_format": {
+      "pattern": "^casebench\\.case/1\\.[0-9]+$",
+      "type": "string"
+    },
+    "suite_id": {
+      "type": "string"
+    },
+    "content_hash": {
+      "type": "string"
+    },
+    "casebench_version": {
+      "type": "string"
+    },
+    "case_count": {
+      "type": "integer"
+    },
+    "task_types": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "reference_sources": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "approvals": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "generation": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "case_format",
+    "suite_id",
+    "content_hash",
+    "casebench_version",
+    "case_count",
+    "task_types",
+    "reference_sources",
+    "approvals"
+  ],
+  "title": "SuiteManifest",
+  "type": "object"
+}

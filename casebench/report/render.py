@@ -1,11 +1,11 @@
 """Write a run's report to the terminal and to report.json."""
 
-import json
 from pathlib import Path
 
 from casebench.core.score import Score
 from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
+from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
 
 REPORT_FILE = "report.json"
@@ -50,15 +50,13 @@ def write(
     summary: FunnelSummary,
 ) -> Path:
     path = folder / REPORT_FILE
-    report = {
-        "score_set": score_set.name,
-        "tables": [t.model_dump(mode="json") for t in tables],
-        "citations": [r.model_dump(mode="json") for r in citation_rates(scores)],
-        "funnel": {
-            "summary": summary.model_dump(mode="json"),
-            "cases": [f.model_dump(mode="json") for f in funnels],
-        },
-        "scores": [s.model_dump(mode="json") for s in scores],
-    }
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    report = Report(
+        format=str(FORMAT),
+        score_set=score_set.name,
+        tables=tables,
+        citations=citation_rates(scores),
+        funnel=Funnel(summary=summary, cases=funnels),
+        scores=scores,
+    )
+    path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return path

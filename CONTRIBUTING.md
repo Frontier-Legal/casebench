@@ -38,6 +38,17 @@ Sign off every commit with `git commit -s`. This is the [Developer Certificate o
 
 A material choice, such as a new dependency, a public interface or a storage format, gets an architecture decision record under [docs/decisions/](docs/decisions/) in the same pull request. Copy [template.md](docs/decisions/template.md).
 
+## Formats
+
+Cases, suite manifests, reports and corpus documents are published formats with their own versions ([docs/design/formats.md](docs/design/formats.md)). If you change one of their models:
+
+- Within a major version, only add optional fields or enum values. Anything else is a new major version and needs its own decision record.
+- If the format's current version is already released (listed in `casebench/formats/schemas/index.json`), raise its minor version first.
+- Run `uv run casebench schema export` and commit the schema it writes.
+- Add an example file for a new version under `tests/formats/examples/<format>/<version>/`.
+
+A release adds the hash of each new schema file to `index.json`. From then on, that file never changes.
+
 ## Plugins
 
 A data provider, a model API's parser or a model provider is a plugin: built into the core or published as a `casebench-<name>` package. [PLUGINS.md](PLUGINS.md) describes the steps.
