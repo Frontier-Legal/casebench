@@ -25,7 +25,7 @@ def authority(kind: str, document_id: str) -> Fact:
         kind=kind,
         value=document_id,
         evidence=Evidence(doc="tr-1"),
-        document_id=document_id,
+        document_id=f"corpus:{document_id}",  # as a suite resolves it (decision 0036)
     )
 
 
@@ -100,7 +100,7 @@ def test_rerank_drop(traced: Path):
     assert ran.exit_code == 0, ran.output
     [funnel] = report(traced)["funnel"]["cases"]
     labels = {a["document_id"]: a["label"] for a in funnel["authorities"]}
-    assert labels == {"dec-9hd-2019-1": None, "law-4857-18": "rerank_drop"}
+    assert labels == {"corpus:dec-9hd-2019-1": None, "corpus:law-4857-18": "rerank_drop"}
     assert "authority funnel: 2 court authorities in 1 cases" in ran.output
     for line in ("retrieved      2   100%", "kept           1    50%", "read           1    50%"):
         assert line in ran.output

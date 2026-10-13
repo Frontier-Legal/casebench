@@ -89,7 +89,7 @@ def _check(profile: Profile) -> str:
 
 
 def profile_block(
-    path: Path, jurisdiction: str | None = None, recorded: str | None = None
+    path: Path, jurisdictions: list[str] | None = None, recorded: str | None = None
 ) -> tuple[dict[str, Any], list[str]]:
     """The corpus block for casebench.yaml, and what to tell the user. Nothing is returned
     unless the live check passed, so a broken profile fails before anything is written.
@@ -99,7 +99,7 @@ def profile_block(
     if unset:
         raise ProfileProblem(f"{', '.join(unset)} is not set in this shell; export it first")
     fetched = _check(profile)
-    block = corpus_block(profile.connector, profile.options, jurisdiction)
+    block = corpus_block(profile.connector, profile.options, jurisdictions or profile.jurisdictions)
     block["profile"] = recorded or path.name
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")
     if profile.metered is not Metered.NONE:

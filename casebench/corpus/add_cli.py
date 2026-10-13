@@ -8,7 +8,15 @@ import click
 import httpx2
 
 from casebench.config import DEFAULT_CONFIG
-from casebench.corpus.add import ConfigHasCorpus, corpus_block, describe, write_corpus
+from casebench.core.jurisdiction import UnknownJurisdiction, code
+from casebench.corpus.add import (
+    ConfigHasCorpus,
+    corpus_block,
+    describe,
+    name_for,
+    taken_names,
+    write_corpus,
+)
 from casebench.corpus.bundled import resolve
 from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.corpus.mapping import every, record_fields
@@ -87,13 +95,23 @@ def _map(
     return ids_path, fields
 
 
-def _save(config: Path, block: dict[str, Any], ask: bool) -> None:
-    if ask and not click.confirm(f"write this corpus into {config}?", default=True):
+def _save(config: Path, block: dict[str, Any], ask: bool, name: str | None = None) -> None:
+    """Add the block under its name: the one given, or one made from the store."""
+    name = name or name_for(block, taken_names(config))
+    if ask and not click.confirm(f"add this corpus to {config} as {name}?", default=True):
         raise click.Abort()
     try:
-        click.echo(write_corpus(config, block))
+        click.echo(write_corpus(config, name, block))
     except ConfigHasCorpus as error:
         raise click.ClickException(str(error)) from error
+
+
+def codes(given: tuple[str, ...]) -> list[str]:
+    """The jurisdictions given, as codes; an unknown one stops the command."""
+    try:
+        return [code(value) for value in given]
+    except UnknownJurisdiction as error:
+        raise click.BadParameter(str(error), param_hint="--jurisdiction") from error
 
 
 def _ask(given: str | None, question: str, ask: bool, default: str | None = None) -> str:
@@ -126,7 +144,7 @@ def http_block(
     probe: str | None = None,
     ids_path: str | None = None,
     fields: tuple[str, ...] = (),
-    jurisdiction: str | None = None,
+    jurisdictions: list[str] | None = None,
     ask: bool = True,
 ) -> dict[str, Any]:
     """Ask for what was not given, make one live search and fetch, and return the corpus block."""
@@ -162,7 +180,7 @@ def http_block(
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("http", options)
     options["search_ids"], options["fields"] = _map(store, probe, ids_path, _pairs(fields), ask)
-    return corpus_block("http", options, jurisdiction)
+    return corpus_block("http", options, jurisdictions)
 
 
 def mcp_block(
@@ -176,7 +194,7 @@ def mcp_block(
     probe: str | None = None,
     ids_path: str | None = None,
     fields: tuple[str, ...] = (),
-    jurisdiction: str | None = None,
+    jurisdictions: list[str] | None = None,
     ask: bool = True,
 ) -> dict[str, Any]:
     if not command_line and not url:
@@ -203,7 +221,7 @@ def mcp_block(
         options["search_ids"], options["fields"] = _map(store, probe, ids_path, _pairs(fields), ask)
     finally:
         store.close()
-    return corpus_block("mcp", options, jurisdiction)
+    return corpus_block("mcp", options, jurisdictions)
 
 
 COMMON = [
@@ -217,7 +235,13 @@ COMMON = [
     click.option("--probe", help="A search that finds at least one document."),
     click.option("--ids", "ids_path", help="JSONPath to the ids in a search result."),
     click.option("--field", "fields", multiple=True, help="NAME=JSONPath, such as text=$.body."),
-    click.option("--jurisdiction", help="Read only this jurisdiction's documents."),
+    click.option(
+        "--jurisdiction",
+        "jurisdictions",
+        multiple=True,
+        help="A jurisdiction the store covers, such as NO or US-CA; give it once for each.",
+    ),
+    click.option("--name", help="The corpus's name in casebench.yaml; made from the store if not."),
     click.option("--yes", is_flag=True, help="Ask nothing: take the flags and suggestions."),
 ]
 
@@ -264,7 +288,8 @@ def http(
     probe: str | None,
     ids_path: str | None,
     fields: tuple[str, ...],
-    jurisdiction: str | None,
+    jurisdictions: tuple[str, ...],
+    name: str | None,
     yes: bool,
 ) -> None:
     """A document API reached over HTTP."""
@@ -279,10 +304,10 @@ def http(
         probe=probe,
         ids_path=ids_path,
         fields=fields,
-        jurisdiction=jurisdiction,
+        jurisdictions=codes(jurisdictions),
         ask=not yes,
     )
-    _save(config_path, block, not yes)
+    _save(config_path, block, not yes, name)
 
 
 @add.command()
@@ -304,7 +329,8 @@ def mcp(
     probe: str | None,
     ids_path: str | None,
     fields: tuple[str, ...],
-    jurisdiction: str | None,
+    jurisdictions: tuple[str, ...],
+    name: str | None,
     yes: bool,
 ) -> None:
     """An MCP server with a search tool and a fetch tool."""
@@ -318,10 +344,10 @@ def mcp(
         probe=probe,
         ids_path=ids_path,
         fields=fields,
-        jurisdiction=jurisdiction,
+        jurisdictions=codes(jurisdictions),
         ask=not yes,
     )
-    _save(config_path, block, not yes)
+    _save(config_path, block, not yes, name)
 
 
 @add.command()
@@ -333,13 +359,21 @@ def mcp(
     default=DEFAULT_CONFIG,
     show_default=True,
 )
-@click.option("--jurisdiction", help="Read only this jurisdiction's documents.")
-def profile(given: str, config_path: Path, jurisdiction: str | None) -> None:
+@click.option(
+    "--jurisdiction",
+    "jurisdictions",
+    multiple=True,
+    help="Cover only these jurisdictions, instead of the profile's.",
+)
+@click.option("--name", help="The corpus's name in casebench.yaml; the profile's id if not.")
+def profile(
+    given: str, config_path: Path, jurisdictions: tuple[str, ...], name: str | None
+) -> None:
     """A store described by a provider's profile: a file, or a bundled profile's id. Nothing
     is asked; one live search and fetch prove it works with your key."""
     try:
         path, recorded = resolve(given)
-        block, notes = profile_block(path, jurisdiction, recorded)
+        block, notes = profile_block(path, codes(jurisdictions), recorded)
     except ProfileProblem as error:
         raise click.ClickException(str(error)) from error
     except Exception as error:
@@ -350,4 +384,4 @@ def profile(given: str, config_path: Path, jurisdiction: str | None) -> None:
         raise
     for note in notes:
         click.echo(note)
-    _save(config_path, block, ask=False)
+    _save(config_path, block, ask=False, name=name)

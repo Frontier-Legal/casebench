@@ -15,7 +15,8 @@ def test_no_country_in_the_core():
         assert not list((ROOT / "casebench" / folder).glob("**/*.py")), folder
     assert set(CorpusConfig.model_fields) == {
         "connector",
-        "jurisdiction",
+        "jurisdictions",  # ISO 3166 codes, the same for every country (decision 0036)
+        "holds",
         "options",
         "connector_source",
         "profile",  # which profile file the options came from, by name

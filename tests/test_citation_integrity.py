@@ -7,7 +7,8 @@ import pytest
 
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.core.score import CitationLabel
-from casebench.corpus.binding import Corpus, CorpusConfig
+from casebench.corpus.binding import CorpusConfig
+from casebench.corpus.corpora import Corpora
 from casebench.judge.client import Judge, read_json
 from casebench.judge.config import JudgeConfig
 from casebench.metrics.builtin.citation_integrity import CitationIntegrity
@@ -23,7 +24,7 @@ ANSWER = (
 )
 
 
-def folder_corpus(tmp_path: Path) -> Corpus:
+def folder_corpus(tmp_path: Path) -> Corpora:
     store = tmp_path / "decisions"
     store.mkdir()
     for work_id, work in WORKS.items():
@@ -40,8 +41,8 @@ def folder_corpus(tmp_path: Path) -> Corpus:
             ),
             encoding="utf-8",
         )
-    return Corpus(
-        CorpusConfig(connector="folder", options={"path": str(store)}),
+    return Corpora(
+        {"corpus": CorpusConfig(connector="folder", options={"path": str(store)})},
         cache_root=tmp_path / "cache",
     )
 
@@ -74,8 +75,8 @@ def test_fabricated_and_misstated_citations(tmp_path: Path, monkeypatch: pytest.
 
     labels = {c.citation: (c.label, c.document_id) for c in score.citations}
     assert labels == {
-        "Yargıtay 9. HD, E. 2023/1234 K. 2024/567": (CitationLabel.VERIFIED, "101"),
-        "Yargıtay 22. HD, E. 2022/77 K. 2023/90": (CitationLabel.MISGROUNDED, "102"),
+        "Yargıtay 9. HD, E. 2023/1234 K. 2024/567": (CitationLabel.VERIFIED, "corpus:101"),
+        "Yargıtay 22. HD, E. 2022/77 K. 2023/90": (CitationLabel.MISGROUNDED, "corpus:102"),
         "Yargıtay 3. HD, E. 2021/999 K. 2022/1": (CitationLabel.FABRICATED, None),
     }
     verified = next(c for c in score.citations if c.label is CitationLabel.VERIFIED)

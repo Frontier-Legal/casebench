@@ -27,7 +27,7 @@ def answer_key(number: int) -> AnswerKey:
     decision = f"decision-{number:03d}"
     return AnswerKey(
         decision_id=decision,
-        jurisdiction="xx",
+        jurisdiction="GB",  # any real code: ISO 3166 or EU (decision 0036)
         inputs={"facts": f"Facts of case {number}, up to the operative part."},
         facts=[
             Fact(

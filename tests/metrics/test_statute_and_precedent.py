@@ -108,7 +108,10 @@ def test_statutes_and_precedents_scored_by_corpus_document(workspace):
     manifest, cases = load(tmp_path / "suite")
     assert manifest.generation["citations"]["statute"] == {"resolved": 2, "dropped": 1}
     statute_case = next(c for c in cases if c.task.type == "statute")
-    assert [f.document_id for f in statute_case.reference.facts] == ["law-4857-18", "law-1475-14"]
+    assert [f.document_id for f in statute_case.reference.facts] == [
+        "corpus:law-4857-18",
+        "corpus:law-1475-14",
+    ]
 
     assert ran.exit_code == 0, ran.output
     by_metric = scores(tmp_path)

@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from casebench.core.case import Case, Fact, Provenance, Reference, ReferenceSource, Task
+from casebench.core.jurisdiction import Jurisdiction
 from casebench.core.model import Record
 
 
@@ -17,7 +18,7 @@ class AnswerKey(Record):
     """
 
     decision_id: str
-    jurisdiction: str
+    jurisdiction: Jurisdiction
     inputs: dict[str, Any]
     facts: list[Fact] = Field(min_length=1)
     date: date_type | None = None

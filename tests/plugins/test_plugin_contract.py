@@ -202,16 +202,16 @@ def test_one_connector_serves_several_countries(tmp_path: Path):
     write_decisions(tmp_path)
 
     turkish = Corpus(
-        CorpusConfig(connector="folder", jurisdiction="tr", options={"path": str(tmp_path)})
+        CorpusConfig(connector="folder", jurisdictions=["tr"], options={"path": str(tmp_path)})
     )
     dutch = Corpus(
-        CorpusConfig(connector="folder", jurisdiction="nl", options={"path": str(tmp_path)})
+        CorpusConfig(connector="folder", jurisdictions=["NL"], options={"path": str(tmp_path)})
     )
     everything = Corpus(CorpusConfig(connector="folder", options={"path": str(tmp_path)}))
 
-    assert turkish.decision_ids() == ["tr-1"]
-    assert dutch.decision_ids() == ["nl-1"]
-    assert sorted(everything.decision_ids()) == ["nl-1", "tr-1"]
+    assert turkish.decision_ids() == ["corpus:tr-1"]
+    assert dutch.decision_ids() == ["corpus:nl-1"]
+    assert sorted(everything.decision_ids()) == ["corpus:nl-1", "corpus:tr-1"]
     assert type(turkish.connector) is type(dutch.connector)
 
 

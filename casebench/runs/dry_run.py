@@ -56,13 +56,17 @@ def estimate(
     pending = [case for case in cases if case.id not in stored]
     characters = sum(len(str(value)) for case in pending for value in case.task.inputs.values())
     checked = sum(1 for case in pending if set(JUDGED) & set(case.metrics))
-    corpus = config.corpus
+    corpora = config.corpora.values()
     return DryRun(
         target_calls=len(pending),
         target_input_tokens=_tokens(characters),
         stored=len(cases) - len(pending),
         judge_calls_at_least=checked,
         judge_input_tokens_at_least=checked * _tokens(len(prompts.LIST_CITATIONS)),
-        candidates=config.judge.candidates if config.judge and corpus else None,
-        cached=cached_documents(corpus.connector, corpus.options, cache_root) if corpus else None,
+        candidates=config.judge.candidates if config.judge and corpora else None,
+        cached=(
+            sum(cached_documents(c.connector, c.options, cache_root) for c in corpora)
+            if corpora
+            else None
+        ),
     )

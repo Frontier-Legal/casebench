@@ -7,8 +7,8 @@ import click
 from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.corpus import cache
 from casebench.corpus.add_cli import add
-from casebench.corpus.binding import Corpus
 from casebench.corpus.check import SAMPLE_SIZE, check
+from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
 
 
@@ -35,13 +35,20 @@ corpus.add_command(add)
     help="A search that finds documents, for a store that cannot list them.",
 )
 @click.option("--size", type=click.IntRange(min=1), default=SAMPLE_SIZE, show_default=True)
-def check_command(config_path: Path, queries: tuple[str, ...], size: int) -> None:
+@click.option("--corpus", "corpus_name", help="Which corpus, when the config names several.")
+def check_command(
+    config_path: Path, queries: tuple[str, ...], size: int, corpus_name: str | None
+) -> None:
     """Fetch a sample by id and report which required fields are present or missing."""
     config = load_config(config_path)
-    if config.corpus is None:
+    if not config.corpora:
         raise click.ClickException("the config has no corpus; add one with casebench corpus add")
     try:
-        report = check(Corpus(config.corpus), list(queries), size)
+        store = Corpora(config.corpora).only(corpus_name)
+    except NoSuchCorpus as error:
+        raise click.ClickException(str(error)) from error
+    try:
+        report = check(store, list(queries), size)
     except ListingNotSupported as error:
         raise click.ClickException(f"{error}; pass --query to sample through search") from error
     click.echo(

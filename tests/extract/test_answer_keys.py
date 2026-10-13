@@ -78,9 +78,9 @@ def test_only_agreed_extractions_become_drafts(workspace):
     ):
         assert line in ran.output
     keys = {k.decision_id: {f.kind for f in k.facts} for k in read_keys(tmp_path / "keys")}
-    assert keys["tr-2"] == {"statute", "precedent"}  # the models read its outcome differently
-    assert keys["en-1"] == {"outcome", "precedent"}  # model B listed an extra statute
-    assert "en-2" not in keys  # its facts gave the ruling away
+    assert keys["corpus:tr-2"] == {"statute", "precedent"}  # the models read its outcome apart
+    assert keys["corpus:en-1"] == {"outcome", "precedent"}  # model B listed an extra statute
+    assert "corpus:en-2" not in keys  # its facts gave the ruling away
     report = json.loads((tmp_path / "keys" / "extraction.json").read_text(encoding="utf-8"))
     assert [m["model"] for m in report["models"]] == ["model-a", "model-b"]
     assert all(m["input_tokens"] == 600 for m in report["models"])
@@ -98,7 +98,7 @@ def test_each_fact_points_at_its_passage(workspace):
     extract(config, tmp_path / "keys")
 
     for key in read_keys(tmp_path / "keys"):
-        text = DECISIONS[key.decision_id][4]
+        text = DECISIONS[key.decision_id.removeprefix("corpus:")][4]
         for fact in key.facts:
             assert fact.evidence.span is not None
             start, end = fact.evidence.span
@@ -128,7 +128,7 @@ def test_date_filter(workspace):
     assert made.exit_code == 0, made.output
     assert "cutoff 2024-12-31: 2 decisions allowed, 3 excluded" in made.output
     manifest, cases = load(tmp_path / "suite")
-    assert {c.provenance.source_decision_id for c in cases if c.provenance} == {"de-1"}
+    assert {c.provenance.source_decision_id for c in cases if c.provenance} == {"corpus:de-1"}
     assert manifest.generation["after"] == "2024-12-31"
     assert manifest.generation["decisions_allowed"] == 2
 
@@ -156,7 +156,7 @@ def test_stratified_suite(workspace):
     assert made.exit_code == 0, made.output
     _, cases = load(tmp_path / "suite")
     sources = [c.provenance.source_decision_id for c in cases if c.provenance]
-    levels = sorted(DECISIONS[source][2] for source in sources if source)
+    levels = sorted(DECISIONS[source.removeprefix("corpus:")][2] for source in sources if source)
     assert levels == ["appellate", "first_instance", "supreme"]
 
 

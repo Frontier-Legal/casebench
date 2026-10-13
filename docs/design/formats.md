@@ -34,6 +34,8 @@ A file at a version Casebench knows is read strictly: an unknown field is an err
 | case | A criterion's weight is never zero. |
 | case | A criterion with a positive weight is derived from at least one fact; every fact it names exists. |
 | suite | The cases in `suite.jsonl`, read in order, hash to the manifest's `content_hash`. |
+| case, profile | A jurisdiction is an ISO 3166-1 alpha-2 code (`NO`), an ISO 3166-2 code (`US-CA`) or `EU`; `UK` and `EL` are read as `GB` and `GR` ([decision 0036](../decisions/0036-several-corpora.md)). |
+| case, report | A document id names its corpus: `<corpus>:<id as the provider gives it>`. |
 
 The schema describes the canonical form only. Casebench also accepts `derived_from` for a criterion's `from`, but writes `from`.
 

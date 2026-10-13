@@ -50,7 +50,9 @@ def reply(system: str, user: str) -> object:
         citation = user.split("\n", 1)[0].removeprefix("Citation: ")
         candidates = {c["id"] for c in json.loads(user.split("Candidates:\n", 1)[1])}
         wanted = ALIASES.get(citation)
-        return {"document_id": wanted if wanted in candidates else None, "reason": "alias"}
+        # The judge answers with a candidate's id as it was shown: qualified by its corpus.
+        picked = next((c for c in sorted(candidates) if c.partition(":")[2] == wanted), None)
+        return {"document_id": picked, "reason": "alias"}
     raise AssertionError(f"unexpected judge prompt: {system[:40]}")
 
 

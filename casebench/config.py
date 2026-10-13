@@ -1,15 +1,16 @@
 """Read casebench.yaml."""
 
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import yaml
-from pydantic import ValidationError, model_validator
+from pydantic import Field, StringConstraints, ValidationError, model_validator
 
 from casebench.capture.config import CaptureConfig
 from casebench.core.model import Record
 from casebench.corpus.binding import CorpusConfig
 from casebench.corpus.guard import refuse_self_check
+from casebench.corpus.ids import NAME
 from casebench.extract.config import ExtractConfig
 from casebench.judge.config import JudgeConfig
 
@@ -20,16 +21,36 @@ class ConfigError(ValueError):
     """casebench.yaml is missing or does not validate; the message says where."""
 
 
+# The name a single `corpus:` is read under (decision 0036).
+SINGLE = "corpus"
+CorpusName = Annotated[str, StringConstraints(pattern=NAME)]
+
+
 class CasebenchConfig(Record):
+    """`corpora:` names every corpus; `corpus:` is the form for one, read as one named
+    `corpus`."""
+
     target: dict[str, Any] | None = None
-    corpus: CorpusConfig | None = None
+    corpora: dict[CorpusName, CorpusConfig] = Field(default_factory=dict)
     capture: CaptureConfig | None = None
     judge: JudgeConfig | None = None
     extract: ExtractConfig | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _one_corpus_is_a_named_one(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "corpus" not in data:
+            return data
+        if data.get("corpora"):
+            raise ValueError("give `corpus:` for one store or `corpora:` for several, not both")
+        single = data["corpus"]
+        rest = {key: value for key, value in data.items() if key != "corpus"}
+        return {**rest, "corpora": {SINGLE: single}} if single is not None else rest
+
     @model_validator(mode="after")
-    def _corpus_is_not_the_target(self) -> "CasebenchConfig":
-        refuse_self_check(self.target or {}, self.corpus)
+    def _no_corpus_is_the_target(self) -> "CasebenchConfig":
+        for corpus in self.corpora.values():
+            refuse_self_check(self.target or {}, corpus)
         return self
 
 
