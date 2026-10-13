@@ -6,14 +6,17 @@ import click
 import questionary
 
 
-def pick(message: str, choices: list[tuple[str, str]], **terminal: Any) -> str:
-    """Typing narrows the list; arrows move; Enter picks. `terminal` passes a test's input
-    and output through to the menu."""
+def pick(
+    message: str, choices: list[tuple[str, str]], default: str | None = None, **terminal: Any
+) -> str:
+    """Typing narrows the list; arrows move; Enter picks. `default` is the value the cursor
+    starts on. `terminal` passes a test's input and output through to the menu."""
     question = questionary.select(
         message,
         choices=[questionary.Choice(title, value) for title, value in choices],
         use_search_filter=True,
         use_jk_keys=False,
+        default=default,
         **terminal,
     )
     answer = question.unsafe_ask()

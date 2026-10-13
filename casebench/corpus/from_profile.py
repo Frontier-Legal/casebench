@@ -88,16 +88,19 @@ def _check(profile: Profile) -> str:
     return found[0]
 
 
-def profile_block(path: Path, jurisdiction: str | None = None) -> tuple[dict[str, Any], list[str]]:
+def profile_block(
+    path: Path, jurisdiction: str | None = None, recorded: str | None = None
+) -> tuple[dict[str, Any], list[str]]:
     """The corpus block for casebench.yaml, and what to tell the user. Nothing is returned
-    unless the live check passed, so a broken profile fails before anything is written."""
+    unless the live check passed, so a broken profile fails before anything is written.
+    `recorded` is what the block names as its profile: a bundled id, or the file's name."""
     profile, notes = load_profile(path)
     unset = _unset(profile)
     if unset:
         raise ProfileProblem(f"{', '.join(unset)} is not set in this shell; export it first")
     fetched = _check(profile)
     block = corpus_block(profile.connector, profile.options, jurisdiction)
-    block["profile"] = path.name
+    block["profile"] = recorded or path.name
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")
     if profile.metered is not Metered.NONE:
         notes.append(f"{profile.name} charges per {profile.metered.value}")

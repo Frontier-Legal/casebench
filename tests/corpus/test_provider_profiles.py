@@ -6,7 +6,6 @@ import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -14,47 +13,10 @@ from click.testing import CliRunner
 
 from casebench.cli import main
 from tests.corpus.document_api import KEY, start_document_api
+from tests.corpus.profiles import FIELDS, http_options, profile
 
 # A subprocess server is up within seconds on a CI runner; this is only a ceiling.
 SERVER_START_S = 30.0
-
-FIELDS = {
-    "id": "$.work_id",
-    "jurisdiction": "$.jurisdiction.code",
-    "court": "$.issuers[0].name",
-    "date": "$.dates[1].date",
-    "text": "$.expressions[0].text",
-}
-
-
-def profile(folder: Path, connector: str, options: dict[str, Any], **extra: Any) -> Path:
-    path = folder / "provider.yaml"
-    data = {
-        "format": "casebench.profile/1.0",
-        "name": "Test Provider",
-        "jurisdictions": ["TR"],
-        "terms": "https://example.com/terms",
-        "key_env": "DOC_KEY",
-        "metered": "search",
-        "connector": connector,
-        "options": options,
-        "probe": "feshi",
-        **extra,
-    }
-    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
-    return path
-
-
-def http_options(base: str, fields: dict[str, str] = FIELDS) -> dict[str, Any]:
-    return {
-        "base_url": base,
-        "headers": {"Authorization": "Bearer ${DOC_KEY}"},
-        "search_path": "/search",
-        "search_params": {"q": "{text}"},
-        "search_ids": "$.results[*].work.work_id",
-        "fetch_path": "/documents/{id}",
-        "fields": fields,
-    }
 
 
 def invoke(*args: str):
@@ -147,9 +109,7 @@ def test_a_profile_whose_key_is_not_set_writes_nothing(
     assert not (tmp_path / "casebench.yaml").exists()
 
 
-def test_a_profile_that_does_not_match_the_provider_fails_before_writing(
-    api: str, tmp_path: Path
-):
+def test_a_profile_that_does_not_match_the_provider_fails_before_writing(api: str, tmp_path: Path):
     path = profile(tmp_path, "http", http_options(api, {**FIELDS, "text": "$.body"}))
 
     added = invoke("corpus", "add", "profile", str(path))

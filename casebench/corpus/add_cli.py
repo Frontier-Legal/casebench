@@ -9,6 +9,7 @@ import httpx2
 
 from casebench.config import DEFAULT_CONFIG
 from casebench.corpus.add import ConfigHasCorpus, corpus_block, describe, write_corpus
+from casebench.corpus.bundled import resolve
 from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.record import REQUIRED_FIELDS
@@ -324,7 +325,7 @@ def mcp(
 
 
 @add.command()
-@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("given", metavar="FILE_OR_ID")
 @click.option(
     "--config",
     "config_path",
@@ -333,11 +334,12 @@ def mcp(
     show_default=True,
 )
 @click.option("--jurisdiction", help="Read only this jurisdiction's documents.")
-def profile(path: Path, config_path: Path, jurisdiction: str | None) -> None:
-    """A store described by a provider's profile file: nothing is asked, one live search and
-    fetch prove it works with your key."""
+def profile(given: str, config_path: Path, jurisdiction: str | None) -> None:
+    """A store described by a provider's profile: a file, or a bundled profile's id. Nothing
+    is asked; one live search and fetch prove it works with your key."""
     try:
-        block, notes = profile_block(path, jurisdiction)
+        path, recorded = resolve(given)
+        block, notes = profile_block(path, jurisdiction, recorded)
     except ProfileProblem as error:
         raise click.ClickException(str(error)) from error
     except Exception as error:

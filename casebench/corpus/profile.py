@@ -34,6 +34,10 @@ class Profile(Record):
         default=None, description="The environment variable that holds the user's key."
     )
     metered: Metered = Metered.NONE
+    maintainer: str | None = Field(
+        default=None,
+        description="Who answers issues about this profile; required for a bundled one.",
+    )
     connector: str
     options: dict[str, Any]
     probe: str

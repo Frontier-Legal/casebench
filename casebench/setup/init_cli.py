@@ -8,10 +8,9 @@ import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
-from casebench.corpus.add_cli import http_block, mcp_block
-from casebench.corpus.from_profile import ProfileProblem, load_profile, profile_block
 from casebench.setup import catalog as model_catalog
-from casebench.setup.checks import Status, live, offline, unreachable
+from casebench.setup.checks import Status, live, offline
+from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.models import choose
 from casebench.setup.sdks import detect
 
@@ -56,40 +55,6 @@ def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
     return options
 
 
-def _corpus(kind: str) -> tuple[dict[str, Any] | None, str]:
-    """An HTTP or MCP store is described from one live search and fetch (decision 0025).
-    One that refuses or cannot be reached is left out, with what to do about it."""
-    later = f"run `casebench corpus add {kind}` once that is fixed"
-    try:
-        block = http_block() if kind == "http" else mcp_block()
-    except click.ClickException as error:
-        return None, f"corpus   not added: {error.format_message()}; {later}"
-    except Exception as error:
-        if unreachable(error):
-            return None, f"corpus   {Status.UNREACHABLE.value}; {later}, where it is reachable"
-        raise
-    return block, "corpus   added after one live search and fetch"
-
-
-def _profile(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
-    """A profile file that cannot be read stops init before anything is written. One whose
-    live check fails here is left out, like any corpus that is not reachable from here."""
-    try:
-        load_profile(path)
-    except ProfileProblem as error:
-        raise click.ClickException(str(error)) from error
-    later = f"run `casebench corpus add profile {path}` once that is fixed"
-    try:
-        block, notes = profile_block(path)
-    except ProfileProblem as error:
-        return None, [f"corpus   not added: {error}; {later}"]
-    except Exception as error:
-        if unreachable(error):
-            return None, [f"corpus   {Status.UNREACHABLE.value}; {later}, where it is reachable"]
-        raise
-    return block, [f"corpus   {note}" for note in notes]
-
-
 @click.command(name="init")
 @click.option(
     "--config",
@@ -106,9 +71,9 @@ def _profile(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
 @click.option("--corpus-path", help="A folder corpus's path.")
 @click.option(
     "--profile",
-    "profile_path",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="A data provider's profile file: the corpus is set up from it with no questions.",
+    "profile_given",
+    metavar="FILE_OR_ID",
+    help="A data provider's profile, a file or a bundled id: the corpus is set up from it.",
 )
 @click.option("--judge-provider", help="The judge's provider, as the model catalog names it.")
 @click.option("--judge-model")
@@ -140,7 +105,7 @@ def init_command(
     url: str | None,
     corpus_kind: str | None,
     corpus_path: str | None,
-    profile_path: Path | None,
+    profile_given: str | None,
     judge_provider: str | None,
     judge_model: str | None,
     judge_options: tuple[str, ...],
@@ -159,28 +124,11 @@ def init_command(
         "how Casebench reaches the agent", type=click.Choice(["python", "command", "http"])
     )
     data: dict[str, Any] = {"target": _target(kind, entry, run_line, url)}
-    if profile_path and corpus_kind:
-        raise click.UsageError("give --profile or --corpus, not both")
-    where = (
-        "profile"
-        if profile_path
-        else corpus_kind
-        or click.prompt("where the corpus is", type=click.Choice(["folder", "http", "mcp", "none"]))
-    )
-    if profile_path:
-        block, notes = _profile(profile_path)
-        for note in notes:
-            click.echo(note)
-        if block is not None:
-            data["corpus"] = block
-    if where == "folder":
-        path = _ask(corpus_path, "the folder")
-        data["corpus"] = {"connector": "folder", "options": {"path": path}}
-    if where in ("http", "mcp"):
-        block, note = _corpus(where)
+    block, notes, where = corpus_for_init(corpus_kind, corpus_path, profile_given)
+    for note in notes:
         click.echo(note)
-        if block is not None:
-            data["corpus"] = block
+    if block is not None:
+        data["corpus"] = block
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:

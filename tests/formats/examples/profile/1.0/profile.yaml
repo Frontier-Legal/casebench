@@ -5,6 +5,7 @@ docs: https://example.com/docs
 terms: https://example.com/terms
 key_env: EXAMPLE_API_KEY
 metered: search
+maintainer: Example Legal Data <data@example.com>
 connector: http
 options:
   base_url: https://api.example.com/v1

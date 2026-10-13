@@ -66,6 +66,18 @@
       "$ref": "#/$defs/Metered",
       "default": "none"
     },
+    "maintainer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Who answers issues about this profile; required for a bundled one."
+    },
     "connector": {
       "type": "string"
     },

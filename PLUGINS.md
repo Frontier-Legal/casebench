@@ -22,3 +22,12 @@ A connector holds no legal logic. One connector can serve many countries; each d
 2. Add samples to the plugin's `samples/` folder: recorded calls for a parser or provider, a small store and its `config.json` for a connector. Use only data you are allowed to redistribute.
 3. Implement the interface until `casebench plugin test <path>` passes. It prints the figure it measured.
 4. Publish your package to PyPI as `casebench-<name>`, or open a pull request for a built-in one.
+
+## A profile bundled with Casebench
+
+`casebench init` lists bundled profiles by name only, and preselects one only when its key is set on the user's machine. Every provider meets the same bar ([decision 0033](docs/decisions/0033-data-provider-profiles.md)):
+
+1. Write `casebench/corpus/profiles/<id>.yaml`, with a `maintainer` who answers issues about it. Check it with `casebench validate`.
+2. Record one search and one fetch, which you may publish, as `casebench/corpus/profiles/samples/<id>/search.json` and `fetch.json`.
+3. Run `uv run pytest tests/corpus/test_bundled_profiles.py`. It reads the recordings through the profile's paths, with no network and no key.
+4. Open a pull request. A profile you do not bundle works the same way as a file your users pass to `--profile`.
