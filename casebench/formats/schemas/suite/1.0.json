@@ -45,6 +45,20 @@
       "additionalProperties": true,
       "type": "object"
     },
+    "corpora": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Cases per corpus their decision came from.",
+      "type": "object"
+    },
+    "jurisdictions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Cases per jurisdiction, for those that name one.",
+      "type": "object"
+    },
     "extensions": {
       "additionalProperties": false,
       "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",

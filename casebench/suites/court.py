@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from casebench.core.case import Case
+from casebench.corpus.ids import SEPARATOR
 from casebench.extract.prompt import OUTCOMES
 from casebench.references.court import AnswerKey, case_from_answer_key
 from casebench.suites.generate import rank
@@ -108,3 +109,35 @@ def court_suite(
         "stratified_by": "court level" if stratify else None,
     }
     return ordered, generation
+
+
+class NoKeysFrom(ValueError):
+    """A share names a corpus no answer key came from."""
+
+
+def mixed_suite(
+    suite_id: str,
+    keys: list[AnswerKey],
+    types: list[str],
+    shares: dict[str, int],
+    *,
+    after: date | None = None,
+    stratify: bool = False,
+    resolve: Callable[[Case], Case | None] = unchanged,
+) -> tuple[list[Case], dict[str, Any]]:
+    """One suite drawn from several corpora, `shares[name]` cases from each, in one order
+    seeded by the suite id (decision 0036)."""
+    chosen: list[Case] = []
+    made: dict[str, dict[str, Any]] = {}
+    for name, count in shares.items():
+        own = [k for k in keys if k.decision_id.partition(SEPARATOR)[0] == name]
+        if not own:
+            raise NoKeysFrom(
+                f"no answer keys come from corpus {name}; run `casebench extract --corpus {name}`"
+            )
+        cases, made[name] = court_suite(
+            suite_id, own, types, count, after=after, stratify=stratify, resolve=resolve
+        )
+        chosen += cases
+    ordered = sorted(chosen, key=lambda c: rank(suite_id, c.id))
+    return ordered, {"types": types, "corpora": made}

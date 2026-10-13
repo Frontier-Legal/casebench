@@ -75,7 +75,7 @@ def extract_command(
             workers=max_concurrency,
             progress=lambda done: bar.update(done - bar.pos),
         )
-    write(result, models, out)
+    write(result, models, out, corpus.name)
     click.echo(f"{result.decisions} decisions read, {len(result.keys)} answer keys kept")
     for name in FIELDS:
         click.echo(f"  {name:<11} agreement {result.rate(name):.2f}")

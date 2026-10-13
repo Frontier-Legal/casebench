@@ -8,7 +8,6 @@ import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
-from casebench.corpus.add import name_for
 from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
@@ -72,9 +71,10 @@ def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
 @click.option("--corpus-path", help="A folder corpus's path.")
 @click.option(
     "--profile",
-    "profile_given",
+    "profiles",
+    multiple=True,
     metavar="FILE_OR_ID",
-    help="A data provider's profile, a file or a bundled id: the corpus is set up from it.",
+    help="A data provider's profile, a file or a bundled id; give it once for each provider.",
 )
 @click.option("--judge-provider", help="The judge's provider, as the model catalog names it.")
 @click.option("--judge-model")
@@ -106,7 +106,7 @@ def init_command(
     url: str | None,
     corpus_kind: str | None,
     corpus_path: str | None,
-    profile_given: str | None,
+    profiles: tuple[str, ...],
     judge_provider: str | None,
     judge_model: str | None,
     judge_options: tuple[str, ...],
@@ -125,11 +125,9 @@ def init_command(
         "how Casebench reaches the agent", type=click.Choice(["python", "command", "http"])
     )
     data: dict[str, Any] = {"target": _target(kind, entry, run_line, url)}
-    block, notes, where = corpus_for_init(corpus_kind, corpus_path, profile_given)
-    for note in notes:
-        click.echo(note)
-    if block is not None:
-        data["corpora"] = {name_for(block): block}
+    corpora, live_checked = corpus_for_init(corpus_kind, corpus_path, profiles)
+    if corpora:
+        data["corpora"] = corpora
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:
@@ -182,8 +180,9 @@ def init_command(
         click.echo("run `casebench check` where the corpus, the target and the judge are reachable")
         return
     checked = load_config(config_path)
-    if where in ("http", "mcp", "profile"):  # its live search and fetch just ran
-        checked = checked.model_copy(update={"corpora": {}})
+    # A corpus whose live search and fetch just ran is not checked again.
+    rest = {name: c for name, c in checked.corpora.items() if name not in live_checked}
+    checked = checked.model_copy(update={"corpora": rest})
     checks = live(checked)
     for item in checks:
         click.echo(item.line())
