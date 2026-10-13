@@ -48,5 +48,5 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0032](0032-provider-catalog-and-sdk-providers.md) | Models are picked from a public catalog; cloud providers are called through the project's own SDK | accepted |
 | [0033](0033-data-provider-profiles.md) | Data providers are profiles the built-in connectors run; a code plugin only where a profile cannot reach | accepted |
 | [0034](0034-versioned-formats.md) | Casebench formats are versioned JSON Schemas generated from the models | accepted |
-| [0035](0035-comparable-and-strict-scores.md) | Every score set says what produced it; a strict pass rate and a second judge are reported beside the scores, never blended | proposed |
+| [0035](0035-comparable-and-strict-scores.md) | Every score set says what produced it; a strict pass rate and a second judge are reported beside the scores, never blended | accepted |
 | [0036](0036-several-corpora.md) | A setup connects several corpora by name; citations go to the corpus that covers their jurisdiction | accepted |

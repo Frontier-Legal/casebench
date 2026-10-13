@@ -26,6 +26,10 @@ when citing it. Read the whole document. Reply with JSON only: \
 "reason": "..."}"""
 
 
+# Every prompt the judge is asked while scoring; a score set records the hash of each.
+ASKED = {"list_citations": LIST_CITATIONS, "match": MATCH, "weigh": WEIGH}
+
+
 def list_citations(answer: str, jurisdictions: list[str] | None = None) -> str:
     """`jurisdictions` are the codes the setup's corpora cover; None when any code may do."""
     listed = f"\n\nJurisdiction codes: {', '.join(jurisdictions)}" if jurisdictions else ""

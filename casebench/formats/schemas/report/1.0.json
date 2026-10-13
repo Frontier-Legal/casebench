@@ -305,6 +305,100 @@
       "title": "FunnelSummary",
       "type": "object"
     },
+    "JudgeUsed": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
+        "candidates": {
+          "description": "Search results the judge matches a citation against.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "family",
+        "candidates"
+      ],
+      "title": "JudgeUsed",
+      "type": "object"
+    },
+    "MetricUsed": {
+      "additionalProperties": false,
+      "description": "A metric's version, and which of the judge and the corpus it reads.",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "reads": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "MetricUsed",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "description": "The first line of every score set, and a copy in its report.",
+      "properties": {
+        "casebench_version": {
+          "default": "0.0.0",
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/MetricUsed"
+          },
+          "type": "object"
+        },
+        "judges": {
+          "items": {
+            "$ref": "#/$defs/JudgeUsed"
+          },
+          "type": "array"
+        },
+        "prompts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "The SHA-256 of each prompt the judge is asked.",
+          "type": "object"
+        },
+        "corpora": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Each corpus's name and the key of its settings.",
+          "type": "object"
+        },
+        "extracted_by": {
+          "description": "The models that wrote the cases' answer keys.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "metrics"
+      ],
+      "title": "Producer",
+      "type": "object"
+    },
     "ReferenceSource": {
       "description": "Where a reference's facts came from.",
       "enum": [
@@ -524,6 +618,9 @@
     "score_set": {
       "type": "string"
     },
+    "produced_by": {
+      "$ref": "#/$defs/Producer"
+    },
     "tables": {
       "items": {
         "$ref": "#/$defs/Table"
@@ -557,6 +654,7 @@
   "required": [
     "format",
     "score_set",
+    "produced_by",
     "tables",
     "citations",
     "funnel",

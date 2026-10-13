@@ -42,7 +42,8 @@
   "provenance": {
     "builder": "court",
     "source_decision_id": "court-of-appeal-2024-0187",
-    "jurisdiction": "GB"
+    "jurisdiction": "GB",
+    "extracted_by": ["anthropic/model-a", "openai/model-b"]
   },
   "approval": "approved",
   "extensions": {"example.com": {"reviewed_in": "2024-Q3"}}

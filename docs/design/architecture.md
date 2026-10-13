@@ -113,6 +113,6 @@ Third parties publish `casebench-<name>` packages that register entry points in 
 
 - Metrics read the corpus; they never ask the target to verify itself.
 - Every score row carries the reference source and the approval state. The report never averages court-derived and lawyer-authored results together, nor lawyer-approved and unreviewed cases.
-- A run log is append-only. Re-scoring writes a new score set with its own metric versions.
+- A run log is append-only. Re-scoring writes a new score set, whose first line says what produced it: metric versions, judge, judge prompts, corpora and extraction models ([0035](../decisions/0035-comparable-and-strict-scores.md)).
 - Casebench is standalone: cases, runs, eval traces and reviews live in its own store (`./.casebench/` locally, Postgres for the team server or the cloud). The runner calls only allowlisted hosts. The shared place receives what `casebench push` sends ([workbench.md](workbench.md)) and never computes a score.
 - Human decisions are append-only events and always outrank a judge's verdict.

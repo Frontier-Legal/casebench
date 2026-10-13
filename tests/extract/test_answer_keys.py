@@ -187,3 +187,28 @@ def test_facts_never_give_the_ruling_away(workspace):
         assert outcome.evidence.quote.casefold() not in facts.casefold()
         assert outcome.value not in facts.casefold()
         assert "Answer with exactly one of" in case.task.inputs["question"]
+
+
+def test_a_case_from_a_decision_names_the_models_that_read_it(workspace):
+    tmp_path, config, _ = workspace
+    extract(config, tmp_path / "keys")
+
+    made = invoke(
+        "generate",
+        "--keys",
+        str(tmp_path / "keys"),
+        "--types",
+        "outcome",
+        "--n",
+        "2",
+        "--suite-id",
+        "read-by",
+        "--out",
+        str(tmp_path / "suite"),
+    )
+
+    assert made.exit_code == 0, made.output
+    _, cases = load(tmp_path / "suite")
+    assert {tuple(c.provenance.extracted_by) for c in cases if c.provenance} == {
+        ("anthropic/model-a", "anthropic/model-b")
+    }

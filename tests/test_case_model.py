@@ -13,11 +13,12 @@ from casebench.core.case import (
     Task,
 )
 from casebench.core.score import CriterionVerdict, Direction, Score, ScoreKind
-from casebench.metrics.base import Verdict
+from casebench.metrics.base import Metric, Verdict
 from casebench.metrics.criteria import WeightedCriteria
 from casebench.references.court import AnswerKey, case_from_answer_key
 from casebench.report.tables import build_tables
 from casebench.runs.log import Result, RunInfo, RunLog
+from casebench.runs.producer import producer_for
 from casebench.runs.rescore import rescore
 from casebench.suites.freeze import freeze, load
 from casebench.suites.generate import generate
@@ -205,10 +206,12 @@ def test_re_score_without_re_running(tmp_path: Path):
     log = RunLog.create(tmp_path / "runs" / "run-1", info)
     for case in cases:
         log.append(Result(case_id=case.id, output="reversed"))
-    # rescore() takes the log, the cases and the metrics; there is no target to call.
-    first = rescore(log, cases, [ExactOutcome(version="1")])
+    # rescore() takes the log, the cases, the metrics and what produced them; there is no target.
+    old: list[Metric] = [ExactOutcome(version="1")]
+    new: list[Metric] = [ExactOutcome(version="2")]
+    first = rescore(log, cases, old, producer_for(old, cases))
     first_bytes = first.read_bytes()
-    second = rescore(log, cases, [ExactOutcome(version="2")])
+    second = rescore(log, cases, new, producer_for(new, cases))
 
     assert log.score_sets() == sorted([first, second])
     assert first.read_bytes() == first_bytes
