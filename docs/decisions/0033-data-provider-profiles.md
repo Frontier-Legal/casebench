@@ -19,36 +19,40 @@ Amends [0025](0025-corpus-connectors.md): provider profiles replace "no provider
 
 ## Considered options
 
-1. Provider profiles: one data file per provider, run by the built-in `http` or `mcp` connector and contributed by pull request with recorded samples. A `casebench-<name>` code plugin only where a profile cannot reach.
+1. Provider profiles: one data file per provider, run by the built-in `http` or `mcp` connector, either contributed by pull request with recorded samples or handed to the user as a file. A `casebench-<name>` code plugin only where a profile cannot reach.
 2. The provider's connector as code inside the core, as a built-in plugin.
 3. The provider's own `casebench-<name>` package and nothing in the core (0025 as it stands).
 4. Providers discovered during onboarding from the public MCP Registry.
 5. Keep `corpus add` as it is and only reword the onboarding question.
+6. Profiles shipped in the provider's own Python package and found through an entry point.
 
 ## Decision outcome
 
 Chosen option: "provider profiles", because what a provider knows (address, key, tools, fields) is data the core already runs. The provider can contribute it without the maintainers taking on code that breaks whenever the provider's API changes, and onboarding can list it without a network call.
 
-- **Profile.** `casebench/corpus/profiles/<id>.yaml` holds:
+- **Profile.** A YAML file holding:
   - the provider's name, the jurisdictions it covers, and links to its docs and terms;
   - the connector (`http`, `mcp` or a plugin's name) and that connector's options, with `${VAR}` standing in for the key;
   - the environment variables the key can live in;
   - `metered`: `search`, `fetch` or `none`.
 
-  The options are exactly what `corpus add` would write: a profile is a reviewed, saved answer to it.
-- **Admission.** One bar for every provider:
+  The options are exactly what `corpus add` would write: a profile is a saved answer to it.
+- **Where profiles come from.** Two places, both read without running any code:
+  - **Bundled** with Casebench under `casebench/corpus/profiles/`, after review. Only these are listed in onboarding.
+  - **A file** the user names: `casebench init --profile acme.yaml` or `casebench corpus add --profile acme.yaml`. A provider that never contributes to Casebench hands its users this file, from its docs for example. The path must be a local file; Casebench does not fetch a profile from a URL (rule 5).
+- **Admission to the bundled list.** One bar for every provider:
   - `samples/` holds a recorded search and fetch that the provider may redistribute;
   - `casebench plugin test` passes on them offline;
   - the profile names a maintainer who answers issues.
-- **Code plugins.** A provider whose API needs logic a profile cannot hold (OAuth, signed requests, paging that changes shape) publishes `casebench-<name>` with a connector plugin ([0016](0016-plugin-contract.md)), plus a profile that names that plugin as its connector. Onboarding still lists the profile, marked as needing that package.
+- **Code plugins.** A provider whose API needs logic a profile cannot hold (OAuth, signed requests, paging that changes shape) publishes `casebench-<name>` with a connector plugin ([0016](0016-plugin-contract.md)), plus a profile, bundled or as a file, that names that plugin as its connector. Onboarding marks a bundled one as needing that package.
 - **Onboarding.** `init` asks one question: "Connect a source of court decisions? Casebench builds test cases from it and checks every citation against it." The choices are:
-  - every profile, sorted by name. A profile whose key variable is set here is marked as found and preselected; nothing else is ever preselected.
+  - every bundled profile, sorted by name. A profile whose key variable is set here is marked as found and preselected; nothing else is ever preselected.
   - a folder on this machine;
   - another HTTP or MCP service, which is today's `corpus add`;
   - "not now, I'll bring lawyer-written cases", which says that citation checks wait until a corpus is added.
 
-  Picking a profile asks nothing more when its key is set, and runs one live search and fetch, as `corpus add` does.
-- **What init writes.** `init` writes the profile's options into `casebench.yaml` along with `profile: <id>`, so a config stays reproducible even when a later release changes the profile.
+  Picking a profile asks nothing more when its key is set, and runs one live search and fetch, as `corpus add` does. `init --profile FILE` skips the question and runs the same live search and fetch on that file's profile, so a broken file fails there, before anything is written.
+- **What init writes.** `init` writes the profile's options into `casebench.yaml`, along with `profile: <id>` and, for a file, the file name it came from. The config stays reproducible when a later release or a newer file changes the profile.
 - **Metering.** For a metered provider:
   - `init` and `corpus check` say how many searches they will spend before spending them;
   - each resolved citation is kept under `.casebench/corpus-cache/<corpus key>/citations/`, so a citation costs one search ever, as a document costs one fetch;
@@ -60,7 +64,9 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 
 - Good, because a user whose provider key is set answers one question, and a provider adds itself with a data file and samples, reviewed like any other change.
 - Good, because the core never runs provider-specific code, and every provider gets the same treatment.
-- Bad, because profile fixes ship with Casebench releases. Until a fix ships, the options already in a user's `casebench.yaml` can be edited by hand.
+- Good, because a provider that never contributes to Casebench still reaches its users in one step, with a file and `--profile`.
+- Bad, because fixes to a bundled profile ship with Casebench releases. Until one ships, the provider can hand out a fixed file, or the user edits the options already in `casebench.yaml`.
+- Bad, because a profile file is only as trustworthy as where the user got it. Casebench runs no code from it, and the live search and fetch show what it reaches before anything is written.
 - Bad, because the maintainers review profiles and their samples, and a broken profile lands in their issue queue until its maintainer fixes it.
 - Bad, because a provider that renumbers its documents makes cached citations wrong until the cache is cleared.
 
@@ -70,10 +76,12 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 - Package only: the user has to know a package exists and install it before onboarding can offer it, which is the friction this decision removes. It stays available for providers that need code.
 - MCP Registry: it adds a network call during onboarding (rule 5), it lists servers rather than field mappings, and it covers MCP providers only.
 - Rewording alone: the user still types tool names and JSONPath, which is the step where set-up fails.
+- Profiles in a provider's package: installing a package can run code, only to deliver a data file. Anyone can publish `casebench-<name>`, so Casebench could not tell whether the provider published it. The user would add a dependency to the agent's own project ([0030](0030-set-up-here-run-there.md)) for a config file. And the user still has to know the package exists. A file gives a provider the same independence from Casebench releases without any of this.
 
 ## Revisit when
 
-- There are more profiles than the maintainers can review, or providers want to ship fixes without a Casebench release. Profiles would then move to their own repository, and releases would bundle a snapshot, as [0032](0032-provider-catalog-and-sdk-providers.md) does with the model catalog.
+- There are more profiles than the maintainers can review. Profiles would then move to their own repository, and releases would bundle a snapshot, as [0032](0032-provider-catalog-and-sdk-providers.md) does with the model catalog.
+- Users ask for profiles they received as files to appear in the onboarding list.
 - A second provider needs OAuth.
 - A provider's terms forbid the local cache of full texts or of resolved citations.
 
