@@ -54,10 +54,10 @@ Chosen option: "provider profiles", because what a provider knows (address, key,
 
   Picking a profile asks nothing more when its key is set, and runs one live search and fetch, as `corpus add` does. `init --profile FILE` skips the question and runs the same live search and fetch on that file's profile, so a broken file fails there, before anything is written. A profile file that cannot be read stops `init`; one whose live check cannot reach the provider from here is left out, like any corpus that is out of reach ([0030](0030-set-up-here-run-there.md)).
 - **What init writes.** `init` writes the profile's options into `casebench.yaml`, along with `profile: <id>` and, for a file, the file name it came from. The config stays reproducible when a later release or a newer file changes the profile.
-- **Metering.** For a metered provider:
-  - `init` and `corpus check` say how many searches they will spend before spending them;
-  - each resolved citation is kept under `.casebench/corpus-cache/<corpus key>/citations/`, so a citation costs one search ever, as a document costs one fetch;
-  - `corpus cache clear` empties both.
+- **Metering.** A profile's `metered` is written into its corpus block. For a provider that charges per search:
+  - each search it answers is kept under `.casebench/corpus-cache/<corpus key>/searches/`, keyed by the exact query, so the same query costs one search ever, as a document costs one fetch. This covers citation checks, re-scoring, suite generation and `corpus check` alike. A store that does not charge per search is searched afresh each time, so documents added to it are found;
+  - `corpus check` says how many searches it may spend, and how many are already kept, before spending them; adding a profile says its live check used one search; the dry run counts the searches already kept;
+  - `corpus cache clear` empties both documents and searches.
 - **MCP keys.** The `mcp` connector gains `headers` with `${VAR}`, as the `http` connector has, sent over Streamable HTTP. OAuth is left to a code plugin until a provider needs it.
 - **Neutrality.** The list has no default, no order but the name, and no ranking words. A test checks that profiles are sorted and that none is preselected without its key.
 

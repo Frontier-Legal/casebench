@@ -45,12 +45,14 @@ def work(work_id: str) -> dict:
 
 class DocumentApi(BaseHTTPRequestHandler):
     fetches: ClassVar[dict[str, int]] = {}
+    searches: ClassVar[list[str]] = []
 
     def do_GET(self) -> None:
         if self.headers.get("Authorization") != f"Bearer {KEY}":
             return self._send(401, {"error": "missing_key"})
         url = urlsplit(self.path)
         if url.path == "/v1/search":
+            DocumentApi.searches.append(parse_qs(url.query)["q"][0])
             words = set(re.findall(r"\w+", parse_qs(url.query)["q"][0].casefold()))
             hits = [
                 i for i, w in WORKS.items() if words & set(re.findall(r"\w+", w["text"].casefold()))
@@ -76,6 +78,7 @@ class DocumentApi(BaseHTTPRequestHandler):
 
 def start_document_api() -> ThreadingHTTPServer:
     DocumentApi.fetches = {}
+    DocumentApi.searches = []
     server = ThreadingHTTPServer(("127.0.0.1", 0), DocumentApi)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server

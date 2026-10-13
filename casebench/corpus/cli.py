@@ -47,10 +47,19 @@ def check_command(
         store = Corpora(config.corpora).only(corpus_name)
     except NoSuchCorpus as error:
         raise click.ClickException(str(error)) from error
+    paid = store.connector.keep_searches
+    if paid and queries:
+        kept = sum(store.connector.search_cached(query, size) for query in queries)
+        click.echo(
+            f"{store.name} charges per search: this check may make {len(queries)} searches, "
+            f"{kept} of them already kept"
+        )
     try:
         report = check(store, list(queries), size)
     except ListingNotSupported as error:
         raise click.ClickException(f"{error}; pass --query to sample through search") from error
+    if paid and queries:
+        click.echo(f"searched {store.connector.searched} times; the rest came from the cache")
     click.echo(
         f"sampled {report.sampled} documents ({report.fetched} fetched, "
         f"{report.sampled - report.fetched} from the cache)"
@@ -71,4 +80,5 @@ def cache_group() -> None:
 @cache_group.command(name="clear")
 def clear() -> None:
     """Delete every cached document."""
-    click.echo(f"removed {cache.clear()} cached documents")
+    documents, searches = cache.clear()
+    click.echo(f"removed {documents} cached documents and {searches} cached searches")

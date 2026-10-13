@@ -101,9 +101,14 @@ def profile_block(
     fetched = _check(profile)
     block = corpus_block(profile.connector, profile.options, jurisdictions or profile.jurisdictions)
     block["profile"] = recorded or path.name
+    if profile.metered is not Metered.NONE:
+        block["metered"] = profile.metered.value
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")
     if profile.metered is not Metered.NONE:
-        notes.append(f"{profile.name} charges per {profile.metered.value}")
+        notes.append(
+            f"{profile.name} charges per {profile.metered.value}: this check used one search and "
+            f"one fetch, and Casebench keeps each {profile.metered.value} so it is paid once"
+        )
     if profile.terms:
         notes.append(f"its terms: {profile.terms}")
     return block, notes
