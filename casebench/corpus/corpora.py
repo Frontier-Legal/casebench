@@ -53,9 +53,11 @@ class Corpora:
     def decision(self, qualified: str) -> DecisionRecord:
         return self.named(split(qualified)[0]).decision(qualified)
 
-    def search(self, text: str, limit: int) -> list[str]:
-        """Up to `limit` ids from each corpus, taken in turn: every corpus's best first."""
-        found = [self.named(name).search(text, limit) for name in self.names]
+    def search(self, text: str, limit: int, names: list[str] | None = None) -> list[str]:
+        """Up to `limit` ids from each corpus named (every one when none are), taken in turn:
+        every corpus's best first. A corpus not named is never searched."""
+        searched = self.names if names is None else names
+        found = [self.named(name).search(text, limit) for name in searched]
         merged = []
         for rank in range(limit):
             merged += [ids[rank] for ids in found if rank < len(ids)]

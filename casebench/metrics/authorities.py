@@ -5,7 +5,6 @@ from typing import ClassVar
 from casebench.core.case import Case
 from casebench.core.score import Direction, ScoreKind
 from casebench.corpus.corpora import Corpora
-from casebench.judge import prompts
 from casebench.judge.client import Judge
 from casebench.judge.resolve import Resolver
 from casebench.metrics.base import Verdict
@@ -43,15 +42,16 @@ class AuthorityMetric:
             return Verdict(value=0.0, label="reference not resolved")
         if result.output is None:
             return Verdict(value=0.0, label="no output")
-        listed = self.model.ask(prompts.LIST_CITATIONS, prompts.list_citations(result.output))
+        place = case.provenance.jurisdiction if case.provenance else None
         wanted = [
-            str(item["citation"])
-            for item in listed
+            item
+            for item in self.resolver.list_citations(result.output)
             if item.get("kind", self.listed_kind) == self.listed_kind
         ]
-        resolved = [self.resolver.resolve(citation).document_id for citation in wanted]
-        cited = {document_id for document_id in resolved if document_id is not None}
-        unresolved = resolved.count(None)
+        resolved = [self.resolver.resolve_listed(item, place) for item in wanted]
+        cited = {r.document_id for r in resolved if r.document_id is not None}
+        # An unchecked citation could not be looked for, so it is not counted as wrong.
+        unresolved = sum(1 for r in resolved if r.document_id is None and not r.unchecked)
         precision, recall = precision_recall(cited, unresolved, court)
         failures = [
             f"{what} {self.name}"

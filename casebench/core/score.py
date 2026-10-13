@@ -38,9 +38,13 @@ class CriterionVerdict(FrozenRecord):
 
 
 class CitationLabel(StrEnum):
+    """`unchecked`: no connected corpus covers the citation's jurisdiction or kind, so
+    Casebench cannot say; it never counts against the answer (decision 0036)."""
+
     VERIFIED = "verified"
     MISGROUNDED = "misgrounded"
     FABRICATED = "fabricated"
+    UNCHECKED = "unchecked"
 
 
 class CitationCheck(FrozenRecord):
@@ -52,6 +56,10 @@ class CitationCheck(FrozenRecord):
     document_id: str | None = None
     quote: str | None = None
     reason: str | None = None
+    routed: str | None = Field(
+        default=None,
+        description="What chose the corpora searched: citation, case or all (decision 0036).",
+    )
 
 
 class Score(FrozenRecord):
@@ -71,3 +79,6 @@ class Score(FrozenRecord):
     task_type: str
     reference_source: ReferenceSource
     approval: Approval
+    jurisdiction: str | None = Field(
+        default=None, description="The case's jurisdiction, so scores split by it (0036)."
+    )

@@ -1,14 +1,21 @@
 """Write a run's report to the terminal and to report.json."""
 
+from collections import Counter
 from pathlib import Path
 
 from casebench.core.score import Score
+from casebench.corpus.routing import Route
 from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
 
 REPORT_FILE = "report.json"
+ROUTED = {
+    Route.CITATION: "its own jurisdiction",
+    Route.CASE: "the case's jurisdiction",
+    Route.ALL: "every corpus",
+}
 
 
 def _percent(value: float | None) -> str:
@@ -22,13 +29,14 @@ def lines(
     for table in tables:
         out.append(f"{table.task_type} · {table.metric}")
         out.append(
-            f"  {'source':<8} {'approval':<16} {'n':>5} {'score':>6} "
+            f"  {'source':<8} {'approval':<16} {'place':<6} {'n':>5} {'score':>6} "
             f"{'95% interval':>14} {'majority':>9} {'text-only':>9}"
         )
         for row in table.rows:
             interval = f"{_percent(row.low)}-{_percent(row.high)}"
             out.append(
-                f"  {row.reference_source.value:<8} {row.approval:<16} {row.n:>5} "
+                f"  {row.reference_source.value:<8} {row.approval:<16} "
+                f"{row.jurisdiction or '-':<6} {row.n:>5} "
                 f"{_percent(row.mean):>6} {interval:>14} "
                 f"{_percent(row.majority_baseline):>9} {_percent(row.text_only_baseline):>9}"
             )
@@ -36,6 +44,12 @@ def lines(
     if rates:
         out.append("citations")
         out += [f"  {r.label.value:<12} {r.count:>5} {_percent(r.rate):>6}" for r in rates]
+        routes = Counter(c.routed for s in scores for c in s.citations if c.routed)
+        if routes:
+            out.append(
+                "  searched by: "
+                + ", ".join(f"{routes[r.value]} {ROUTED[r]}" for r in Route if routes[r.value])
+            )
     if funnel is not None:
         out += funnel_lines(funnel)
     return out
