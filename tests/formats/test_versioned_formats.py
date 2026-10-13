@@ -7,6 +7,7 @@ from typing import Any
 
 import jsonschema
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from casebench.cli import main
@@ -50,13 +51,13 @@ def test_a_released_schema_never_changes():
 
 
 def test_files_of_every_released_version_still_validate():
-    examples = sorted(EXAMPLES.glob("*/*/*.json"))
+    examples = sorted(p for p in EXAMPLES.glob("*/*/*") if p.suffix in (".json", ".yaml"))
     assert {path.parts[-3] for path in examples} == set(FORMATS), "a format has no example"
     for name in released():
         assert (EXAMPLES / Path(name).with_suffix("")).is_dir(), f"{name} has no examples"
     for path in examples:
         item = FORMATS[path.parts[-3]]
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))  # JSON is YAML too
         schema = json.loads(schema_path(item.version).read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(schema).validate(data)
         ran = validate(path, "--format", f"casebench.{item.version.name}/{path.parts[-2]}")

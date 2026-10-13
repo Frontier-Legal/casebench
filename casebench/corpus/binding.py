@@ -15,12 +15,14 @@ from casebench.plugins.kinds import kind_named
 
 class CorpusConfig(Record):
     """`corpus:` in casebench.yaml. `jurisdiction` filters a store that serves several;
-    `connector_source` names the distribution when two register the same connector."""
+    `connector_source` names the distribution when two register the same connector;
+    `profile` records which profile the options came from, and is never read again."""
 
     connector: str
     jurisdiction: str | None = None
     options: dict[str, Any] = Field(default_factory=dict)
     connector_source: str | None = None
+    profile: str | None = None
 
 
 class Corpus:

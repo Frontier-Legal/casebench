@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Metered": {
+      "description": "What the provider charges for, so Casebench can say what a check will spend.",
+      "enum": [
+        "search",
+        "fetch",
+        "none"
+      ],
+      "title": "Metered",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "How to reach one provider's documents with a built-in connector, or with a connector\nplugin named here. `options` are exactly what `corpus add` would write, with `${VAR}`\nstanding in for the key; `probe` is a search the provider knows finds a document.",
+  "properties": {
+    "format": {
+      "pattern": "^casebench\\.profile/1\\.[0-9]+$",
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "jurisdictions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "docs": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "terms": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "key_env": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The environment variable that holds the user's key."
+    },
+    "metered": {
+      "$ref": "#/$defs/Metered",
+      "default": "none"
+    },
+    "maintainer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Who answers issues about this profile; required for a bundled one."
+    },
+    "connector": {
+      "type": "string"
+    },
+    "options": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "probe": {
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "name",
+    "connector",
+    "options",
+    "probe"
+  ],
+  "title": "Profile",
+  "type": "object"
+}

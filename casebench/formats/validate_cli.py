@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+import yaml
 from pydantic import ValidationError
 
 from casebench.formats.read import ignored_note, read
@@ -15,7 +16,8 @@ from casebench.suites.freeze import MANIFEST_FILE, SUITE_FILE, SuiteHashMismatch
 
 
 def _records(path: Path) -> list[tuple[str, Any]]:
-    """Each record with where it is: the lines of a `.jsonl` file, or one JSON document."""
+    """Each record with where it is: the lines of a `.jsonl` file, or one JSON or YAML
+    document (a profile is YAML)."""
     text = path.read_text(encoding="utf-8")
     if path.suffix == ".jsonl":
         return [
@@ -23,6 +25,8 @@ def _records(path: Path) -> list[tuple[str, Any]]:
             for number, line in enumerate(text.splitlines(), start=1)
             if line.strip()
         ]
+    if path.suffix in (".yaml", ".yml"):
+        return [(path.name, yaml.safe_load(text))]
     return [(path.name, json.loads(text))]
 
 

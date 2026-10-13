@@ -1,0 +1,25 @@
+format: casebench.profile/1.0
+name: Example Legal Data
+jurisdictions: [GB]
+docs: https://example.com/docs
+terms: https://example.com/terms
+key_env: EXAMPLE_API_KEY
+metered: search
+maintainer: Example Legal Data <data@example.com>
+connector: http
+options:
+  base_url: https://api.example.com/v1
+  headers:
+    Authorization: Bearer ${EXAMPLE_API_KEY}
+  search_path: /search
+  search_params:
+    q: "{text}"
+  search_ids: $.results[*].id
+  fetch_path: /documents/{id}
+  fields:
+    id: $.id
+    jurisdiction: $.jurisdiction
+    court: $.court.name
+    date: $.decided_on
+    text: $.body
+probe: unfair dismissal
