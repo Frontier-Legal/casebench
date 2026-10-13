@@ -5,9 +5,9 @@ from pathlib import Path
 
 import click
 
-from casebench.core.score import Score
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
+from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.record import FORMAT, Report
 from casebench.report.render import REPORT_FILE, lines
@@ -16,11 +16,11 @@ from casebench.runs.log import RunLog
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
 
 
-def latest_scores(folder: Path) -> list[Score]:
+def latest_set(folder: Path) -> Path:
     sets = RunLog(folder).score_sets()
     if not sets:
         raise click.ClickException(f"{folder} has no scores yet")
-    return RunLog.read_scores(sets[-1])
+    return sets[-1]
 
 
 @click.command(name="report")
@@ -45,13 +45,24 @@ def report_command(run_dir: Path) -> None:
 @click.argument("first", type=RUN)
 @click.argument("second", type=RUN)
 def compare_command(first: Path, second: Path) -> None:
-    """Each metric before and after, with the interval of the difference."""
+    """Each metric before and after, with the interval of the difference, and every setting
+    the two score sets were produced with differently."""
     info = RunLog(first).info
     if RunLog(second).info.suite_hash != info.suite_hash:
         raise click.ClickException("the two runs ran different suites; compare runs of one suite")
-    for d in compare(latest_scores(first), latest_scores(second), info.suite_id):
+    sets = latest_set(first), latest_set(second)
+    found = changes(*(RunLog.read_producer(path) for path in sets))
+    if found:
+        click.echo("the two score sets were produced differently:")
+    for change in found:
+        click.echo(f"  {change.setting}: {change.first} -> {change.second}")
+    scores = [RunLog.read_scores(path) for path in sets]
+    for d in compare(scores[0], scores[1], info.suite_id):
         verdict = "significant" if d.significant else "not significant"
+        moved = [c.setting for c in found if d.metric in c.moves]
+        caveat = f"; not comparable, because of {', '.join(moved)}" if moved else ""
         click.echo(
             f"{d.task_type} · {d.metric}: {d.first:.0%} -> {d.second:.0%} over {d.n} "
             f"cases, difference {d.interval.low:+.0%} to {d.interval.high:+.0%}, {verdict}"
+            f"{caveat}"
         )

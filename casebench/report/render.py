@@ -9,6 +9,7 @@ from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
+from casebench.runs.producer import Producer
 
 REPORT_FILE = "report.json"
 ROUTED = {
@@ -57,6 +58,7 @@ def lines(
 
 def write(
     folder: Path,
+    produced_by: Producer,
     tables: list[Table],
     scores: list[Score],
     score_set: Path,
@@ -67,6 +69,7 @@ def write(
     report = Report(
         format=str(FORMAT),
         score_set=score_set.name,
+        produced_by=produced_by,
         tables=tables,
         citations=citation_rates(scores),
         funnel=Funnel(summary=summary, cases=funnels),

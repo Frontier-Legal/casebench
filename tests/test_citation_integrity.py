@@ -14,6 +14,7 @@ from casebench.judge.config import JudgeConfig
 from casebench.metrics.builtin.citation_integrity import CitationIntegrity
 from casebench.report.citations import citation_rates
 from casebench.runs.log import Result, RunInfo, RunLog
+from casebench.runs.producer import producer_for
 from casebench.runs.rescore import rescore
 from tests.corpus.document_api import WORKS
 from tests.judge.fake_judge import FakeJudge, start_fake_judge
@@ -69,7 +70,7 @@ def test_fabricated_and_misstated_citations(tmp_path: Path, monkeypatch: pytest.
     )
     log.append(Result(case_id="c1", output=ANSWER))
     try:
-        [score] = RunLog.read_scores(rescore(log, [case], [metric]))
+        [score] = RunLog.read_scores(rescore(log, [case], [metric], producer_for([metric], [case])))
     finally:
         server.shutdown()
 

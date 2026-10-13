@@ -24,6 +24,7 @@ class AnswerKey(Record):
     date: date_type | None = None
     court: str | None = None
     level: str | None = None
+    extracted_by: list[str] = Field(default_factory=list)
 
 
 def case_from_answer_key(key: AnswerKey, *, task: str, metrics: list[str]) -> Case:
@@ -37,5 +38,6 @@ def case_from_answer_key(key: AnswerKey, *, task: str, metrics: list[str]) -> Ca
             builder="court",
             source_decision_id=key.decision_id,
             jurisdiction=key.jurisdiction,
+            extracted_by=key.extracted_by,
         ),
     )

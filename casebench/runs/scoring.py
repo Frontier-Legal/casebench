@@ -7,6 +7,7 @@ from typing import Any
 from casebench.config import CasebenchConfig
 from casebench.core.case import Case
 from casebench.core.score import Score
+from casebench.corpus.cache import corpus_key
 from casebench.corpus.corpora import Corpora
 from casebench.judge.client import Judge
 from casebench.judge.memo import MEMO_FILE, Memo
@@ -17,6 +18,7 @@ from casebench.report import render
 from casebench.report.funnel import CaseFunnel, FunnelSummary, case_funnel, gold, summarise
 from casebench.report.tables import Table, build_tables
 from casebench.runs.log import RunLog
+from casebench.runs.producer import JudgeUsed, Producer, producer_for
 from casebench.runs.rescore import rescore
 
 
@@ -66,13 +68,35 @@ def funnels(log: RunLog, cases: list[Case], context: dict[str, Any]) -> list[Cas
     return traced
 
 
+def producer(
+    metrics: list[Metric], cases: list[Case], config: CasebenchConfig, context: dict[str, Any]
+) -> Producer:
+    """The judge's family comes from its provider, which is why the built judge is read."""
+    judge: Judge | None = context.get("judge")
+    judges: list[JudgeUsed] = []
+    if judge is not None:
+        used = judge.config
+        judges.append(
+            JudgeUsed(
+                provider=used.provider,
+                model=used.model,
+                family=judge.family,
+                candidates=used.candidates,
+            )
+        )
+    corpora = {name: corpus_key(c.connector, c.options) for name, c in config.corpora.items()}
+    return producer_for(metrics, cases, judges, corpora)
+
+
 def score(log: RunLog, cases: list[Case], config: CasebenchConfig, suite_id: str) -> Scored:
     """The judge's replies are kept in the run folder; scoring again reads them back."""
     context = context_for(config, Memo(log.folder / MEMO_FILE))
-    path = rescore(log, cases, metrics_for(cases, context))
+    metrics = metrics_for(cases, context)
+    produced_by = producer(metrics, cases, config, context)
+    path = rescore(log, cases, metrics, produced_by)
     scores = RunLog.read_scores(path)
     tables = build_tables(scores, cases, suite_id)
     traced = funnels(log, cases, context)
     summary = summarise(traced)
-    report = render.write(log.folder, tables, scores, path, traced, summary)
+    report = render.write(log.folder, produced_by, tables, scores, path, traced, summary)
     return Scored(path, scores, tables, summary, report)

@@ -50,6 +50,7 @@ def _one(corpus: Corpus, models: list[Judge], decision_id: str) -> tuple[AnswerK
         date=record.date,
         court=record.court,
         level=record.level,
+        extracted_by=[f"{m.config.provider}/{m.config.model}" for m in models],
     )
     return key, agreed
 

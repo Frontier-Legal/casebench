@@ -1,5 +1,6 @@
 """A run's folder: what ran, every result as it finished, and every score set."""
 
+import json
 import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
@@ -11,10 +12,12 @@ from casebench import __version__
 from casebench.capture.step import Step
 from casebench.core.model import FrozenRecord
 from casebench.core.score import Score
+from casebench.runs.producer import Producer
 
 RUN_FILE = "run.json"
 RESULTS_FILE = "results.jsonl"
 SCORES_DIR = "scores"
+PRODUCER = "produced_by"
 
 
 class RunInfo(FrozenRecord):
@@ -68,13 +71,15 @@ class RunLog:
         lines = path.read_text(encoding="utf-8").splitlines()
         return [Result.model_validate_json(line) for line in lines if line]
 
-    def write_score_set(self, scores: Iterable[Score]) -> Path:
-        """Write a new score set beside the existing ones; never rewrite an old one."""
+    def write_score_set(self, scores: Iterable[Score], producer: Producer) -> Path:
+        """Write a new score set beside the existing ones; never rewrite an old one. Its first
+        line says what produced it (decision 0035)."""
         directory = self.folder / SCORES_DIR
         directory.mkdir(exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         path = directory / f"{stamp}-{uuid.uuid4().hex}.jsonl"
         with path.open("x", encoding="utf-8") as stream:
+            stream.write(json.dumps({PRODUCER: producer.model_dump(mode="json")}) + "\n")
             for score in scores:
                 stream.write(score.model_dump_json() + "\n")
         return path
@@ -85,5 +90,11 @@ class RunLog:
 
     @staticmethod
     def read_scores(path: Path) -> list[Score]:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()[1:]
         return [Score.model_validate_json(line) for line in lines if line]
+
+    @staticmethod
+    def read_producer(path: Path) -> Producer:
+        with path.open(encoding="utf-8") as stream:
+            first = json.loads(stream.readline())
+        return Producer.model_validate(first[PRODUCER])

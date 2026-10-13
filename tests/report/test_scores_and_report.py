@@ -14,6 +14,7 @@ from tests.judge.fake_judge import FakeJudge, start_fake_judge
 from tests.report.suites import frozen, mixed, outcome_case
 
 AGENTS = Path(__file__).parent / "agents.py"
+CHECKED = ["outcome", "citation_integrity"]
 
 
 @pytest.fixture
@@ -174,3 +175,48 @@ def test_terminal_and_json_report(tmp_path: Path):
 
     assert again.exit_code == 0, again.output
     assert again.output in ran.output
+
+
+def test_a_score_set_says_what_produced_it(tmp_path: Path, judged: Path):
+    cases = [outcome_case(1, "reversed", "The appeal court found an error.", CHECKED)]
+    suite = frozen(cases, tmp_path / "suite")
+
+    ran = run(suite, tmp_path / "runs", "upheld", "--config", str(judged), "--run-id", "r")
+
+    assert ran.exit_code == 0, ran.output
+    [score_set] = RunLog(tmp_path / "runs" / "r").score_sets()
+    first = json.loads(score_set.read_text(encoding="utf-8").splitlines()[0])["produced_by"]
+    report = json.loads((tmp_path / "runs" / "r" / "report.json").read_text("utf-8"))
+    assert report["produced_by"] == first
+    assert first["metrics"] == {
+        "citation_integrity": {"version": "2", "reads": ["corpus", "judge"]},
+        "outcome": {"version": "1", "reads": []},
+    }
+    assert first["judges"] == [
+        {"provider": "anthropic", "model": "judge-model", "family": "anthropic", "candidates": 5}
+    ]
+    assert sorted(first["prompts"]) == ["list_citations", "match", "weigh"]
+    assert list(first["corpora"]) == ["corpus"]
+
+
+def test_compare_says_a_new_judge_makes_judged_metrics_not_comparable(tmp_path: Path, judged: Path):
+    cases = [outcome_case(1, "reversed", "The appeal court found an error.", CHECKED)]
+    suite = frozen(cases, tmp_path / "suite")
+    other = tmp_path / "other.yaml"
+    other.write_text(
+        judged.read_text(encoding="utf-8").replace("judge-model", "other-judge"), "utf-8"
+    )
+    runs = tmp_path / "runs"
+    for name, config in (("a", judged), ("b", other)):
+        assert run(suite, runs, "upheld", "--config", str(config), "--run-id", name).exit_code == 0
+
+    compared = CliRunner().invoke(main, ["compare", str(runs / "a"), str(runs / "b")])
+
+    assert compared.exit_code == 0, compared.output
+    assert (
+        "  judge: anthropic/judge-model (anthropic family, 5 candidates) -> "
+        "anthropic/other-judge (anthropic family, 5 candidates)"
+    ) in compared.output
+    rows = {line.split(":")[0]: line for line in compared.output.splitlines() if " · " in line}
+    assert rows["outcome · citation_integrity"].endswith("; not comparable, because of judge")
+    assert rows["outcome · outcome"].endswith(", not significant")

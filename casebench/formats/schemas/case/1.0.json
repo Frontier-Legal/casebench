@@ -183,6 +183,13 @@
             }
           ],
           "default": null
+        },
+        "extracted_by": {
+          "description": "The models that wrote the answer key, each as provider/model.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

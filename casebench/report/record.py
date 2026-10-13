@@ -9,6 +9,7 @@ from casebench.formats.version import FormatVersion
 from casebench.report.citations import CitationRate
 from casebench.report.funnel import CaseFunnel, FunnelSummary
 from casebench.report.tables import Table
+from casebench.runs.producer import Producer
 
 FORMAT = FormatVersion("report", 1, 0)
 
@@ -25,6 +26,7 @@ class Report(FrozenRecord):
 
     format: str = Field(pattern=FORMAT.pattern)
     score_set: str
+    produced_by: Producer
     tables: list[Table]
     citations: list[CitationRate]
     funnel: Funnel

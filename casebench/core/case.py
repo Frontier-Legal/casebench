@@ -118,6 +118,10 @@ class Provenance(Record):
     builder: str
     source_decision_id: str | None = None
     jurisdiction: Jurisdiction | None = None
+    extracted_by: list[str] = Field(
+        default_factory=list,
+        description="The models that wrote the answer key, each as provider/model.",
+    )
 
 
 class Case(Record):
