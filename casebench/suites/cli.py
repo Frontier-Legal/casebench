@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config
-from casebench.corpus.binding import Corpus
+from casebench.corpus.corpora import Corpora
 from casebench.extract.cli import DEFAULT_KEYS
 from casebench.extract.run import read_keys
 from casebench.judge.client import Judge
@@ -19,13 +19,13 @@ from casebench.suites.resolve import RESOLVED_KINDS, CaseResolver
 def _resolver(config_path: Path) -> CaseResolver:
     """The court names authorities as written; the judge and the corpus find their documents."""
     config = load_config(config_path) if config_path.is_file() else CasebenchConfig()
-    if config.judge is None or config.corpus is None:
+    if config.judge is None or not config.corpora:
         raise click.ClickException(
             "statute and precedent cases need `judge:` and `corpus:` in the config, "
             "to find the documents the court cited"
         )
     judge = Judge(config.judge)
-    return CaseResolver(Resolver(judge, Corpus(config.corpus), config.judge.candidates))
+    return CaseResolver(Resolver(judge, Corpora(config.corpora), config.judge.candidates))
 
 
 @click.command(name="generate")

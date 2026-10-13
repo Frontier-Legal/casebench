@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-13
 decision-makers: Casebench maintainers
 ---
@@ -95,5 +95,7 @@ Chosen option 1, because it is the only one where a mixed-jurisdiction suite run
 Checked on 2026-10-13:
 
 - The [European Case Law Identifier](https://en.wikipedia.org/wiki/European_Case_Law_Identifier) uses ISO 3166-1 alpha-2 country codes, except `UK` for the United Kingdom; one source also names `EL` for Greece, the European Union's own code for it, where ISO has `GR`. `EU` marks the Union's courts. The [e-Justice portal](https://e-justice.europa.eu/topics/legislation-and-case-law/european-case-law-identifier-ecli_en) describes the identifier.
+
+- The list of ISO 3166-1 alpha-2 codes Casebench accepts comes from Unicode CLDR 48.2.3 (Unicode License 3.0): the two-letter regions in `supplemental/codeMappings.json` with a numeric and an alpha-3 code, less private-use, deprecated (`supplemental/aliases.json`) and grouping codes. That leaves 249, the number ISO 3166-1 assigns. ISO 3166-2 subdivisions are checked by form only (a known country, a dash, one to three letters or digits), because no list of them ships with Casebench.
 
 In the code: a single `corpus` is read by `casebench/runs/scoring.py`, `casebench/suites/cli.py`, `casebench/extract/cli.py`, `casebench/corpus/cli.py`, `casebench/setup/checks.py` and `casebench/runs/dry_run.py`. `Resolver` (`casebench/judge/resolve.py`) searches one corpus. `CitationLabel` (`casebench/core/score.py`) has `verified`, `misgrounded` and `fabricated`.

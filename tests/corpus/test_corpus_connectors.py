@@ -10,7 +10,7 @@ from click.testing import CliRunner
 
 from casebench.cli import main
 from casebench.config import ConfigError, load_config
-from casebench.corpus.binding import Corpus, CorpusConfig
+from casebench.corpus.binding import Corpus
 from tests.corpus.document_api import KEY, DocumentApi, start_document_api
 
 HTTP_FLAGS = [
@@ -50,7 +50,7 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
 
     assert added.exit_code == 0, added.output
     assert "$.expressions[0].text  text," in added.output
-    corpus = yaml.safe_load(config.read_text(encoding="utf-8"))["corpus"]
+    corpus = yaml.safe_load(config.read_text(encoding="utf-8"))["corpora"]["127-0-0-1"]
     assert corpus["connector"] == "http"
     assert corpus["options"]["search_ids"] == "$.results[*].work.work_id"
     assert corpus["options"]["fields"]["id"] == "$.work_id"
@@ -58,8 +58,23 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
     assert corpus["options"]["fields"]["court"] == "$.issuers[0].name"
     assert corpus["options"]["headers"] == {"Authorization": "Bearer ${DOC_KEY}"}
 
-    again = add_http(config, api)
-    assert again.exit_code != 0 and "already names a corpus" in again.output
+    again = add_http(config, api)  # a second store is added under its own name
+    assert again.exit_code == 0, again.output
+    corpora = yaml.safe_load(config.read_text(encoding="utf-8"))["corpora"]
+    assert list(corpora) == ["127-0-0-1-2", "127-0-0-1"]
+    taken = invoke(
+        "corpus",
+        "add",
+        "http",
+        "--base-url",
+        api,
+        "--name",
+        "127-0-0-1",
+        "--config",
+        str(config),
+        *HTTP_FLAGS,
+    )
+    assert taken.exit_code != 0 and "already has a corpus named 127-0-0-1" in taken.output
 
     mcp_config = tmp_path / "mcp.yaml"
     mcp_added = invoke(
@@ -80,7 +95,9 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
     )
     assert mcp_added.exit_code == 0, mcp_added.output
     assert "get_document: One document in full." in mcp_added.output
-    mcp_corpus = yaml.safe_load(mcp_config.read_text(encoding="utf-8"))["corpus"]
+    mcp_corpus = yaml.safe_load(mcp_config.read_text(encoding="utf-8"))["corpora"][
+        "tests-corpus-mcp-documents"
+    ]
     assert mcp_corpus["options"]["search_ids"] == "$.hits[*].document_id"
 
 
@@ -134,8 +151,8 @@ def test_corpus_behind_a_licensed_api(api: str, tmp_path: Path):
     assert "sampled 3 documents (3 fetched, 0 from the cache)" in first.output
     assert "sampled 3 documents (0 fetched, 3 from the cache)" in second.output
     assert set(DocumentApi.fetches.values()) == {1}
-    corpus = Corpus(load_config(config).corpus or CorpusConfig(connector="none"))
-    assert corpus.search("E. 2023/1234 K. 2024/567", 1) == ["101"]
+    [(name, settings)] = load_config(config).corpora.items()
+    assert Corpus(settings, name).search("E. 2023/1234 K. 2024/567", 1) == ["127-0-0-1:101"]
 
 
 def test_any_http_api_or_mcp_server(api: str, tmp_path: Path):
@@ -177,7 +194,7 @@ def test_the_agents_own_document_source_is_a_fine_corpus(tmp_path: Path):
         encoding="utf-8",
     )
 
-    assert load_config(config).corpus is not None
+    assert list(load_config(config).corpora) == ["corpus"]
 
 
 def test_the_system_under_test_cannot_verify_itself(tmp_path: Path):

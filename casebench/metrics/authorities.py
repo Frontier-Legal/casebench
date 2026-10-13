@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from casebench.core.case import Case
 from casebench.core.score import Direction, ScoreKind
-from casebench.corpus.binding import Corpus
+from casebench.corpus.corpora import Corpora
 from casebench.judge import prompts
 from casebench.judge.client import Judge
 from casebench.judge.resolve import Resolver
@@ -32,7 +32,7 @@ class AuthorityMetric:
     kind = ScoreKind.LLM
     direction = Direction.HIGHER
 
-    def __init__(self, judge: Judge, corpus: Corpus, candidates: int, **_: object) -> None:
+    def __init__(self, judge: Judge, corpus: Corpora, candidates: int, **_: object) -> None:
         self.model = judge
         self.resolver = Resolver(judge, corpus, candidates)
 

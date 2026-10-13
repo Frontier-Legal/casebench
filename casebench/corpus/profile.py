@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import Field
 
+from casebench.core.jurisdiction import Jurisdiction
 from casebench.core.model import Record
 from casebench.formats.extensions import Extensions
 from casebench.formats.version import FormatVersion
@@ -27,7 +28,7 @@ class Profile(Record):
 
     format: str = Field(pattern=FORMAT.pattern)
     name: str
-    jurisdictions: list[str] = Field(default_factory=list)
+    jurisdictions: list[Jurisdiction] = Field(default_factory=list)
     docs: str | None = None
     terms: str | None = None
     key_env: str | None = Field(

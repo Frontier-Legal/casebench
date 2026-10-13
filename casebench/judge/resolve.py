@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from casebench.corpus.binding import Corpus
+from casebench.corpus.corpora import Corpora
 from casebench.judge import prompts
 from casebench.judge.client import Judge
 
@@ -20,7 +20,7 @@ class Resolution:
 
 
 class Resolver:
-    def __init__(self, judge: Judge, corpus: Corpus, candidates: int) -> None:
+    def __init__(self, judge: Judge, corpus: Corpora, candidates: int) -> None:
         self.judge = judge
         self.corpus = corpus
         self.candidates = candidates

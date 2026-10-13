@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import AliasChoices, ConfigDict, Field, model_validator
 
+from casebench.core.jurisdiction import Jurisdiction
 from casebench.core.model import Record
 from casebench.formats.extensions import Extensions
 from casebench.formats.version import FormatVersion
@@ -116,7 +117,7 @@ class Provenance(Record):
 
     builder: str
     source_decision_id: str | None = None
-    jurisdiction: str | None = None
+    jurisdiction: Jurisdiction | None = None
 
 
 class Case(Record):

@@ -124,7 +124,7 @@ def test_init_connects_a_bundled_profile_picked_from_the_list(
     assert asked["default"] == "profile:test-provider"
     assert "corpus   Test Provider: searched 'feshi' and fetched document 101" in ran.output
     config = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
-    assert config["corpus"]["profile"] == "test-provider"
+    assert config["corpora"]["test-provider"]["profile"] == "test-provider"
 
     again = CliRunner().invoke(
         main, ["corpus", "add", "profile", "test-provider", "--config", "other.yaml"]

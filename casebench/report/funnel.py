@@ -5,6 +5,7 @@ from collections import Counter
 from casebench.capture.step import NO_DIAGNOSTIC, StepKind
 from casebench.core.case import Case
 from casebench.core.model import FrozenRecord
+from casebench.corpus.ids import SEPARATOR
 from casebench.runs.log import Result
 
 STAGES = ("retrieved", "kept", "read", "cited")
@@ -47,15 +48,33 @@ def _label(trace: dict[str, bool | None]) -> str | None:
     return None
 
 
+def as_corpus_ids(ids: set[str], known: set[str]) -> set[str]:
+    """The agent's own ids, as corpus ids: a bare id is the qualified one it is the provider's
+    part of, when exactly one known corpus id has that part (decision 0036)."""
+    by_part: dict[str, set[str]] = {}
+    for qualified in known:
+        by_part.setdefault(qualified.partition(SEPARATOR)[2], set()).add(qualified)
+    mapped = set()
+    for found in ids:
+        matches = by_part.get(found, set())
+        mapped |= matches if found not in known and len(matches) == 1 else {found}
+    return mapped
+
+
 def case_funnel(case: Case, result: Result, cited: dict[str, str | None] | None) -> CaseFunnel:
     """`cited` maps the answer's citations to corpus documents; None when there is no judge."""
-    returned = {i for step in result.steps for i in step.doc_ids_out}
+    cited_ids = {d for d in (cited or {}).values() if d is not None}
+    known = set(gold(case)) | cited_ids
+
+    def ids(found: set[str]) -> set[str]:
+        return as_corpus_ids(found, known)
+
+    returned = ids({i for step in result.steps for i in step.doc_ids_out})
     if not returned:
         return CaseFunnel(case_id=case.id, diagnostic=False, authorities=[], ungrounded=[])
     reranks = [s for s in result.steps if s.kind is StepKind.RERANK]
-    kept_ids = {i for s in reranks for i in s.doc_ids_out}
-    read_ids = {i for s in result.steps if s.kind is StepKind.LLM for i in s.doc_ids_in}
-    cited_ids = {d for d in (cited or {}).values() if d is not None}
+    kept_ids = ids({i for s in reranks for i in s.doc_ids_out})
+    read_ids = ids({i for s in result.steps if s.kind is StepKind.LLM for i in s.doc_ids_in})
     traces = []
     for document_id in gold(case):
         trace: dict[str, bool | None] = {

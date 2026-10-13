@@ -11,8 +11,8 @@ from pathlib import Path
 import httpx2
 
 from casebench.config import CasebenchConfig
-from casebench.corpus.binding import Corpus
 from casebench.corpus.check import SAMPLE_SIZE, check
+from casebench.corpus.corpora import Corpora
 from casebench.corpus.interface import ListingNotSupported
 from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
@@ -103,9 +103,9 @@ def offline(config: CasebenchConfig) -> list[Check]:
     named = []
     if config.target is not None:
         named.append(("target", "target", str(config.target.get("type")), None))
-    if config.corpus is not None:
-        source = config.corpus.connector_source
-        named.append(("corpus", "connector", config.corpus.connector, source))
+    for name, corpus in config.corpora.items():
+        label = f"corpus {name}" if len(config.corpora) > 1 else "corpus"
+        named.append((label, "connector", corpus.connector, corpus.connector_source))
     for name, model in _models(config):
         named.append((name, "provider", model.provider, model.provider_source))
     for name, kind, plugin, source in named:
@@ -147,19 +147,20 @@ def _model_request(name: str, model: JudgeConfig) -> list[Check]:
     return []
 
 
-def _corpus(config: CasebenchConfig, queries: list[str], size: int) -> Check:
-    assert config.corpus is not None
+def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check:
+    """Opening the corpus is part of the check, so a store out of reach is reported as such."""
+    label = f"corpus {name}" if len(corpora.names) > 1 else "corpus"
     try:
-        report = check(Corpus(config.corpus), queries, size)
+        report = check(corpora.named(name), queries, size)
     except ListingNotSupported:
-        return Check("corpus", Status.FAILED, "the store cannot list documents; pass --query")
+        return Check(label, Status.FAILED, "the store cannot list documents; pass --query")
     except Exception as error:
-        return _failure("corpus", error)
+        return _failure(label, error)
     if report.failures or report.missing:
         missing = f"missing {', '.join(report.missing)}" if report.missing else ""
         failed = f"{len(report.failures)} fetches failed" if report.failures else ""
-        return Check("corpus", Status.FAILED, "; ".join(filter(None, (missing, failed))))
-    return Check("corpus", Status.PASSED, f"{report.sampled} documents sampled")
+        return Check(label, Status.FAILED, "; ".join(filter(None, (missing, failed))))
+    return Check(label, Status.PASSED, f"{report.sampled} documents sampled")
 
 
 def _target(config: CasebenchConfig) -> Check:
@@ -187,8 +188,8 @@ def live(
 ) -> list[Check]:
     """One check for each part the config names: the corpus, the target, each model."""
     checks = []
-    if config.corpus is not None:
-        checks.append(_corpus(config, queries or [], size))
+    corpora = Corpora(config.corpora)
+    checks += [_corpus(corpora, name, queries or [], size) for name in corpora.names]
     if config.target is not None:
         checks.append(_target(config))
     checks += [_model(name, model) for name, model in _models(config)]

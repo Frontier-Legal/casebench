@@ -8,6 +8,7 @@ import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
+from casebench.corpus.add import name_for
 from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
@@ -128,7 +129,7 @@ def init_command(
     for note in notes:
         click.echo(note)
     if block is not None:
-        data["corpus"] = block
+        data["corpora"] = {name_for(block): block}
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:
@@ -182,7 +183,7 @@ def init_command(
         return
     checked = load_config(config_path)
     if where in ("http", "mcp", "profile"):  # its live search and fetch just ran
-        checked = checked.model_copy(update={"corpus": None})
+        checked = checked.model_copy(update={"corpora": {}})
     checks = live(checked)
     for item in checks:
         click.echo(item.line())

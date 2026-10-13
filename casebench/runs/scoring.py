@@ -7,7 +7,7 @@ from typing import Any
 from casebench.config import CasebenchConfig
 from casebench.core.case import Case
 from casebench.core.score import Score
-from casebench.corpus.binding import Corpus
+from casebench.corpus.corpora import Corpora
 from casebench.judge.client import Judge
 from casebench.judge.memo import MEMO_FILE, Memo
 from casebench.judge.resolve import Resolver, cited_documents
@@ -35,8 +35,8 @@ def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, 
     if config.judge is not None:
         context["judge"] = Judge(config.judge, memo=memo)
         context["candidates"] = config.judge.candidates
-    if config.corpus is not None:
-        context["corpus"] = Corpus(config.corpus)
+    if config.corpora:
+        context["corpus"] = Corpora(config.corpora)
     return context
 
 
@@ -50,7 +50,7 @@ def funnels(log: RunLog, cases: list[Case], context: dict[str, Any]) -> list[Cas
     are resolved with the run's judge, whose replies the metrics may have kept already."""
     by_id = {case.id: case for case in cases if gold(case)}
     judge: Judge | None = context.get("judge")
-    corpus: Corpus | None = context.get("corpus")
+    corpus: Corpora | None = context.get("corpus")
     traced = []
     for result in log.results():
         case = by_id.get(result.case_id)

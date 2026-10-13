@@ -226,5 +226,5 @@ def test_a_corpus_that_refuses_says_why(checkout: Path, monkeypatch: pytest.Monk
     ) in refused.output
     assert added.exit_code == 0, added.output
     assert "corpus   added after one live search and fetch" in added.output
-    corpus = yaml.safe_load((checkout / "casebench.yaml").read_text("utf-8"))["corpus"]
+    [corpus] = yaml.safe_load((checkout / "casebench.yaml").read_text("utf-8"))["corpora"].values()
     assert corpus["options"]["headers"] == {"Authorization": "Bearer ${DOC_KEY}"}

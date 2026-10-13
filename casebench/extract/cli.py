@@ -5,8 +5,8 @@ from pathlib import Path
 import click
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
-from casebench.corpus.binding import Corpus
 from casebench.corpus.check import sample_ids
+from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
 from casebench.extract.agreement import FIELDS
 from casebench.extract.run import extract, write
@@ -43,16 +43,25 @@ DEFAULT_KEYS = Path(".casebench") / "keys"
     show_default=True,
 )
 @click.option("--max-concurrency", type=click.IntRange(min=1), default=1, show_default=True)
+@click.option("--corpus", "corpus_name", help="Which corpus, when the config names several.")
 def extract_command(
-    size: int, config_path: Path, queries: tuple[str, ...], out: Path, max_concurrency: int
+    size: int,
+    config_path: Path,
+    queries: tuple[str, ...],
+    out: Path,
+    max_concurrency: int,
+    corpus_name: str | None,
 ) -> None:
     """Two different models read each decision; only the fields they agree on become keys."""
     config = load_config(config_path)
-    if config.corpus is None or config.extract is None:
+    if not config.corpora or config.extract is None:
         raise ConfigError(
             "extract needs `corpus:` and `extract: {models: [..two..]}` in the config"
         )
-    corpus = Corpus(config.corpus)
+    try:
+        corpus = Corpora(config.corpora).only(corpus_name)
+    except NoSuchCorpus as error:
+        raise click.ClickException(str(error)) from error
     models = [Judge(model) for model in config.extract.models]
     try:
         ids = sample_ids(corpus, list(queries), size)
