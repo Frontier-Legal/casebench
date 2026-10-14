@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from collections.abc import Callable
 
 from casebench.capture.assemble import assemble
 from casebench.capture.context import capturing
@@ -54,10 +55,11 @@ async def run_cases(
     *,
     max_concurrency: int = 1,
     capture: CaptureSession | None = None,
+    on_answered: Callable[[Result], None] | None = None,
 ) -> list[Result]:
     """At most `max_concurrency` cases at once; cases the log already holds are skipped. With
     nothing left to send, the target is never started, so a stored run is scored again
-    without calling the agent (decision 0037)."""
+    without calling the agent (decision 0037). `on_answered` hears of each stored result."""
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be at least 1")
     stored = {result.case_id for result in log.results()}
@@ -70,6 +72,8 @@ async def run_cases(
         async with slots:
             result = await ask(case, target, capture)
         log.append(result)
+        if on_answered is not None:
+            on_answered(result)
         return result
 
     if capture is not None:

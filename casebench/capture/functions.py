@@ -51,7 +51,10 @@ def _ids(expression: str | None, document: Any) -> list[str]:
     return [str(match.value) for match in jsonpath(expression).find(document)]
 
 
-def _step(spec: StepFunction, arguments: dict[str, Any], result: Any, started: float) -> Step:
+def _step(
+    spec: StepFunction, arguments: dict[str, Any], result: Any, started: float, begun: float
+) -> Step:
+    """`started` orders the step by the wall clock; `begun` times it by the monotonic one."""
     ended = time.time()
     document = {"arguments": _plain(arguments), "result": _plain(result)}
     ids_out = _ids(spec.doc_ids_out, document)
@@ -62,7 +65,7 @@ def _step(spec: StepFunction, arguments: dict[str, Any], result: Any, started: f
         doc_ids_out=ids_out,
         started=started,
         ended=ended,
-        duration_ms=(ended - started) * 1000,
+        duration_ms=(time.perf_counter() - begun) * 1000,
         note=None if ids_out else NO_DIAGNOSTIC,
     )
 
@@ -80,18 +83,18 @@ def wrap(spec: StepFunction, original: Callable[..., Any]) -> Callable[..., Any]
 
         @functools.wraps(original)
         async def wrapped_async(*args: Any, **kwargs: Any) -> Any:
-            started = time.time()
+            started, begun = time.time(), time.perf_counter()
             result = await original(*args, **kwargs)
-            record(_step(spec, bound(args, kwargs), result, started))
+            record(_step(spec, bound(args, kwargs), result, started, begun))
             return result
 
         return wrapped_async
 
     @functools.wraps(original)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
-        started = time.time()
+        started, begun = time.time(), time.perf_counter()
         result = original(*args, **kwargs)
-        record(_step(spec, bound(args, kwargs), result, started))
+        record(_step(spec, bound(args, kwargs), result, started, begun))
         return result
 
     return wrapped

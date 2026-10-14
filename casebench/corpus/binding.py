@@ -19,6 +19,8 @@ Holding = Literal["decisions", "statutes"]
 Charge = Literal["search", "fetch", "none"]
 # The kinds of citation the judge names (decision 0029).
 Cited = Literal["statute", "decision"]
+# What a provider's terms may let Casebench keep on disk (decision 0041).
+Kept = Literal["documents", "searches"]
 
 
 class CorpusConfig(Record):
@@ -28,7 +30,8 @@ class CorpusConfig(Record):
     the options came from, and is never read again. `metered` is what the provider charges
     for: a store that charges per search has each search kept, like each document.
     `search_filters` are what a search for each kind of citation adds, so a statute is
-    searched only among statutes (decision 0037)."""
+    searched only among statutes (decision 0037). `keep` is what the provider's terms let
+    Casebench keep on disk; left out, documents are kept, and searches when metered (0041)."""
 
     connector: str
     jurisdictions: list[Jurisdiction] = Field(default_factory=list)
@@ -38,6 +41,15 @@ class CorpusConfig(Record):
     profile: str | None = None
     metered: Charge = "none"
     search_filters: dict[Cited, dict[str, Any]] = Field(default_factory=dict)
+    keep: list[Kept] | None = None
+
+    @property
+    def keeps_documents(self) -> bool:
+        return self.keep is None or "documents" in self.keep
+
+    @property
+    def keeps_searches(self) -> bool:
+        return self.metered == "search" and (self.keep is None or "searches" in self.keep)
 
 
 def _code_or_none(value: str) -> str | None:
@@ -59,7 +71,10 @@ class Corpus:
         )
         folder = cache_root / corpus_key(config.connector, config.options)
         self.connector = CachedConnector(
-            connector_class(**config.options), folder, keep_searches=config.metered == "search"
+            connector_class(**config.options),
+            folder,
+            keep_searches=config.keeps_searches,
+            keep_documents=config.keeps_documents,
         )
         self.name = name
         self.jurisdictions = list(config.jurisdictions)

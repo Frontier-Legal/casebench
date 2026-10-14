@@ -63,7 +63,9 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
             raw = json.dumps(body).encode()
         headers = {k: v for k, v in request.headers.items() if k.lower() not in NOT_FORWARDED}
         headers["accept-encoding"] = "identity"
-        started = time.time()
+        # Wall-clock times order the steps; the duration comes from the monotonic clock, which
+        # on Windows is fine enough to time a fast local call, as the wall clock is not.
+        started, begun = time.time(), time.perf_counter()
         upstream = await client.send(
             client.build_request(request.method, url, headers=headers, content=raw), stream=True
         )
@@ -76,7 +78,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
                     yield chunk
             finally:
                 await upstream.aclose()
-                ended = time.time()
+                ended, took = time.time(), time.perf_counter() - begun
                 content = b"".join(chunks)
                 streamed = "text/event-stream" in upstream.headers.get("content-type", "")
                 recorder.add(
@@ -90,7 +92,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
                         route=route.name,
                         started=started,
                         ended=ended,
-                        duration_ms=(ended - started) * 1000,
+                        duration_ms=took * 1000,
                     ),
                     request.headers.get("traceparent"),
                     request.path_params.get("worker"),

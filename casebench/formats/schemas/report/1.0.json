@@ -736,6 +736,29 @@
     "score_set": {
       "type": "string"
     },
+    "suite_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "suite_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The hash of the suite the run ran, which changes with any case (0039)."
+    },
     "produced_by": {
       "$ref": "#/$defs/Producer"
     },

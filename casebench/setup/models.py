@@ -63,4 +63,8 @@ def choose(
     window = (model.get("limit") or {}).get("context")
     if window:
         block["context_window"] = window
+    # So a run can say what it cost; without a price it counts tokens only (decision 0038).
+    cost = model.get("cost") or {}
+    if cost.get("input") is not None and cost.get("output") is not None:
+        block["price"] = {"input": cost["input"], "output": cost["output"]}
     return block, notes

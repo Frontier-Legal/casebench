@@ -1,5 +1,7 @@
 """The `capture:` section of casebench.yaml: the proxy's port and its routes."""
 
+from typing import Any
+
 from pydantic import Field
 
 from casebench.capture.functions import StepFunction
@@ -12,7 +14,7 @@ class CaptureConfig(Record):
     `traces: true` points the OpenTelemetry exporter of agents Casebench starts at it."""
 
     port: int = 0
-    routes: list[dict[str, str]] = Field(default_factory=list)
+    routes: list[dict[str, Any]] = Field(default_factory=list)
     functions: list[StepFunction] = Field(default_factory=list)
     traces: bool = False
 

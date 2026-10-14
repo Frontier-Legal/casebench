@@ -51,3 +51,7 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0035](0035-comparable-and-strict-scores.md) | Every score set says what produced it; a strict pass rate and a second judge are reported beside the scores, never blended | accepted |
 | [0036](0036-several-corpora.md) | A setup connects several corpora by name; citations go to the corpus that covers their jurisdiction | accepted |
 | [0037](0037-match-by-the-corpus-description.md) | The judge matches citations by what the corpus says about each result, one call per answer; scoring runs in parallel and survives a dropped call | accepted |
+| [0038](0038-model-settings-by-measurement.md) | Each model takes its provider's own settings, and a team picks them from measured agreement, time and cost | accepted |
+| [0039](0039-one-case-by-a-lawyer.md) | A lawyer writes one case at a time, from a decision found by topic or by hand, and approves it | accepted |
+| [0040](0040-init-reads-the-code.md) | Init reads the project's own code, offline, to find its model clients, model names and entry points | accepted |
+| [0041](0041-a-profile-says-what-may-be-kept.md) | A profile says what a provider's terms let Casebench keep on disk, and the cache follows it | accepted |

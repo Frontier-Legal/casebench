@@ -1,16 +1,23 @@
-"""`casebench report` and `casebench compare`: read finished runs back."""
+"""`casebench report` and `casebench compare`: read finished runs and extractions back."""
 
 import json
 from pathlib import Path
 
 import click
 
+from casebench.extract.compare import compare_lines, is_extraction
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.record import FORMAT, Report
-from casebench.report.render import REPORT_FILE, error_lines, lines
+from casebench.report.render import (
+    REPORT_FILE,
+    corpus_lines,
+    error_lines,
+    lines,
+    suite_line,
+)
 from casebench.runs.log import RunLog
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -37,7 +44,11 @@ def report_command(run_dir: Path) -> None:
     report, ignored = read(Report, saved, declared, FORMAT)
     if ignored:
         click.echo(ignored_note(str(path), declared, FORMAT, ignored), err=True)
+    if report.suite_hash:
+        click.echo(suite_line(report.suite_id, report.suite_hash))
     for line in lines(report.tables, report.scores, report.funnel.summary):
+        click.echo(line)
+    for line in corpus_lines(report.produced_by):
         click.echo(line)
     for line in error_lines(report.scoring_errors, run_dir.name):
         click.echo(line)
@@ -48,7 +59,12 @@ def report_command(run_dir: Path) -> None:
 @click.argument("second", type=RUN)
 def compare_command(first: Path, second: Path) -> None:
     """Each metric before and after, with the interval of the difference, and every setting
-    the two score sets were produced with differently."""
+    the two score sets were produced with differently. Given two keys folders, their
+    extractions side by side: settings, agreement, time and cost."""
+    if is_extraction(first) and is_extraction(second):
+        for line in compare_lines(first, second):
+            click.echo(line)
+        return
     info = RunLog(first).info
     if RunLog(second).info.suite_hash != info.suite_hash:
         raise click.ClickException("the two runs ran different suites; compare runs of one suite")
