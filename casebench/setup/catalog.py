@@ -73,6 +73,23 @@ def speakers(provider: dict[str, Any]) -> list[str]:
     ]
 
 
+def families(catalog: dict[str, Any], names: list[str]) -> dict[str, str]:
+    """The family of each model id the catalog knows, by its id or its last path segment, so
+    `accounts/x/models/name` is found as `name`."""
+    known: dict[str, str] = {}
+    for provider_id, provider in catalog.items():
+        for model_id, model in (provider.get("models") or {}).items():
+            family = model.get("family") or provider_id
+            known.setdefault(model_id, family)
+            known.setdefault(model_id.rsplit("/", 1)[-1], family)
+    found = {}
+    for name in names:
+        family = known.get(name) or known.get(name.rsplit("/", 1)[-1])
+        if family:
+            found[name] = family
+    return found
+
+
 def plugins() -> list[str]:
     return sorted({item.name for item in registry.available(kind_named("provider"))})
 
