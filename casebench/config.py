@@ -6,6 +6,7 @@ from typing import Annotated, Any
 import yaml
 from pydantic import Field, StringConstraints, ValidationError, model_validator
 
+from casebench import envfiles
 from casebench.capture.config import CaptureConfig
 from casebench.core.model import Record
 from casebench.corpus.binding import CorpusConfig
@@ -37,6 +38,11 @@ class CasebenchConfig(Record):
     capture: CaptureConfig | None = None
     judges: list[JudgeConfig] = Field(default_factory=list, max_length=MOST_JUDGES)
     extract: ExtractConfig | None = None
+    keys: dict[str, str] = Field(
+        default_factory=dict,
+        description="Each key's variable name and the .env file it is read from, relative to "
+        "this file, when the environment does not set it; never a value (decision 0043).",
+    )
 
     @property
     def judge(self) -> JudgeConfig | None:
@@ -98,7 +104,7 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
         if isinstance(function, dict) and isinstance(function.get("function"), str):
             function["function"] = relative_to(base, function["function"])
     try:
-        return CasebenchConfig.model_validate(data)
+        config = CasebenchConfig.model_validate(data)
     except ValidationError as error:
         problems = "; ".join(
             ".".join(str(part) for part in e["loc"]) + ": " + e["msg"].removeprefix("Value error, ")
@@ -107,6 +113,9 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
             for e in error.errors()
         )
         raise ConfigError(f"{path}: {problems}") from error
+    # Keys the team keeps in .env files are read by name, for every command (decision 0043).
+    envfiles.load(config.keys, base)
+    return config
 
 
 def target_of(config: CasebenchConfig) -> dict[str, Any]:

@@ -13,6 +13,13 @@ from casebench.config import ConfigError, load_config
 from casebench.corpus.binding import Corpus
 from tests.corpus.document_api import KEY, DocumentApi, start_document_api
 
+# What a person picks from the response; a script names it, since nothing is guessed (0043).
+DOCUMENT_FIELDS = [
+    "--field",
+    "jurisdiction=$.jurisdiction.code",
+    "--field",
+    "court=$.issuers[0].name",
+]
 HTTP_FLAGS = [
     "--search-path",
     "/search",
@@ -22,8 +29,14 @@ HTTP_FLAGS = [
     "Authorization=Bearer ${DOC_KEY}",
     "--probe",
     "feshi",
+    "--results",
+    "$.results[*]",
+    "--result-field",
+    "id=$.work.work_id",
+    *DOCUMENT_FIELDS,
     "--yes",
 ]
+MCP_FIELDS = ["--results", "$.hits[*]", "--result-field", "id=$.document_id", *DOCUMENT_FIELDS]
 
 
 def invoke(*args: str):
@@ -90,6 +103,7 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
         "get_document",
         "--probe",
         "feshi",
+        *MCP_FIELDS,
         "--yes",
         "--config",
         str(mcp_config),
@@ -177,6 +191,7 @@ def test_any_http_api_or_mcp_server(api: str, tmp_path: Path):
         "get_document",
         "--probe",
         "feshi",
+        *MCP_FIELDS,
         "--yes",
         "--config",
         str(mcp_config),
