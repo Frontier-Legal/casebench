@@ -123,7 +123,7 @@ For a folder of decisions, use `casebench corpus add folder`; for an MCP server,
 casebench check --json
 ```
 
-Each part has `passed`, a `reason` and the `next` step. Fix the adapter or the flags you gave, and run it again. Stop and tell the user only what you cannot fix from here, such as a service that is not reachable from this machine or a key that is refused.
+Each part has `passed`, a `reason` and the `next` step. The target is asked the corpus's probe search; `casebench target check --question "…"` asks it something else and shows its answer, its citations and each call recorded. Fix the adapter or the flags you gave, and run it again. Stop and tell the user only what you cannot fix from here, such as a service that is not reachable from this machine or a key that is refused.
 
 ## 8. Show the user what changed
 

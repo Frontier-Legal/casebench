@@ -478,7 +478,15 @@ def test_an_agents_own_search_is_recorded(project: Path):
             "fetch_path": "/documents/{id}",
             "search_results": "$.results[*]",
             "result_fields": {"id": "$.work.work_id"},
+            "fields": {
+                "id": "$.work_id",
+                "jurisdiction": "$.jurisdiction.code",
+                "court": "$.issuers[0].name",
+                "date": "$.dates[1].date",
+                "text": "$.expressions[0].text",
+            },
         },
+        "probe": "feshi",
     }
     target = {"type": "python", "entry": "searching_agent.py:answer"}
     write(project / "casebench.yaml", yaml.safe_dump({"target": target, "corpus": corpus}))
@@ -493,9 +501,13 @@ def test_an_agents_own_search_is_recorded(project: Path):
                 [case("c1", "feshi")], target_from_config(config.target or {}), log, capture=session
             )
         )
+        # The sample case asks the corpus's own search, in its language (decision 0044).
+        checked = invoke("check")
     finally:
         api.shutdown()
 
+    assert checked.exit_code == 0, checked.output
+    assert "target   passed: answered, 2 calls recorded" in checked.output  # a gap is no call
     assert result.error is None, result.error
     assert result.output == "101"
     [searched] = [step for step in result.steps if step.kind is StepKind.RETRIEVAL]

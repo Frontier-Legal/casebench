@@ -7,7 +7,7 @@ import click
 
 from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.runs.log import Result
-from casebench.targets.sample import SAMPLE_QUESTION, send_sample
+from casebench.targets.sample import send_sample
 
 
 @click.group()
@@ -37,8 +37,11 @@ def describe(result: Result) -> list[str]:
     default=DEFAULT_CONFIG,
     show_default=True,
 )
-@click.option("--question", default=SAMPLE_QUESTION, show_default=True)
-def check(config_path: Path, question: str) -> None:
+@click.option(
+    "--question",
+    help="What to ask; by default the corpus's probe search, or a general legal question.",
+)
+def check(config_path: Path, question: str | None) -> None:
     """Send one sample case and show the parsed answer, citations and captured steps."""
     try:
         result = asyncio.run(send_sample(load_config(config_path), question))

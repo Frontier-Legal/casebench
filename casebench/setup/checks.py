@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx2
 
+from casebench.capture.step import StepKind
 from casebench.config import CasebenchConfig
 from casebench.corpus.check import SAMPLE_SIZE, check
 from casebench.corpus.corpora import Corpora
@@ -193,14 +194,16 @@ def _target(config: CasebenchConfig) -> Check:
         if result.error.startswith(CONNECTION_FAILURES):
             return Check("target", Status.UNREACHABLE, result.error, NEXT_REACH)
         return Check("target", Status.FAILED, result.error, NEXT_TARGET)
-    if not result.steps:
+    if not [step for step in result.steps if step.kind is not StepKind.GAP]:
         # Answering is what the check needs; the funnel needs the calls (decision 0044).
         quiet = (
             "answered, but no call was recorded, so a report cannot say where an authority was "
             "lost; a Python target records calls made through httpx2, httpx or requests"
         )
         return Check("target", Status.PASSED, quiet)
-    return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
+    calls = [step for step in result.steps if step.kind is not StepKind.GAP]
+    said = f"{len(calls)} call{'s' if len(calls) != 1 else ''} recorded"
+    return Check("target", Status.PASSED, f"answered, {said}")
 
 
 def _refused(error: BaseException) -> bool:

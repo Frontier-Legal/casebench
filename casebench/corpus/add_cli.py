@@ -425,7 +425,11 @@ def add() -> None:
 
 
 @add.command()
-@click.option("--base-url", help="The API's root URL, such as https://api.example.com/v1.")
+@click.option(
+    "--base-url",
+    help="The API's root URL, such as https://api.example.com/v1, or a variable that holds it, "
+    "such as '${DOCS_URL}'.",
+)
 @click.option("--search-path", help="Such as /search.")
 @click.option("--query-param", default="q", show_default=True)
 @click.option("--fetch-path", help="With {id}, such as /documents/{id}.")
