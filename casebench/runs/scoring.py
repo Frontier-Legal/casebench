@@ -1,5 +1,6 @@
 """Score a finished run with the metrics its cases name, and write its report."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -105,15 +106,33 @@ def producer(
     return producer_for(metrics, cases, judges, corpora)
 
 
+def judge_cost(context: dict[str, Any]) -> float | None:
+    """What the judges' calls have cost so far, or None when one has no price (0038)."""
+    judges = [j for j in (context.get("judge"), context.get("second_judge")) if j is not None]
+    costs = [judge.cost for judge in judges]
+    return None if None in costs else sum(c for c in costs if c is not None)
+
+
 def score(
-    log: RunLog, cases: list[Case], config: CasebenchConfig, suite_id: str, concurrency: int = 1
+    log: RunLog,
+    cases: list[Case],
+    config: CasebenchConfig,
+    suite_id: str,
+    concurrency: int = 1,
+    on_scored: Callable[[str, float, float | None], None] | None = None,
 ) -> Scored:
     """The judge's replies are kept in the run folder; scoring again reads them back, so it
-    asks only what failed before. Up to `concurrency` cases are scored at once (0037)."""
+    asks only what failed before. Up to `concurrency` cases are scored at once (0037).
+    `on_scored` hears of each case scored, its time and the judges' cost so far (0038)."""
     context = context_for(config, Memo(log.folder / MEMO_FILE))
     metrics = metrics_for(cases, context)
     produced_by = producer(metrics, cases, config, context)
-    path = rescore(log, cases, metrics, produced_by, concurrency)
+
+    def heard(case_id: str, seconds: float) -> None:
+        if on_scored is not None:
+            on_scored(case_id, seconds, judge_cost(context))
+
+    path = rescore(log, cases, metrics, produced_by, concurrency, heard)
     scores, errors = RunLog.read_scores(path), RunLog.read_errors(path)
     tables = build_tables(scores, cases, suite_id)
     traced, unfunnelled = funnels(log, cases, context, errors)

@@ -1,6 +1,7 @@
 """`casebench run`: send a frozen suite to the target and store every result."""
 
 import asyncio
+import sys
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,6 +16,7 @@ from casebench.metrics.loading import MetricNeeds
 from casebench.report import render
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
+from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
 from casebench.runs.scoring import prepare, score
 from casebench.suites.freeze import load
@@ -135,6 +137,10 @@ def run(
             "target": str(target_config.get("type")),
         },
     )
+    # A terminal shows the summary; a log file gets a line per case as it finishes (0038).
+    progress = None
+    if not sys.stdout.isatty():
+        progress = Progress(len(cases), click.echo)
     try:
         sent = asyncio.run(
             run_cases(
@@ -143,12 +149,20 @@ def run(
                 log,
                 max_concurrency=concurrency,
                 capture=capture,
+                on_answered=progress.answered_one if progress else None,
             )
         )
     except TargetDidNotStart as error:
         raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
-    scored = score(log, cases, config, manifest.suite_id, concurrency)
+    scored = score(
+        log,
+        cases,
+        config,
+        manifest.suite_id,
+        concurrency,
+        on_scored=progress.scored_one if progress else None,
+    )
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):

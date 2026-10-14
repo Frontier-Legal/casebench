@@ -19,6 +19,7 @@ from casebench.judge.config import JudgeConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.providers.interface import Message
+from casebench.providers.settings import settings_of
 from casebench.setup.catalog import installed
 from casebench.targets.sample import send_sample
 
@@ -177,11 +178,18 @@ def _target(config: CasebenchConfig) -> Check:
 
 
 def _model(name: str, model: JudgeConfig) -> Check:
+    """Asked with its settings, so the check says whether the provider takes them (0038)."""
+    settings = settings_of(model.options)
+    shown = ", ".join(f"{key}={value}" for key, value in settings.items())
     try:
         Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
-        return _failure(name, error)
-    return Check(name, Status.PASSED, f"{model.provider} {model.model} answered")
+        failed = _failure(name, error)
+        if settings and failed.status is Status.FAILED:
+            failed = Check(name, Status.FAILED, f"refused the call with {shown}: {failed.detail}")
+        return failed
+    accepted = f", accepting {shown}" if settings else ""
+    return Check(name, Status.PASSED, f"{model.provider} {model.model} answered{accepted}")
 
 
 def live(

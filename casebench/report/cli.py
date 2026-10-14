@@ -1,10 +1,11 @@
-"""`casebench report` and `casebench compare`: read finished runs back."""
+"""`casebench report` and `casebench compare`: read finished runs and extractions back."""
 
 import json
 from pathlib import Path
 
 import click
 
+from casebench.extract.compare import compare_lines, is_extraction
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
 from casebench.report.comparable import changes
@@ -48,7 +49,12 @@ def report_command(run_dir: Path) -> None:
 @click.argument("second", type=RUN)
 def compare_command(first: Path, second: Path) -> None:
     """Each metric before and after, with the interval of the difference, and every setting
-    the two score sets were produced with differently."""
+    the two score sets were produced with differently. Given two keys folders, their
+    extractions side by side: settings, agreement, time and cost."""
+    if is_extraction(first) and is_extraction(second):
+        for line in compare_lines(first, second):
+            click.echo(line)
+        return
     info = RunLog(first).info
     if RunLog(second).info.suite_hash != info.suite_hash:
         raise click.ClickException("the two runs ran different suites; compare runs of one suite")

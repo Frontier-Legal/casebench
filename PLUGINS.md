@@ -12,6 +12,8 @@ Casebench works in any country with no country-specific code ([decision 0024](do
 
 A store reachable over HTTP or MCP needs no plugin at all: `casebench corpus add http` or `casebench corpus add mcp` makes one live search and fetch, suggests where each field is, and writes the connector into casebench.yaml. A provider can save those answers as a profile file, so its users run `casebench corpus add profile provider.yaml` or `casebench init --profile provider.yaml` and answer nothing ([decision 0033](docs/decisions/0033-data-provider-profiles.md)); `casebench validate provider.yaml` checks the file. A setup may connect several stores, one per jurisdiction for example: each `corpus add` adds one more under its own name (`--name`, or one made from the store), with the jurisdictions it covers (`--jurisdiction NO`) ([decision 0036](docs/decisions/0036-several-corpora.md)). Write a connector plugin only for a store neither can reach.
 
+A model provider takes the model settings its API documents as constructor arguments, under the names Casebench uses everywhere (`reasoning_effort`, `thinking_budget`, `temperature`, `max_tokens`), and sends each in the form its vendor documents; one not set is not sent. Casebench refuses a setting a provider does not take before any call ([decision 0038](docs/decisions/0038-model-settings-by-measurement.md)).
+
 A parser may list `packages`, the SDKs whose calls it reads (such as `openai` on PyPI or `@anthropic-ai/sdk` on npm), so `casebench init` names them when it finds them in a project's dependency files.
 
 A connector holds no legal logic. One connector can serve many countries; each decision carries its jurisdiction, and a corpus in `casebench.yaml` may name one to filter by.
