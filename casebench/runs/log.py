@@ -108,8 +108,9 @@ class RunLog:
 
     @staticmethod
     def _lines(path: Path) -> list[dict]:
-        lines = path.read_text(encoding="utf-8").splitlines()[1:]
-        return [json.loads(line) for line in lines if line]
+        """Every line but the header; a set written before headers has none (decision 0042)."""
+        lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+        return [line for line in lines if PRODUCER not in line]
 
     @staticmethod
     def read_scores(path: Path) -> list[Score]:
@@ -126,7 +127,8 @@ class RunLog:
         ]
 
     @staticmethod
-    def read_producer(path: Path) -> Producer:
+    def read_producer(path: Path) -> Producer | None:
+        """None for a set written before score sets said what produced them."""
         with path.open(encoding="utf-8") as stream:
-            first = json.loads(stream.readline())
-        return Producer.model_validate(first[PRODUCER])
+            first = json.loads(stream.readline() or "{}")
+        return Producer.model_validate(first[PRODUCER]) if PRODUCER in first else None

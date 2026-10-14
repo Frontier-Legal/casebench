@@ -90,9 +90,9 @@ WAITING = (
 )
 
 
-def corpus_lines(produced_by: Producer) -> list[str]:
+def corpus_lines(produced_by: Producer | None) -> list[str]:
     """A run scored without a corpus says its citations wait for one (decision 0033)."""
-    return [] if produced_by.corpora else [WAITING]
+    return [] if produced_by is None or produced_by.corpora else [WAITING]
 
 
 def suite_line(suite_id: str | None, suite_hash: str | None) -> str:

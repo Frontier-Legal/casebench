@@ -12,6 +12,8 @@ from casebench.corpus.results import SearchResult, as_result
 
 DEFAULT_CACHE = Path(".casebench") / "corpus-cache"
 SEARCHES = "searches"
+# Connector options that say how search results describe their documents (decision 0037).
+DESCRIBING = ("search_results", "result_fields")
 
 
 def _write(path: Path, value: Any) -> None:
@@ -24,8 +26,11 @@ def _write(path: Path, value: Any) -> None:
 
 
 def corpus_key(connector: str, options: dict[str, Any]) -> str:
-    """One folder per connector and its options, so two stores never share a cache."""
-    settings = json.dumps({"connector": connector, "options": options}, sort_keys=True)
+    """One folder per connector and the options that decide what its documents hold, so two
+    stores never share a cache. Options that only describe search results are left out, so
+    mapping them keeps the documents already cached (decision 0042)."""
+    kept = {name: value for name, value in options.items() if name not in DESCRIBING}
+    settings = json.dumps({"connector": connector, "options": kept}, sort_keys=True)
     return f"{connector}-{hashlib.sha256(settings.encode()).hexdigest()}"
 
 

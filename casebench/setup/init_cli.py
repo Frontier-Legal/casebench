@@ -10,6 +10,7 @@ import yaml
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
 from casebench.setup import catalog as model_catalog
+from casebench.setup.advice import advice
 from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
@@ -17,6 +18,7 @@ from casebench.setup.models import choose
 from casebench.setup.routes import offers
 from casebench.setup.scan import ModelName, Scan, Source, scan
 from casebench.setup.sdks import detect
+from casebench.setup.update import missing_from_models, model_additions, route_additions
 
 HEADER = (
     "# Written by casebench init. It holds no secrets: API keys are read from the\n"
@@ -114,6 +116,37 @@ def _same_family(judge: dict[str, Any], found: Scan, catalog: dict[str, Any]) ->
     )
 
 
+def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: bool | None) -> None:
+    """Only what this version adds and the config lacks, offered and then written; every
+    setting already there stays as written (decision 0042)."""
+    config = load_config(config_path)
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    additions = [] if routes is False else route_additions(data, config, found)
+    if missing_from_models(data):
+        try:
+            additions += model_additions(data, model_catalog.load(catalog_path))
+        except httpx2.HTTPError as error:
+            click.echo(f"the model catalog could not be fetched ({error}); pass --catalog FILE")
+    for line in advice(config):
+        if line.startswith("corpus"):
+            click.echo(f"could use {line}")
+    if not additions:
+        click.echo(f"{config_path} has everything this version adds; nothing to change")
+        return
+    for addition in additions:
+        click.echo(f"add      {addition.said}")
+    asked = f"add these to {config_path}? its settings stay; comments other than its header do not"
+    if routes is None and not click.confirm(asked, default=True):
+        raise click.Abort()
+    for addition in additions:
+        addition.apply(data)
+    config_path.write_text(
+        HEADER + yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
+    load_config(config_path)
+    click.echo(f"updated  {config_path}; run `casebench check` where it runs")
+
+
 def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
     """NAME=VALUE pairs; each value read as YAML, so numbers stay numbers."""
     options = {}
@@ -193,15 +226,16 @@ def init_command(
     no_live: bool,
     routes: bool | None,
 ) -> None:
-    """Set Casebench up for the agent in this folder."""
-    if config_path.exists():
-        raise click.ClickException(f"{config_path} exists already; edit it or remove it first")
+    """Set Casebench up for the agent in this folder, or bring an existing setup up to date."""
     checkout = config_path.resolve().parent
     for line in _sdks(checkout):
         click.echo(f"found    {line}")
     found = scan(checkout)
     for line in _scanned(found):
         click.echo(f"found    {line}")
+    if config_path.exists():
+        _update(config_path, found, catalog_path, routes)
+        return
     kind = target_kind or click.prompt(
         "how Casebench reaches the agent", type=click.Choice(["python", "command", "http"])
     )

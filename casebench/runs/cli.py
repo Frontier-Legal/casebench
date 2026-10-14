@@ -20,6 +20,7 @@ from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
 from casebench.runs.scoring import prepare, score
 from casebench.suites.freeze import load
+from casebench.suites.qualify import as_qualified
 from casebench.targets.interface import TargetDidNotStart
 from casebench.targets.load import target_from_config
 
@@ -108,6 +109,7 @@ def run(
     """Send every case of a frozen suite to the target, store each result and score the run."""
     config = _config(config_path, python)
     manifest, cases = load(suite_dir)
+    cases = as_qualified(cases, list(config.corpora))
     if dry_run:
         existing = runs_dir / run_id if run_id else None
         stored = (

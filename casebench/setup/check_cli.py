@@ -6,6 +6,7 @@ import click
 
 from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.corpus.check import SAMPLE_SIZE
+from casebench.setup.advice import advice
 from casebench.setup.checks import Status, live, offline
 
 
@@ -32,5 +33,7 @@ def check_command(config_path: Path, queries: tuple[str, ...], size: int) -> Non
         checks = live(config, list(queries), size)
     for item in checks:
         click.echo(item.line())
+    for line in advice(config):
+        click.echo(f"could use {line}")
     if any(item.status is not Status.PASSED for item in checks):
         raise SystemExit(1)
