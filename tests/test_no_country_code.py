@@ -22,5 +22,6 @@ def test_no_country_in_the_core():
         "profile",  # which profile file the options came from, by name
         "metered",  # what the provider charges for, so paid searches are kept
         "search_filters",  # per kind of citation the judge names, statute or decision (0037)
+        "keep",  # what the provider's terms let Casebench keep on disk (0041)
     }
     assert plugin_leaks(ROOT) == []

@@ -18,6 +18,9 @@ from casebench.plugins.kinds import kind_named
 from casebench.setup.checks import unreachable
 from casebench.targets.placeholders import VARIABLE
 
+# What Casebench keeps so each charged call is paid once (decisions 0033 and 0041).
+KEPT_FOR = {"search": "searches", "fetch": "documents"}
+
 
 class ProfileProblem(ValueError):
     """The profile cannot be used here: unreadable, a key not set, or its live check failed."""
@@ -105,11 +108,27 @@ def profile_block(
         block["metered"] = profile.metered.value
     if profile.search_filters:
         block["search_filters"] = profile.search_filters
+    kept = list(KEPT_FOR) if profile.keep is None else list(profile.keep)
+    if profile.keep is not None:
+        block["keep"] = kept
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")
+    charged = profile.metered.value
     if profile.metered is not Metered.NONE:
+        paid_once = KEPT_FOR[charged] in kept
         notes.append(
-            f"{profile.name} charges per {profile.metered.value}: this check used one search and "
-            f"one fetch, and Casebench keeps each {profile.metered.value} so it is paid once"
+            f"{profile.name} charges per {charged}: this check used one search and one fetch, "
+            + (
+                f"and Casebench keeps each {charged} so it is paid once"
+                if paid_once
+                else f"and its terms let Casebench keep none, so each {charged} is paid again "
+                "on every run (decision 0041)"
+            )
+        )
+    unkept = [k for k in KEPT_FOR.values() if k not in kept]
+    if unkept and profile.keep is not None:
+        notes.append(
+            f"{profile.name}'s terms let Casebench keep no {' or '.join(unkept)} on disk, so "
+            "each is asked for again on every run and re-score (decision 0041)"
         )
     if profile.terms:
         notes.append(f"its terms: {profile.terms}")

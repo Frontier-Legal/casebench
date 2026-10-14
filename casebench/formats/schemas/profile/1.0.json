@@ -99,6 +99,25 @@
       },
       "type": "object"
     },
+    "keep": {
+      "anyOf": [
+        {
+          "items": {
+            "enum": [
+              "documents",
+              "searches"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the provider's terms let a customer keep on disk; left out, documents are kept, and searches when metered (decision 0041)."
+    },
     "probe": {
       "type": "string"
     },

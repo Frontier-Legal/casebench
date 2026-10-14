@@ -54,3 +54,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0038](0038-model-settings-by-measurement.md) | Each model takes its provider's own settings, and a team picks them from measured agreement, time and cost | accepted |
 | [0039](0039-one-case-by-a-lawyer.md) | A lawyer writes one case at a time, from a decision found by topic or by hand, and approves it | accepted |
 | [0040](0040-init-reads-the-code.md) | Init reads the project's own code, offline, to find its model clients, model names and entry points | accepted |
+| [0041](0041-a-profile-says-what-may-be-kept.md) | A profile says what a provider's terms let Casebench keep on disk, and the cache follows it | accepted |
