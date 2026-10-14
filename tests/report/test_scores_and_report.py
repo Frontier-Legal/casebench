@@ -11,7 +11,7 @@ from casebench.metrics.builtin.outcome import WRONG, labels_in
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.suites.freeze import load
 from tests.judge.fake_judge import FakeJudge, start_fake_judge
-from tests.report.suites import frozen, mixed, outcome_case
+from tests.report.suites import criteria_case, frozen, mixed, outcome_case
 
 AGENTS = Path(__file__).parent / "agents.py"
 CHECKED = ["outcome", "citation_integrity"]
@@ -195,7 +195,7 @@ def test_a_score_set_says_what_produced_it(tmp_path: Path, judged: Path):
     assert first["judges"] == [
         {"provider": "anthropic", "model": "judge-model", "family": "anthropic", "candidates": 5}
     ]
-    assert sorted(first["prompts"]) == ["list_citations", "match", "weigh"]
+    assert sorted(first["prompts"]) == ["grade", "list_citations", "match", "weigh"]
     assert list(first["corpora"]) == ["corpus"]
 
 
@@ -220,3 +220,37 @@ def test_compare_says_a_new_judge_makes_judged_metrics_not_comparable(tmp_path: 
     rows = {line.split(":")[0]: line for line in compared.output.splitlines() if " · " in line}
     assert rows["outcome · citation_integrity"].endswith("; not comparable, because of judge")
     assert rows["outcome · outcome"].endswith(", not significant")
+
+
+def test_the_judge_grades_criteria_and_the_report_shows_how_many_answers_passed_them_all(
+    tmp_path: Path, judged: Path
+):
+    cases = [
+        criteria_case(1, {"Mentions upheld": 2, "Mentions appeal": 1, "Mentions reversed": -1}),
+        criteria_case(2, {"Mentions upheld": 2, "Mentions reversed": -1}),
+    ]
+    suite = frozen(cases, tmp_path / "suite")
+
+    ran = run(suite, tmp_path / "runs", "upheld", "--config", str(judged), "--run-id", "r")
+
+    assert ran.exit_code == 0, ran.output
+    report = json.loads((tmp_path / "runs" / "r" / "report.json").read_text("utf-8"))
+    [table] = report["tables"]
+    [row] = table["rows"]
+    assert (table["metric"], row["n"]) == ("criteria", 2)
+    assert row["mean"] == pytest.approx((2 / 3 + 1) / 2)
+    assert row["strict"] == 0.5
+    first = next(s for s in report["scores"] if s["case_id"] == "case-001")
+    assert first["label"] == "failed: c2"
+    assert first["criteria"][0]["quote"] == "The decision is upheld."
+    assert "all passed" in ran.output
+
+
+def test_the_dry_run_counts_the_calls_that_grade_criteria(tmp_path: Path, judged: Path):
+    suite = frozen([criteria_case(n, {"Mentions upheld": 1}) for n in range(3)], tmp_path / "s")
+
+    ran = run(suite, tmp_path / "runs", "upheld", "--config", str(judged), "--dry-run")
+
+    assert ran.exit_code == 0, ran.output
+    assert "judge: 3 calls to grade criteria (one per answer for each judge)" in ran.output
+    assert FakeJudge.calls == []

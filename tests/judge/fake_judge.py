@@ -1,5 +1,5 @@
-"""A judge behind the Anthropic Messages API that answers the three citation questions the way
-a careful model would, so the metric's plumbing is tested without a real model."""
+"""A judge behind the Anthropic Messages API that answers the citation and criteria questions the
+way a careful model would, so the metrics' plumbing is tested without a real model."""
 
 import json
 import re
@@ -23,13 +23,24 @@ LISTED = [
     },
 ]
 SUPPORTING = {"101": "İşçinin feshi geçersizdir."}
-# Second judges that see things differently: one never finds a claim supported, the other never
-# recognises a cited document among the candidates.
+# Second judges that see things differently: one never finds a claim supported or a criterion
+# met, the other never recognises a cited document among the candidates.
 DOUBTING = "doubting-judge"
 LOST = "lost-judge"
 
 
+def graded(criterion: dict, answer: str, model: str) -> dict:
+    """A criterion reads "Mentions <words>" and is met when the answer has those words; the
+    doubting judge never finds a positive criterion met."""
+    words = criterion["text"].removeprefix("Mentions ").casefold()
+    met = words in answer.casefold() and not (model == DOUBTING and criterion["weight"] > 0)
+    return {"id": criterion["id"], "met": met, "quote": answer if met else None}
+
+
 def reply(system: str, user: str, model: str = "") -> object:
+    if system == prompts.GRADE:
+        answer, criteria = user.split("Answer:\n", 1)[1].split("\n\nCriteria:\n", 1)
+        return [graded(criterion, answer, model) for criterion in json.loads(criteria)]
     if system == prompts.LIST_CITATIONS:
         return LISTED
     if system == prompts.MATCH and model == LOST:

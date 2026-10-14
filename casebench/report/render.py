@@ -29,18 +29,23 @@ def lines(
 ) -> list[str]:
     out: list[str] = []
     for table in tables:
+        # Beside the weighted mean, never instead of it (decision 0035).
+        strict = any(row.strict is not None for row in table.rows)
         out.append(f"{table.task_type} · {table.metric}")
         out.append(
             f"  {'source':<8} {'approval':<16} {'place':<6} {'n':>5} {'score':>6} "
             f"{'95% interval':>14} {'majority':>9} {'text-only':>9}"
+            + (f" {'all passed':>10} {'95% interval':>14}" if strict else "")
         )
         for row in table.rows:
             interval = f"{_percent(row.low)}-{_percent(row.high)}"
+            passed = f"{_percent(row.strict_low)}-{_percent(row.strict_high)}"
             out.append(
                 f"  {row.reference_source.value:<8} {row.approval:<16} "
                 f"{row.jurisdiction or '-':<6} {row.n:>5} "
                 f"{_percent(row.mean):>6} {interval:>14} "
                 f"{_percent(row.majority_baseline):>9} {_percent(row.text_only_baseline):>9}"
+                + (f" {_percent(row.strict):>10} {passed:>14}" if strict else "")
             )
     rates = [r for r in citation_rates(scores) if r.count]
     if rates:

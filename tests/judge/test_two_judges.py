@@ -14,12 +14,13 @@ from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
 from casebench.metrics.base import score
 from casebench.metrics.builtin.citation_integrity import CitationIntegrity
+from casebench.metrics.builtin.criteria import Metric as Criteria
 from casebench.metrics.builtin.precedent import Metric as Precedent
 from casebench.report.render import lines
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result
 from tests.judge.fake_judge import DOUBTING, LOST, start_fake_judge
-from tests.report.suites import frozen, outcome_case
+from tests.report.suites import criteria_case, frozen, outcome_case
 from tests.test_citation_integrity import ANSWER, folder_corpus
 
 FIRST = "Yargıtay 9. HD, E. 2023/1234 K. 2024/567"
@@ -142,3 +143,19 @@ def test_the_dry_run_counts_the_second_judges_calls(port: int):
     printed = "\n".join(estimate([case(["citation_integrity"])], set(), two).lines())
 
     assert "then up to two per citation for each of the 2 judges" in printed
+
+
+def test_a_criterion_passes_only_when_both_judges_pass_it(port: int):
+    metric = Criteria(
+        judge(port, "first-judge", "anthropic"), second_judge=judge(port, DOUBTING, "other")
+    )
+    asked = criteria_case(1, {"Mentions upheld": 2, "Mentions reversed": -1})
+
+    scored = score(metric, asked, Result(case_id=asked.id, output="The decision is upheld."))
+
+    assert scored.label == "failed: c1"
+    assert scored.value == 0.0
+    assert scored.judged_twice == 2
+    assert scored.disagreements == [
+        Disagreement(item="criterion c1", first="passed", second="failed")
+    ]
