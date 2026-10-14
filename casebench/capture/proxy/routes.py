@@ -10,6 +10,8 @@ class Route(Record):
 
     A backend route with no parser names where its responses hold document ids
     (`doc_ids`, JSONPath) and, for a rerank, where its requests hold them (`doc_ids_in`).
+    `fetch_path`, such as `/documents/{id}`, marks the requests that read one document: they
+    are recorded as document fetches of the id in the path, not as retrievals (0040).
     """
 
     name: str
@@ -20,6 +22,7 @@ class Route(Record):
     step: str = "retrieval"
     doc_ids: str | None = None
     doc_ids_in: str | None = None
+    fetch_path: str | None = None
 
     def base_url(self, port: int) -> str:
         return f"http://127.0.0.1:{port}/{self.name}{self.env_suffix}"

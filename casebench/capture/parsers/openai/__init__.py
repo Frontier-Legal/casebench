@@ -61,6 +61,13 @@ def _from_chunks(chunks: list[Any]) -> tuple[str | None, int | None, int | None,
 class Parser:
     hosts: ClassVar[list[str]] = ["api.openai.com"]
     packages: ClassVar[list[str]] = ["openai"]
+    # The client classes whose calls this parser reads, for `casebench init` (decision 0040).
+    clients: ClassVar[list[str]] = [
+        "openai.OpenAI",
+        "openai.AsyncOpenAI",
+        "openai.AzureOpenAI",
+        "openai.AsyncAzureOpenAI",
+    ]
     default_route: ClassVar[dict[str, str]] = {
         "name": "openai",
         "upstream": "https://api.openai.com",

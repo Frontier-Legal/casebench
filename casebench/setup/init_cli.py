@@ -8,10 +8,14 @@ import httpx2
 import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
+from casebench.corpus.binding import CorpusConfig
 from casebench.setup import catalog as model_catalog
+from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.models import choose
+from casebench.setup.routes import offers
+from casebench.setup.scan import ModelName, Scan, Source, scan
 from casebench.setup.sdks import detect
 
 HEADER = (
@@ -31,9 +35,37 @@ def _sdks(checkout: Path) -> list[str]:
     return [f"{package}: read by the {parser} parser" for package, parser in found.items()]
 
 
-def _target(kind: str, entry: str | None, run: str | None, url: str | None) -> dict[str, Any]:
+def _source(source: Source | None) -> str:
+    if source is None:
+        return "its SDK's default"
+    if source.env and source.literal:
+        return f"from {source.env}, else {source.literal}"
+    return f"from {source.env}" if source.env else source.literal or "unknown"
+
+
+def _scanned(found: Scan) -> list[str]:
+    """Every client with where its base URL and key come from, and every model named."""
+    lines = []
+    for client in found.clients:
+        key = f", key {_source(client.api_key)}" if client.api_key else ""
+        lines.append(f"{client.kind} at {client.where}, base URL {_source(client.base_url)}{key}")
+    first: dict[str, ModelName] = {}
+    for model in found.models:
+        first.setdefault(model.name, model)
+    lines += [f"model {m.name} at {m.path}:{m.line}" for m in first.values()]
+    return [*lines, found.said()]
+
+
+def _target(
+    kind: str, entry: str | None, run: str | None, url: str | None, entries: list[str]
+) -> dict[str, Any]:
     if kind == "python":
-        return {"type": "python", "entry": _ask(entry, "the agent's function, as path.py:function")}
+        if entry is None and entries:
+            click.echo(
+                f"the functions that call a model, nearest the question first: {', '.join(entries)}"
+            )
+        label = "the agent's function, as path.py:function"
+        return {"type": "python", "entry": _ask(entry, label, entries[0] if entries else None)}
     if kind == "command":
         return {"type": "command", "run": _ask(run, "the command, with {question} where it goes")}
     return {
@@ -42,6 +74,44 @@ def _target(kind: str, entry: str | None, run: str | None, url: str | None) -> d
         "body": yaml.safe_load(click.prompt("the request body, as JSON with {question}")),
         "answer": click.prompt("JSONPath to the answer in the response"),
     }
+
+
+def _routes(found: Scan, corpora: dict[str, Any], accept: bool | None) -> list[dict[str, Any]]:
+    """A capture route for each client that can have one, offered one by one unless
+    `--routes` or `--no-routes` answered for all (decision 0040)."""
+    configs = {name: CorpusConfig.model_validate(block) for name, block in corpora.items()}
+    chosen = []
+    for offer in offers(found.clients, configs):
+        where = f"{offer.client.kind} at {offer.client.where}"
+        if offer.route is None:
+            click.echo(f"capture  {where}: {offer.note}")
+            continue
+        wanted = (
+            accept
+            if accept is not None
+            else click.confirm(f"record {where} through the proxy: {offer.note}?", default=True)
+        )
+        if wanted:
+            chosen.append(offer.route)
+            click.echo(f"capture  {where}: {offer.note}")
+    return chosen
+
+
+def _same_family(judge: dict[str, Any], found: Scan, catalog: dict[str, Any]) -> str | None:
+    """As `casebench run` warns: a judge of the family the agent's models come from favours
+    their answers (decision 0029)."""
+    family = (judge.get("options") or {}).get("family")
+    if family is None:
+        family = families(catalog, [judge["model"]]).get(judge["model"])
+    named = families(catalog, [m.name for m in found.models])
+    same = sorted(name for name, of in named.items() if of == family)
+    if not family or not same:
+        return None
+    return (
+        f"warning: the judge is of the {family} family, like {', '.join(same)} in your agent's "
+        "code; a model grading its own family's answers favours them (decision 0029). Pick a "
+        "judge from another family."
+    )
 
 
 def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
@@ -98,6 +168,12 @@ def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
     help="A saved copy of the model catalog, instead of fetching it.",
 )
 @click.option("--no-live", is_flag=True, help="Only the checks that need no network.")
+@click.option(
+    "--routes/--no-routes",
+    "routes",
+    default=None,
+    help="Write a capture route for every client found, or for none, without asking.",
+)
 def init_command(
     config_path: Path,
     target_kind: str | None,
@@ -115,19 +191,27 @@ def init_command(
     no_extract: bool,
     catalog_path: Path | None,
     no_live: bool,
+    routes: bool | None,
 ) -> None:
     """Set Casebench up for the agent in this folder."""
     if config_path.exists():
         raise click.ClickException(f"{config_path} exists already; edit it or remove it first")
-    for line in _sdks(config_path.resolve().parent):
+    checkout = config_path.resolve().parent
+    for line in _sdks(checkout):
+        click.echo(f"found    {line}")
+    found = scan(checkout)
+    for line in _scanned(found):
         click.echo(f"found    {line}")
     kind = target_kind or click.prompt(
         "how Casebench reaches the agent", type=click.Choice(["python", "command", "http"])
     )
-    data: dict[str, Any] = {"target": _target(kind, entry, run_line, url)}
+    data: dict[str, Any] = {"target": _target(kind, entry, run_line, url, found.entries)}
     corpora, live_checked = corpus_for_init(corpus_kind, corpus_path, profiles)
     if corpora:
         data["corpora"] = corpora
+    chosen_routes = _routes(found, corpora, routes)
+    if chosen_routes:
+        data["capture"] = {"routes": chosen_routes}
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:
@@ -146,6 +230,9 @@ def init_command(
             "judge", listed(), judge_provider, judge_model, _options(judge_options)
         )
         click.echo(f"judge    {'; '.join(notes)}")
+        warning = _same_family(data["judge"], found, listed())
+        if warning:
+            click.echo(warning, err=True)
     wants_extract = bool(extract_models) or (
         not no_extract
         and click.confirm(
