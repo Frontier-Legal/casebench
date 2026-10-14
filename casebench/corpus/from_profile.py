@@ -1,6 +1,5 @@
 """Turn a profile file into a corpus block, after one live search and fetch with the user's key."""
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +7,7 @@ import httpx2
 import yaml
 from pydantic import ValidationError
 
+from casebench import keys
 from casebench.corpus.add import corpus_block
 from casebench.corpus.profile import FORMAT, Metered, Profile
 from casebench.corpus.record import REQUIRED_FIELDS
@@ -47,7 +47,7 @@ def _unset(profile: Profile) -> list[str]:
     named = set(VARIABLE.findall(str(profile.options)))
     if profile.key_env:
         named.add(profile.key_env)
-    return sorted(name for name in named if not os.environ.get(name))
+    return sorted(name for name in named if not keys.get(name))
 
 
 def _reason(error: BaseException) -> str:

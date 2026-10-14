@@ -1,19 +1,28 @@
 """Onboarding a real project in a few Enter presses: detect first, keys from .env files, a guided
 terminal UI (decision 0043)."""
 
+import asyncio
 import json
 import os
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import click
 import pytest
 import yaml
 from click.testing import CliRunner
 
+from casebench import keys
 from casebench.cli import main
 from casebench.config import load_config
+from casebench.corpus.add_cli import http_block
+from casebench.providers.builtin.openai import Provider as OpenAiCompatible
+from casebench.providers.call import complete
+from casebench.providers.interface import Message
 from casebench.setup import judge_question, models
+from casebench.targets.builtin.command import Target as CommandTarget
 from tests.corpus.document_api import KEY, start_document_api
 
 CATALOG = Path(__file__).parent / "catalog.json"
@@ -41,12 +50,18 @@ def init(*flags: str, typed: str = ""):
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(tmp_path)
-    # Init sets a key it found in this process's environment; each test gets its own.
+    # Each test starts as a new process would: its own environment, no key held.
     monkeypatch.setattr(os, "environ", os.environ.copy())
+    monkeypatch.setattr(keys, "_held", {})
     for name in ("ANTHROPIC_API_KEY", "DOC_KEY", "MY_JUDGE_KEY"):
         os.environ.pop(name, None)
     (tmp_path / "agent.py").write_text(AGENT, encoding="utf-8")
     return tmp_path
+
+
+def a_new_process() -> None:
+    """What a later command starts with: no key held from an earlier one."""
+    keys._held.clear()
 
 
 def env_file(path: Path, lines: dict[str, str]) -> None:
@@ -56,22 +71,23 @@ def env_file(path: Path, lines: dict[str, str]) -> None:
 
 def test_a_key_in_a_env_file_is_found(project: Path):
     env_file(project / ".env", {"DATABASE_URL": "postgres://local"})
-    env_file(project / "research" / ".env", {"OTHER": "1", "ANTHROPIC_API_KEY": SECRET})
+    env_file(project / "web" / ".env.local", {"OTHER": "1"})
+    env_file(project / "env" / "eval.env", {"OTHER": "1", "ANTHROPIC_API_KEY": SECRET})
+    env_file(project / "env" / "eval.env.example", {"ANTHROPIC_API_KEY": "your-key-here"})
     flags = ["--entry", "agent.py:answer", "--corpus", "none", "--no-extract", "--no-live"]
 
     made = init(*flags, *JUDGE, "--no-routes", "--yes")
-    os.environ.pop("ANTHROPIC_API_KEY")  # a later command starts without it
+    a_new_process()
     config = load_config(project / "casebench.yaml")  # as every later command reads it
-    read_later = os.environ.get("ANTHROPIC_API_KEY")
 
     assert made.exit_code == 0, made.output
-    assert "✓ key ANTHROPIC_API_KEY in research/.env" in made.output
+    assert "✓ key ANTHROPIC_API_KEY in env/eval.env" in made.output
     assert "which .env file" not in made.output  # found, so not asked
     written = (project / "casebench.yaml").read_text(encoding="utf-8")
     assert SECRET not in made.output
     assert SECRET not in written
-    assert config.keys == {"ANTHROPIC_API_KEY": "research/.env"}
-    assert read_later == SECRET
+    assert config.keys == {"ANTHROPIC_API_KEY": "env/eval.env"}
+    assert keys.get("ANTHROPIC_API_KEY") == SECRET  # held for Casebench's own calls
 
 
 def test_two_env_files_disagree_or_none_has_the_name(project: Path):
@@ -84,7 +100,7 @@ def test_two_env_files_disagree_or_none_has_the_name(project: Path):
 
     for path in (project / "research", project / "services"):
         (path / ".env").unlink()
-    os.environ.pop("ANTHROPIC_API_KEY")  # set by the first init, as for the rest of its run
+    a_new_process()
     (project / "casebench.yaml").unlink()
     env_file(project / ".env", {"MY_JUDGE_KEY": "sk-ant-mine-33333333", "DB_URL": "x"})
     # The only .env file (1), then the first name in it (1).
@@ -93,8 +109,10 @@ def test_two_env_files_disagree_or_none_has_the_name(project: Path):
 
     assert disagree.exit_code == 0, disagree.output
     assert "ANTHROPIC_API_KEY has different values in these files" in disagree.output
-    assert "research/.env  (sk-a…1111)" in disagree.output  # masked, enough to tell apart
-    assert "sk-ant-aaaa-first-111111" not in disagree.output
+    first = keys.fingerprint("sk-ant-aaaa-first-111111")
+    assert f"research/.env  (fingerprint {first})" in disagree.output  # tells them apart
+    assert "sk-a" not in disagree.output  # and shows no character of either key
+    assert "1111" not in disagree.output
     assert chosen["keys"] == {"ANTHROPIC_API_KEY": "services/.env"}
     assert named.exit_code == 0, named.output
     assert "judge: which key in .env?" in named.output
@@ -245,3 +263,37 @@ def test_reviewed_before_writing(project: Path):
     assert "target  agent.py:answer" in declined.output
     assert "Nothing was written." in declined.output
     assert not (project / "casebench.yaml").exists()
+
+
+def test_a_key_never_shows_or_leaves_casebench(project: Path):
+    env_file(project / "env" / "eval.env", {"ANTHROPIC_API_KEY": SECRET, "OPENAI_API_KEY": SECRET})
+    (project / "casebench.yaml").write_text(
+        "target: {type: python, entry: agent.py:answer}\nkeys: {OPENAI_API_KEY: env/eval.env}\n",
+        encoding="utf-8",
+    )
+    load_config(project / "casebench.yaml")
+    shows = project / "shows_its_key.py"
+    shows.write_text("import os\nprint(os.environ.get('OPENAI_API_KEY', 'absent'))\n", "utf-8")
+    agent = CommandTarget(run=f"{sys.executable} {shows}")
+
+    def refuses(request):  # a provider whose refusal repeats the key it was sent
+        return 401, {"error": f"invalid key {request.headers['Authorization']}"}
+
+    agent_sees = asyncio.run(agent.answer({"question": "q"}))
+    with pytest.raises(RuntimeError) as refusal:
+        complete(OpenAiCompatible(), [Message(role="user", content="q")], "m", refuses)
+    with pytest.raises(click.BadParameter) as typed_in:
+        http_block(
+            base_url="http://127.0.0.1:9/v1",
+            search_path="/search",
+            fetch_path="/documents/{id}",
+            headers=(f"Authorization=Bearer {SECRET}",),
+            probe="q",
+            ask=False,
+        )
+
+    assert agent_sees.text == "absent"  # the agent's process does not inherit it
+    assert SECRET not in str(refusal.value)
+    assert "invalid key Bearer ${OPENAI_API_KEY}" in str(refusal.value)
+    assert "would write a key into casebench.yaml" in str(typed_in.value)
+    assert SECRET not in str(typed_in.value)

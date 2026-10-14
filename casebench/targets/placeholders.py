@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from string import Template
 from typing import Any
 
+from casebench import keys
+
 WHOLE = re.compile(r"^\{\{(\w+)\}\}$")
 INLINE = re.compile(r"\{\{(\w+)\}\}")
 # `${VAR}`: an environment variable, as `expand_env` reads it.
@@ -52,8 +54,10 @@ def fill_args(run: str, inputs: Mapping[str, Any]) -> list[str]:
 
 
 def expand_env(values: Mapping[str, str]) -> dict[str, str]:
-    """`${VAR}` reads the environment; a variable that is not set is an error."""
+    """`${VAR}` reads the shell, then the keys read from .env files; a variable that is
+    set in neither is an error."""
+    found = keys.lookup()
     try:
-        return {key: Template(value).substitute(os.environ) for key, value in values.items()}
+        return {key: Template(value).substitute(found) for key, value in values.items()}
     except KeyError as missing:
         raise KeyError(f"set the environment variable {missing.args[0]}") from None

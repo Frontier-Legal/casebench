@@ -3,15 +3,23 @@
 import os
 from pathlib import Path
 
+from casebench.keys import hold
+
 # Folders that hold no file of the project's own.
 SKIPPED = {"node_modules", "__pycache__", "site-packages"}
 # A file of placeholders that documents the variables, not one that holds them.
 EXAMPLES = (".example", ".sample", ".template", ".dist")
 
 
+def is_env_file(name: str) -> bool:
+    """`.env`, `.env.<anything>` or `<anything>.env`, and not a file of placeholders."""
+    named = name == ".env" or name.startswith(".env.") or name.endswith(".env")
+    return named and not name.endswith(EXAMPLES)
+
+
 def env_files(root: Path) -> list[Path]:
-    """Every `.env` or `.env.*` file below the root, outside virtual environments,
-    `node_modules` and hidden folders, nearest the root first (decision 0043)."""
+    """Every .env file below the root, outside virtual environments, `node_modules` and
+    hidden folders, nearest the root first (decision 0043)."""
     found = []
     for folder, folders, files in os.walk(root):
         here = Path(folder)
@@ -23,7 +31,7 @@ def env_files(root: Path) -> list[Path]:
             and not (here / name / "pyvenv.cfg").is_file()
         )
         for name in sorted(files):
-            if (name == ".env" or name.startswith(".env.")) and not name.endswith(EXAMPLES):
+            if is_env_file(name):
                 found.append(here / name)
     return sorted(found, key=lambda path: (len(path.relative_to(root).parts), str(path)))
 
@@ -62,14 +70,10 @@ def value(path: Path, name: str) -> str | None:
     return found or None
 
 
-def masked(secret: str) -> str:
-    """Enough to tell two keys apart, never enough to use one."""
-    return f"{secret[:4]}…{secret[-4:]}" if len(secret) > 12 else "•" * len(secret)
-
-
 def load(keys: dict[str, str], base: Path) -> list[str]:
-    """Each named variable the environment lacks, read from the file the config names for it,
-    relative to the config's folder. Returns the names that could not be found."""
+    """Each named variable the shell lacks, read from the file the config names for it,
+    relative to the config's folder, and held for Casebench's own calls, not set in the
+    environment. Returns the names that could not be found."""
     missing = []
     for name, file in keys.items():
         if os.environ.get(name):
@@ -79,5 +83,5 @@ def load(keys: dict[str, str], base: Path) -> list[str]:
         if found is None:
             missing.append(name)
         else:
-            os.environ[name] = found
+            hold(name, found)
     return missing
