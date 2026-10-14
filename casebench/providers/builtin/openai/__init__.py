@@ -10,6 +10,9 @@ LONGEST_RETRY_AFTER_S = 120.0
 
 
 class Provider:
+    """`reasoning_effort` and `temperature` are sent as Chat Completions names them; one not
+    set is not sent, so the endpoint's default applies (decision 0038)."""
+
     speaks = ("@ai-sdk/openai-compatible", "@ai-sdk/openai")
 
     def __init__(
@@ -18,11 +21,15 @@ class Provider:
         family: str = "openai",
         api_key_env: str = "OPENAI_API_KEY",
         max_tokens: int | None = None,
+        reasoning_effort: str | None = None,
+        temperature: float | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.family = family
         self.api_key_env = api_key_env
         self.max_tokens = max_tokens
+        self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
 
     def request(self, messages: list[Message], model: str, api_key: str) -> HttpRequest:
         body: dict[str, Any] = {
@@ -31,6 +38,10 @@ class Provider:
         }
         if self.max_tokens is not None:
             body["max_completion_tokens"] = self.max_tokens
+        if self.reasoning_effort is not None:
+            body["reasoning_effort"] = self.reasoning_effort
+        if self.temperature is not None:
+            body["temperature"] = self.temperature
         return HttpRequest(
             method="POST",
             url=f"{self.base_url}/chat/completions",

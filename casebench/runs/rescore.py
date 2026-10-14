@@ -1,5 +1,7 @@
 """Score a finished run again, from its stored results alone."""
 
+import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -38,21 +40,30 @@ def rescore(
     metrics: list[Metric],
     producer: Producer,
     concurrency: int = 1,
+    on_scored: Callable[[str, float], None] | None = None,
 ) -> Path:
     """Write a new score set beside the existing ones.
 
     It reads `results.jsonl` and the suite's cases; there is no target here to call.
     `producer` says what the metrics were built with, and becomes the set's first line. Up to
     `concurrency` cases are scored at once, and the set keeps the results' order (decision
-    0037).
+    0037). `on_scored` hears of each case scored and how long it took (decision 0038).
     """
     by_id = {case.id: case for case in cases}
     results = log.results()
     missing = {result.case_id for result in results} - by_id.keys()
     if missing:
         raise ValueError(f"the run has results for cases not in the suite: {sorted(missing)}")
+
+    def timed(result: Result) -> tuple[list[Score], list[ScoringError]]:
+        started = time.perf_counter()
+        scored = _score_one(by_id[result.case_id], result, metrics)
+        if on_scored is not None:
+            on_scored(result.case_id, time.perf_counter() - started)
+        return scored
+
     with ThreadPoolExecutor(max_workers=max(concurrency, 1)) as pool:
-        scored = list(pool.map(lambda r: _score_one(by_id[r.case_id], r, metrics), results))
+        scored = list(pool.map(timed, results))
     scores = [s for case_scores, _ in scored for s in case_scores]
     errors = [e for _, case_errors in scored for e in case_errors]
     return log.write_score_set(scores, producer, errors)

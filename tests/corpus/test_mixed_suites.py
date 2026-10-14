@@ -39,7 +39,12 @@ def extracted(folder: Path, corpus: str, place: str, numbers: range) -> None:
     """What `casebench extract --corpus <corpus>` writes, without reading any decision."""
     result = Extraction(decisions=len(numbers), keys=[key(corpus, n, place) for n in numbers])
     model = SimpleNamespace(
-        config=SimpleNamespace(provider="p", model="m"), input_tokens=0, output_tokens=0
+        config=SimpleNamespace(provider="p", model="m"),
+        settings={},
+        calls=0,
+        input_tokens=0,
+        output_tokens=0,
+        cost=None,
     )
     write(result, [model], folder, corpus)  # type: ignore[list-item]
 
