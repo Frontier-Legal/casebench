@@ -28,6 +28,11 @@ class Report(FrozenRecord):
 
     format: str = Field(pattern=FORMAT.pattern)
     score_set: str
+    suite_id: str | None = None
+    suite_hash: str | None = Field(
+        default=None,
+        description="The hash of the suite the run ran, which changes with any case (0039).",
+    )
     produced_by: Producer
     tables: list[Table]
     citations: list[CitationRate]

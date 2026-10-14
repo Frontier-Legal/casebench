@@ -52,3 +52,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0036](0036-several-corpora.md) | A setup connects several corpora by name; citations go to the corpus that covers their jurisdiction | accepted |
 | [0037](0037-match-by-the-corpus-description.md) | The judge matches citations by what the corpus says about each result, one call per answer; scoring runs in parallel and survives a dropped call | accepted |
 | [0038](0038-model-settings-by-measurement.md) | Each model takes its provider's own settings, and a team picks them from measured agreement, time and cost | accepted |
+| [0039](0039-one-case-by-a-lawyer.md) | A lawyer writes one case at a time, from a decision found by topic or by hand, and approves it | accepted |
