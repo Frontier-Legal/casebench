@@ -1,13 +1,15 @@
 """The python target: answer each case in one of N worker processes running the agent."""
 
 import asyncio
+import json
 import os
 import sys
 from collections.abc import Mapping
 from typing import Any
 
 from casebench.capture.context import current_traceparent, record, set_worker
-from casebench.capture.session import PROXY, PROXY_VARIABLES
+from casebench.capture.redirect import FOLLOW
+from casebench.capture.session import PROXY, PROXY_VARIABLES, SHADOWED
 from casebench.capture.step import Step
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, to_answer
@@ -30,24 +32,35 @@ class AgentError(RuntimeError):
 
 
 class PythonConfig(Record):
+    """`root` is the config's folder, first on the agent's import path (decision 0044)."""
+
     type: str = "python"
     entry: str
     max_concurrency: int = 1
+    root: str | None = None
 
 
 def worker_environment(worker: int) -> dict[str, str]:
-    """The run's environment, with each proxy variable under this worker's own path."""
+    """The run's environment with the project's own base URLs: the worker sends each call
+    through the proxy itself, under this worker's own path (decision 0044)."""
     env = dict(os.environ)
     proxy = env.get(PROXY)
+    for name, before in json.loads(env.get(SHADOWED) or "{}").items():
+        if before is None:
+            env.pop(name, None)
+        else:
+            env[name] = before
+    if proxy and FOLLOW in os.environ:
+        env[FOLLOW] = f"{proxy}/w/{worker}"
     for name in filter(None, env.get(PROXY_VARIABLES, "").split(",")):
-        if proxy and name in env:
-            env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}", 1)
+        if proxy and name in env and name != FOLLOW:
+            env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}")
     return env
 
 
 class Worker:
-    def __init__(self, number: int, entry: str) -> None:
-        self.number, self.entry = number, entry
+    def __init__(self, number: int, entry: str, root: str | None = None) -> None:
+        self.number, self.entry, self.root = number, entry, root
         self.process: asyncio.subprocess.Process | None = None
 
     async def start(self) -> None:
@@ -56,6 +69,7 @@ class Worker:
             "-m",
             WORKER_MODULE,
             self.entry,
+            *([self.root] if self.root else []),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             env=worker_environment(self.number),
@@ -104,7 +118,7 @@ class Target:
         """One worker per parallel slot, each importing the agent once."""
         count = max(slots, self.config.max_concurrency)
         self.idle = asyncio.Queue()
-        self.workers = [Worker(n, self.config.entry) for n in range(count)]
+        self.workers = [Worker(n, self.config.entry, self.config.root) for n in range(count)]
         await asyncio.gather(*(worker.start() for worker in self.workers))
         for worker in self.workers:
             self.idle.put_nowait(worker)

@@ -24,7 +24,7 @@ def choose(
     overrides: dict[str, Any],
 ) -> tuple[dict[str, Any], list[str]]:
     """The config block for one model, and what to tell the user about it."""
-    provider_id = provider_id or pick(f"{role}: provider (type to filter)", _titled(catalog))
+    provider_id = provider_id or pick(f"{role}: provider", _titled(catalog))
     if provider_id not in catalog:
         raise click.ClickException(f"the model catalog has no provider {provider_id!r}")
     provider = {"id": provider_id, **catalog[provider_id]}
@@ -32,7 +32,7 @@ def choose(
     models = provider.get("models") or {}
     if model_id is None:
         choices = [*_titled(models), ("another model id", ANOTHER)]
-        model_id = pick(f"{role}: {name} model (type to filter)", choices)
+        model_id = pick(f"{role}: {name} model", choices)
         if model_id == ANOTHER:
             model_id = click.prompt("the model id")
     model = {"id": model_id, **(models.get(model_id) or {})}

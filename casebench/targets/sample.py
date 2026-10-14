@@ -10,9 +10,16 @@ from casebench.targets.load import target_from_config
 SAMPLE_QUESTION = "What is the time limit for appealing a first-instance civil judgment?"
 
 
-async def send_sample(config: CasebenchConfig, question: str = SAMPLE_QUESTION) -> Result:
+def sample_question(config: CasebenchConfig) -> str:
+    """The search a corpus was added with, which is a question in the corpus's own language and
+    field, or else a general one (decision 0044)."""
+    return next((c.probe for c in config.corpora.values() if c.probe), SAMPLE_QUESTION)
+
+
+async def send_sample(config: CasebenchConfig, question: str | None = None) -> Result:
+    question = question or sample_question(config)
     agent = target_from_config(target_of(config))
-    capture = session_for(config.capture)
+    capture = session_for(config.capture, config.corpora)
     sample = Case(
         id="target-check",
         task=Task.model_validate({"type": "qa", "question": question}),

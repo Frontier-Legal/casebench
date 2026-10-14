@@ -12,8 +12,16 @@ from casebench.providers.interface import Completion, HttpRequest, Message, Mode
 Send = Callable[[HttpRequest], tuple[int, Any]]
 
 
+# RFC 9110 sections 15.5.2 and 15.5.4: the credentials are missing, wrong or not allowed.
+REFUSED = (401, 403)
+
+
 class MissingApiKey(RuntimeError):
     pass
+
+
+class KeyRefused(RuntimeError):
+    """The provider answered 401 or 403: the key is missing, wrong or not allowed there."""
 
 
 def complete(
@@ -32,4 +40,5 @@ def complete(
         return provider.parse(status, body)
     except RuntimeError as error:
         # A refusal may echo the request; the key never reaches a message (decision 0043).
-        raise RuntimeError(keys.scrub(str(error), [provider.api_key_env])) from None
+        said = keys.scrub(str(error), [provider.api_key_env])
+        raise (KeyRefused if status in REFUSED else RuntimeError)(said) from None

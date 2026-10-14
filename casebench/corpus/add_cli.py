@@ -30,10 +30,12 @@ from casebench.corpus.suggest import (
     results_path,
     search_ids,
 )
+from casebench.key_record import record_keys
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.setup.checks import unreachable
-from casebench.setup.picker import interactive, pick
+from casebench.setup.key_question import given_keys, hold_located, preset
+from casebench.setup.picker import interactive, pick, text
 from casebench.targets.placeholders import VARIABLE, split_command
 
 FIELDS = (*REQUIRED_FIELDS, "level")
@@ -110,10 +112,15 @@ def _choose(
     return click.prompt(label, default=suggestion or "", show_default=bool(suggestion)) or None
 
 
-def _live(call: Any, what: str) -> Any:
+def live_call(call: Any, what: str) -> Any:
     """A refused request says why in the user's terms; a connection that fails propagates."""
     try:
         return call()
+    except (httpx2.UnsupportedProtocol, httpx2.InvalidURL) as error:
+        raise click.ClickException(
+            f"the {what} has no full http:// or https:// URL to go to; give the API's root URL, "
+            "or a variable that holds it, such as --base-url '${DOCS_URL}'"
+        ) from error
     except httpx2.HTTPStatusError as error:
         status = error.response.status_code
         hint = (
@@ -182,7 +189,7 @@ def _map(
 ) -> dict[str, Any]:
     """One live search and one fetch; show them, suggest paths, let the user correct them.
     Returns the connector options they set."""
-    results = _live(lambda: store.search_raw(probe, 1), "search")
+    results = live_call(lambda: store.search_raw(probe, 1), "search")
     if show:  # what a user checks the paths against; Quick start takes them as suggested
         click.echo(f"search for {probe!r} returned:")
         for line in describe(results):
@@ -201,7 +208,7 @@ def _map(
         if not ids_path or not every(ids_path, results):
             raise click.ClickException("no document id found in the search result; check the path")
         options, first_id = {"search_ids": ids_path}, str(every(ids_path, results)[0])
-    document = _live(lambda: store.fetch_raw(first_id), f"fetch of document {first_id}")
+    document = live_call(lambda: store.fetch_raw(first_id), f"fetch of document {first_id}")
     if show:
         click.echo(f"document {first_id} returned:")
         for line in describe(document):
@@ -286,32 +293,52 @@ def http_block(
         "the path that returns one document, with {id} where its id goes, such as /documents/{id}",
         ask,
     )
+    options = http_options(
+        base_url, search_path, query_param, fetch_path, headers, key_env, key_header_name
+    )
+    probe = _ask(probe, "a search that finds at least one document", ask)
+    store = connector("http", options)
+    options |= _map(
+        store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields), show
+    )
+    # The search it was added with is the one `casebench check` runs (decision 0044).
+    return {**corpus_block("http", options, jurisdictions), "probe": probe}
+
+
+def key_names(base_url: str, headers: tuple[str, ...], key_env: str | None) -> set[str]:
+    """Every variable the base URL and the headers name, and the key's own."""
+    named = set(VARIABLE.findall(" ".join([base_url, *_pairs(headers).values()])))
+    return named | {key_env} if key_env else named
+
+
+def http_options(
+    base_url: str,
+    search_path: str,
+    query_param: str,
+    fetch_path: str,
+    headers: tuple[str, ...],
+    key_env: str | None,
+    key_header_name: str,
+) -> dict[str, Any]:
+    """The connector's options, with each key named, never given; every key they name must be
+    set in the shell or read from a .env file already."""
     if "{id}" not in fetch_path:
         raise click.BadParameter(f"{fetch_path!r} has no {{id}} for the document's id")
-    sent = _headers(headers)
-    if not sent and key_env is None and ask:
-        key_env = click.prompt(
-            "the environment variable that holds its API key (leave empty if it needs none)",
-            default="",
-            show_default=False,
+    sent = _headers(headers) | key_header(key_env or None, key_header_name)
+    named = " ".join([base_url, *sent.values()])
+    unset = sorted(n for n in set(VARIABLE.findall(named)) if not keys.get(n))
+    if unset:
+        raise click.ClickException(
+            f"{', '.join(unset)} is set neither in this shell nor in any .env file here; "
+            f"export it, or pass --key {unset[0]}=FILE"
         )
-    sent |= key_header(key_env or None, key_header_name)
-    options: dict[str, Any] = {
+    return {
         "base_url": base_url,
         "headers": sent,
         "search_path": search_path,
         "search_params": {query_param: "{text}"},
         "fetch_path": fetch_path,
     }
-    unset = sorted(n for n in set(VARIABLE.findall(" ".join(sent.values()))) if not keys.get(n))
-    if unset:
-        raise click.ClickException(f"{', '.join(unset)} is not set here; export it first")
-    probe = _ask(probe, "a search that finds at least one document", ask)
-    store = connector("http", options)
-    options |= _map(
-        store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields), show
-    )
-    return corpus_block("http", options, jurisdictions)
 
 
 def mcp_block(
@@ -354,7 +381,7 @@ def mcp_block(
         options |= _map(store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields))
     finally:
         store.close()
-    return corpus_block("mcp", options, jurisdictions)
+    return {**corpus_block("mcp", options, jurisdictions), "probe": probe}
 
 
 COMMON = [
@@ -398,7 +425,11 @@ def add() -> None:
 
 
 @add.command()
-@click.option("--base-url", help="The API's root URL, such as https://api.example.com/v1.")
+@click.option(
+    "--base-url",
+    help="The API's root URL, such as https://api.example.com/v1, or a variable that holds it, "
+    "such as '${DOCS_URL}'.",
+)
 @click.option("--search-path", help="Such as /search.")
 @click.option("--query-param", default="q", show_default=True)
 @click.option("--fetch-path", help="With {id}, such as /documents/{id}.")
@@ -414,6 +445,13 @@ def add() -> None:
     "headers",
     multiple=True,
     help="NAME=VALUE; ${VAR} reads the environment, such as Authorization=Bearer ${KEY}.",
+)
+@click.option(
+    "--key",
+    "key_files",
+    multiple=True,
+    metavar="NAME=FILE",
+    help="The .env file a key is read from, relative to the config; found by name if not.",
 )
 @common
 def http(
@@ -433,8 +471,18 @@ def http(
     jurisdictions: tuple[str, ...],
     name: str | None,
     yes: bool,
+    key_files: tuple[str, ...],
 ) -> None:
     """A document API reached over HTTP."""
+    project = config_path.resolve().parent
+    preset(given_keys(key_files, project))
+    if not headers and key_env is None and not yes:
+        key_env = text(
+            "the environment variable that holds its API key (leave empty if it needs none)",
+            default="",
+            flag="--key-env NAME",
+        )
+    found = hold_located(key_names(base_url or "", headers, key_env), project)
     block = http_block(
         base_url=base_url,
         search_path=search_path,
@@ -452,6 +500,8 @@ def http(
         ask=not yes,
     )
     _save(config_path, block, not yes, name)
+    for key, file in record_keys(config_path, found).items():
+        click.echo(f"key {key}: read from {file}, by name; its value is not written")
 
 
 @add.command()

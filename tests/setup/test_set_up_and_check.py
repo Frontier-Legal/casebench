@@ -155,7 +155,7 @@ def test_checked_and_run_where_it_is_reachable(checkout: Path):
         judge.shutdown()
 
     assert checked.exit_code == 0, checked.output
-    assert "corpus   passed: 1 documents sampled" in checked.output
+    assert "corpus   passed: 1 document sampled" in checked.output
     assert "target   passed" in checked.output
     assert "judge    passed" in checked.output
     assert ran.exit_code == 0, ran.output

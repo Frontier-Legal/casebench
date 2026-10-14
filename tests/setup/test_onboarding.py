@@ -179,7 +179,7 @@ def test_a_short_summary_on_a_large_project(project: Path):
     detailed = init(*flags, "--no-live", "--no-routes", "--yes", "--details")
 
     assert short.exit_code == 0, short.output
-    assert "2 functions Casebench can call; you pick one" in short.output
+    assert "agent    agent.py:answer, as given; 2 could be called" in short.output
     assert "clients  openai.OpenAI in 2 places · httpx.Client in 1 place" in short.output
     assert "models   real-model" in short.output
     for left_out in ("test-only-model", "_helper", "service/agent.py:run", "tests/test_agent.py"):

@@ -29,12 +29,14 @@ def sdks(root: Path) -> tuple[str, str]:
     )
 
 
-def summary(found: Scan, root: Path) -> list[tuple[str, str]]:
-    """The functions Casebench could call as the agent, the model clients and names, and
-    where their keys are. Nothing is suggested from names: a function is listed because a
-    case's inputs fit its signature and it reaches a model call (decision 0043)."""
+def summary(found: Scan, root: Path, entry: str | None = None) -> list[tuple[str, str]]:
+    """The functions Casebench could call as the agent, or the one given, the model clients
+    and names, and where their keys are. Nothing is suggested from names: a function is
+    listed because a case's inputs fit its signature and it reaches a model call (0043)."""
     rows = [sdks(root)]
-    if len(found.entries) == 1:
+    if entry is not None:
+        rows.append(("agent", f"{entry}, as given; {len(found.entries)} could be called"))
+    elif len(found.entries) == 1:
         rows.append(("agent", f"{found.entries[0]}, the one function Casebench can call"))
     elif found.entries:
         rows.append(("agent", f"{len(found.entries)} functions Casebench can call; you pick one"))

@@ -3,16 +3,21 @@
 import json
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
+from casebench import keys
 from casebench.capture.backend import backend_step
 from casebench.capture.config import CaptureConfig, routes_for
+from casebench.capture.corpus_routes import corpus_routes
 from casebench.capture.functions import STEP_FUNCTIONS, StepFunction
 from casebench.capture.interface import CaptureParser
 from casebench.capture.proxy.forward import make_app
-from casebench.capture.proxy.routes import Route, environment
+from casebench.capture.proxy.routes import Route, default_routes, environment
 from casebench.capture.proxy.server import ProxyServer
 from casebench.capture.recorder import Recorder
+from casebench.capture.redirect import FOLLOW
 from casebench.capture.step import HttpExchange, Step
+from casebench.corpus.binding import CorpusConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
@@ -25,7 +30,26 @@ def traces_endpoint(port: int) -> str:
 
 # Read by workers to put their own path in each variable (decision 0020).
 PROXY = "CASEBENCH_PROXY"
+# Each variable the session points at the proxy, with the value it had before, so a Python
+# worker can keep the project's own (decision 0044).
+SHADOWED = "CASEBENCH_SHADOWED"
 PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
+
+
+def _to_set_upstream(route: Route) -> Route:
+    """A route through a variable forwards to the base URL that variable already has here, in
+    the shell or a .env file named under `keys`, not to the parser's default host: a key is
+    sent only to the host the project chose (decision 0044)."""
+    if route.env is None:
+        return route
+    current = keys.get(route.env)
+    if not current:
+        return route
+    parts = urlsplit(current)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return route
+    update = {"upstream": f"{parts.scheme}://{parts.netloc}", "env_suffix": parts.path.rstrip("/")}
+    return route.model_copy(update=update)
 
 
 class CaptureSession:
@@ -48,6 +72,10 @@ class CaptureSession:
             for route in routes
             if route.parser
         }
+        kind = kind_named("parser")
+        self.all_parsers: list[CaptureParser] = [
+            registry.load(kind, item.name, item.source)() for item in registry.available(kind)
+        ]
         self.server: ProxyServer | None = None
         self.env: dict[str, str] = {}
         self._previous: dict[str, str | None] = {}
@@ -58,11 +86,25 @@ class CaptureSession:
             for name, parser in self.parsers.items()
             if hasattr(parser, "prepare")
         }
+        self.routes = {name: _to_set_upstream(route) for name, route in self.routes.items()}
         app = make_app(list(self.routes.values()), self.recorder, prepare)
         self.server = ProxyServer(app, self.port)
         self.port = await self.server.start()
         self.env = environment(list(self.routes.values()), self.port)
-        self.env[PROXY] = f"http://127.0.0.1:{self.port}"
+        proxy = f"http://127.0.0.1:{self.port}"
+        # A Python worker sends every call here, to the host it chose, and keeps the project's
+        # own value of each variable a parser's default route sets; a route the config gives
+        # its own upstream keeps its variable, as for an agent that runs as a command or a
+        # server (decision 0044).
+        self.env[FOLLOW] = proxy
+        defaults = {route.name: route.upstream for route in default_routes()}
+        shadowed = [
+            route.env
+            for route in self.routes.values()
+            if route.env and defaults.get(route.name) == route.upstream
+        ]
+        self.env[SHADOWED] = json.dumps({name: os.environ.get(name) for name in shadowed})
+        self.env[PROXY] = proxy
         self.env[PROXY_VARIABLES] = ",".join(name for name in self.env if name != PROXY)
 
         if self.traces:
@@ -77,11 +119,27 @@ class CaptureSession:
         return self.env
 
     def parse(self, exchange: HttpExchange) -> list[Step]:
-        route = self.routes.get(exchange.route or "")
-        if route is None:
+        """A call through a route is read by the route's parser or as a backend step. A call
+        a Python agent made to a host of its choosing is read by the route for that host, or
+        by the first parser whose API it is: each parser reads only its API's own paths."""
+        route = self.routes.get(exchange.route or "") or self._route_at(exchange.url)
+        if route is not None:
+            parser = self.parsers.get(route.name)
+            return parser.parse(exchange) if parser else [backend_step(exchange, route)]
+        if exchange.route is not None:
             return []
-        parser = self.parsers.get(route.name)
-        return parser.parse(exchange) if parser else [backend_step(exchange, route)]
+        for parser in self.all_parsers:
+            try:
+                steps = parser.parse(exchange)
+            except Exception:
+                continue
+            if steps:
+                return steps
+        return []
+
+    def _route_at(self, url: str) -> Route | None:
+        host = urlsplit(url).netloc
+        return next((r for r in self.routes.values() if urlsplit(r.upstream).netloc == host), None)
 
     async def stop(self) -> None:
         for name, value in self._previous.items():
@@ -95,8 +153,13 @@ class CaptureSession:
             self.server = None
 
 
-def session_for(capture: CaptureConfig | None) -> CaptureSession:
-    """The session the config's `capture:` section describes, or the defaults without one."""
+def session_for(
+    capture: CaptureConfig | None, corpora: dict[str, CorpusConfig] | None = None
+) -> CaptureSession:
+    """The session the config's `capture:` section describes, or the defaults without one,
+    with a route at each corpus the agent may search itself (decision 0044)."""
+    routes = routes_for(capture)
+    routes += corpus_routes(corpora or {}, routes)
     if capture is None:
-        return CaptureSession(routes_for(None))
-    return CaptureSession(routes_for(capture), capture.port, capture.functions, capture.traces)
+        return CaptureSession(routes)
+    return CaptureSession(routes, capture.port, capture.functions, capture.traces)

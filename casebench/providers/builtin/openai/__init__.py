@@ -13,7 +13,9 @@ class Provider:
     """`reasoning_effort` and `temperature` are sent as Chat Completions names them; one not
     set is not sent, so the endpoint's default applies (decision 0038)."""
 
-    speaks = ("@ai-sdk/openai-compatible", "@ai-sdk/openai")
+    # OpenRouter's own package speaks OpenAI's Chat Completions, as its API reference says,
+    # at the address the catalog gives (decision 0044).
+    speaks = ("@ai-sdk/openai-compatible", "@ai-sdk/openai", "@openrouter/ai-sdk-provider")
 
     def __init__(
         self,

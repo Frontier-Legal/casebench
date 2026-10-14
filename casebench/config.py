@@ -100,6 +100,9 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
     target = data.get("target") or {}
     if isinstance(target.get("entry"), str):
         target["entry"] = relative_to(base, target["entry"])
+    if target.get("type") == "python":
+        # An adapter under .casebench/ imports the project as its root does (decision 0044).
+        target.setdefault("root", str(base))
     for function in (data.get("capture") or {}).get("functions") or []:
         if isinstance(function, dict) and isinstance(function.get("function"), str):
             function["function"] = relative_to(base, function["function"])

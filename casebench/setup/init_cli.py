@@ -10,6 +10,7 @@ import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
+from casebench.key_record import record_keys
 from casebench.setup import catalog as model_catalog
 from casebench.setup import screen
 from casebench.setup.advice import advice
@@ -17,7 +18,7 @@ from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.judge_question import ask_model
-from casebench.setup.key_question import KeyFound
+from casebench.setup.key_question import KeyFound, given_files, given_keys, preset
 from casebench.setup.picker import confirm, interactive, pick, text
 from casebench.setup.routes import offers
 from casebench.setup.scan import Scan, scan
@@ -262,6 +263,13 @@ def _review(data: dict[str, Any]) -> list[tuple[str, str]]:
     default=None,
     help="Choose every part, or take what was found and ask only what is missing.",
 )
+@click.option(
+    "--key",
+    "key_files",
+    multiple=True,
+    metavar="NAME=FILE",
+    help="The .env file a key is read from, relative to the config; give it once for each.",
+)
 @click.option("--yes", is_flag=True, help="Write casebench.yaml without asking after the review.")
 @click.option("--details", is_flag=True, help="List everything the code scan found.")
 def init_command(
@@ -283,21 +291,25 @@ def init_command(
     no_live: bool,
     routes: bool | None,
     custom: bool | None,
+    key_files: tuple[str, ...],
     yes: bool,
     details: bool,
 ) -> None:
     """Set Casebench up for the agent in this folder, or bring an existing setup up to date."""
     checkout = config_path.resolve().parent
+    preset(given_keys(key_files, checkout))
     updating = config_path.exists()
     screen.intro(f"{'updating' if updating else 'setting up'} {checkout.name}")
     screen.step("Reading your project")
     with screen.working("reading your project"):
         found = scan(checkout)
-    screen.rows(summary(found, checkout))
+    screen.rows(summary(found, checkout, entry))
     if details:
         for line in scan_details(found):
             screen.line(line, "dim")
     if updating:
+        for name, file in record_keys(config_path, given_files(checkout)).items():
+            screen.ok(f"key {name}: read from {file}, by name")
         _update(config_path, found, catalog_path, routes)
         return
     choose_all = _lane(custom)
@@ -307,7 +319,11 @@ def init_command(
     sources = corpus_for_init(corpus_kind, corpus_path, profiles, checkout, choose_all)
     if sources.corpora:
         data["corpora"] = sources.corpora
-    if found.clients:
+    if found.clients and data["target"].get("type") == "python":
+        # Its worker sends each call through the proxy to where it goes (decision 0044).
+        screen.step("Recording your agent's calls")
+        screen.line("each model and search call is recorded where it goes; no route is needed")
+    elif found.clients:
         screen.step("Recording your agent's calls")
         accept = routes if routes is not None or choose_all else True
         chosen_routes = _routes(found, sources.corpora, accept)
@@ -369,7 +385,7 @@ def init_command(
         data["extract"] = {"models": chosen}
     elif not choose_all and not no_extract:
         screen.line("test cases from many decisions can come later: casebench extract", "dim")
-    if found_keys := _keys(keys, checkout):
+    if found_keys := {**_keys(keys, checkout), **given_files(checkout)}:
         data["keys"] = found_keys
     screen.review(f"{config_path.name} will hold", _review(data))
     if not yes and not confirm(f"Write {config_path}?"):
