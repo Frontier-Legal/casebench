@@ -148,7 +148,9 @@ def run(
     except TargetDidNotStart as error:
         raise click.ClickException(str(error)) from error
     click.echo(_summary(log, sent))
-    scored = score(log, cases, config, manifest.suite_id)
+    scored = score(log, cases, config, manifest.suite_id, concurrency)
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
+        click.echo(line)
+    for line in render.error_lines(scored.errors, log.folder.name):
         click.echo(line)
     click.echo(str(scored.report))

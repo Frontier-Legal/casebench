@@ -18,6 +18,7 @@ RUN_FILE = "run.json"
 RESULTS_FILE = "results.jsonl"
 SCORES_DIR = "scores"
 PRODUCER = "produced_by"
+SCORING_ERROR = "scoring_error"
 
 
 class RunInfo(FrozenRecord):
@@ -41,6 +42,16 @@ class Result(FrozenRecord):
     steps: list[Step] = Field(default_factory=list)
     error: str | None = None
     latency_ms: float | None = None
+
+
+class ScoringError(FrozenRecord):
+    """A metric that could not score one result, such as a judge call that still failed after
+    its retries; the case has no score for it until the run is scored again (decision 0037)."""
+
+    case_id: str
+    repeat: int = 0
+    metric: str
+    error: str
 
 
 class RunLog:
@@ -71,9 +82,14 @@ class RunLog:
         lines = path.read_text(encoding="utf-8").splitlines()
         return [Result.model_validate_json(line) for line in lines if line]
 
-    def write_score_set(self, scores: Iterable[Score], producer: Producer) -> Path:
+    def write_score_set(
+        self,
+        scores: Iterable[Score],
+        producer: Producer,
+        errors: Iterable[ScoringError] = (),
+    ) -> Path:
         """Write a new score set beside the existing ones; never rewrite an old one. Its first
-        line says what produced it (decision 0035)."""
+        line says what produced it (decision 0035); each error has a line of its own."""
         directory = self.folder / SCORES_DIR
         directory.mkdir(exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -82,6 +98,8 @@ class RunLog:
             stream.write(json.dumps({PRODUCER: producer.model_dump(mode="json")}) + "\n")
             for score in scores:
                 stream.write(score.model_dump_json() + "\n")
+            for error in errors:
+                stream.write(json.dumps({SCORING_ERROR: error.model_dump(mode="json")}) + "\n")
         return path
 
     def score_sets(self) -> list[Path]:
@@ -89,9 +107,23 @@ class RunLog:
         return sorted(directory.glob("*.jsonl")) if directory.exists() else []
 
     @staticmethod
-    def read_scores(path: Path) -> list[Score]:
+    def _lines(path: Path) -> list[dict]:
         lines = path.read_text(encoding="utf-8").splitlines()[1:]
-        return [Score.model_validate_json(line) for line in lines if line]
+        return [json.loads(line) for line in lines if line]
+
+    @staticmethod
+    def read_scores(path: Path) -> list[Score]:
+        lines = RunLog._lines(path)
+        return [Score.model_validate(line) for line in lines if SCORING_ERROR not in line]
+
+    @staticmethod
+    def read_errors(path: Path) -> list[ScoringError]:
+        lines = RunLog._lines(path)
+        return [
+            ScoringError.model_validate(line[SCORING_ERROR])
+            for line in lines
+            if SCORING_ERROR in line
+        ]
 
     @staticmethod
     def read_producer(path: Path) -> Producer:

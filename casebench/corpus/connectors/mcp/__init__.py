@@ -16,10 +16,11 @@ from mcp.client.streamable_http import streamable_http_client
 # The SDK's own client factory keeps its timeouts for long-lived response streams; it lives in
 # a private module, and the header test fails first if it moves.
 from mcp.shared._httpx_utils import create_mcp_http_client
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from casebench.core.model import Record
-from casebench.corpus.mapping import every, record_fields
+from casebench.corpus.mapping import record_fields
+from casebench.corpus.results import SearchResult, results_of
 from casebench.targets.placeholders import expand_env
 
 Result = TypeVar("Result")
@@ -28,7 +29,8 @@ Result = TypeVar("Result")
 class McpCorpusConfig(Record):
     """`command` starts a server over stdio; `url` reaches one over Streamable HTTP, sending
     `headers` (with `${VAR}` read from the environment) on every request. Tool arguments may
-    hold `{text}`, `{limit}` and `{id}`."""
+    hold `{text}`, `{limit}` and `{id}`. `search_results` and `result_fields` read each
+    result's id and description, as for the http connector (decision 0037)."""
 
     command: list[str] | None = None
     url: str | None = None
@@ -36,9 +38,17 @@ class McpCorpusConfig(Record):
     search_tool: str = ""
     search_arguments: dict[str, Any] = Field(default_factory=lambda: {"query": "{text}"})
     search_ids: str = "$"
+    search_results: str | None = None
+    result_fields: dict[str, str] = Field(default_factory=dict)
     fetch_tool: str = ""
     fetch_arguments: dict[str, Any] = Field(default_factory=lambda: {"id": "{id}"})
     fields: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _results_have_ids(self) -> "McpCorpusConfig":
+        if self.search_results and "id" not in self.result_fields:
+            raise ValueError("result_fields needs an id when search_results is set")
+        return self
 
 
 def _fill(arguments: dict[str, Any], values: dict[str, Any]) -> dict[str, Any]:
@@ -130,17 +140,25 @@ class Connector:
         listed = self._ask(lambda client: client.list_tools())
         return [(t.name, t.description or "", dict(t.input_schema or {})) for t in listed.tools]
 
-    def search_raw(self, text: str, limit: int) -> Any:
+    def search_raw(self, text: str, limit: int, filters: dict[str, Any] | None = None) -> Any:
+        """`filters` are further tool arguments, such as a document type (decision 0037)."""
         arguments = _fill(self.config.search_arguments, {"text": text, "limit": limit})
-        return self._call(self.config.search_tool, arguments)
+        return self._call(self.config.search_tool, arguments | (filters or {}))
 
     def fetch_raw(self, decision_id: str) -> Any:
         arguments = _fill(self.config.fetch_arguments, {"id": decision_id})
         return self._call(self.config.fetch_tool, arguments)
 
+    def search_results(
+        self, text: str, limit: int, filters: dict[str, Any] | None = None
+    ) -> list[SearchResult]:
+        config = self.config
+        response = self.search_raw(text, limit, filters)
+        found = results_of(response, config.search_results, config.result_fields, config.search_ids)
+        return found[:limit]
+
     def search(self, text: str, limit: int) -> list[str]:
-        found = every(self.config.search_ids, self.search_raw(text, limit))
-        return [str(item) for item in found][:limit]
+        return [result.id for result in self.search_results(text, limit)]
 
     def fetch(self, decision_id: str) -> dict[str, Any]:
         return record_fields(self.fetch_raw(decision_id), self.config.fields)

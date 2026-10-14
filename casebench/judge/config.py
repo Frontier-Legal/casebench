@@ -9,10 +9,13 @@ from casebench.core.model import Record
 
 class JudgeConfig(Record):
     """No default model: the user picks the judge (decision 0026). `candidates` is how many
-    search results the judge may match a citation against; provisional, see 0026."""
+    search results the judge may match a citation against; provisional, see 0026.
+    `context_window` is the model's, in tokens, from the model catalog; a matching call is
+    split only when it would not fit (decision 0037)."""
 
     provider: str
     model: str
     options: dict[str, Any] = Field(default_factory=dict)
     provider_source: str | None = None
     candidates: int = 5
+    context_window: int | None = None

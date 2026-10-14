@@ -10,16 +10,20 @@ from casebench.corpus.binding import CorpusConfig, Holding
 from casebench.corpus.corpora import Corpora
 from casebench.corpus.routing import Route, covers
 from casebench.judge import prompts
+from casebench.judge.config import JudgeConfig
 from casebench.judge.resolve import Resolver
 from casebench.metrics.base import score
 from casebench.metrics.builtin.citation_integrity import CitationIntegrity
 from casebench.report.render import lines
 from casebench.report.tables import build_tables
 from casebench.runs.log import Result
+from tests.judge.matching import picks
 
 
 class Judge:
     """Lists the citations it is given, picks the first candidate, and says it supports."""
+
+    config = JudgeConfig(provider="anthropic", model="judge")
 
     def __init__(self, listed: list[dict[str, Any]]) -> None:
         self.listed = listed
@@ -30,8 +34,7 @@ class Judge:
         if system == prompts.LIST_CITATIONS:
             return self.listed
         if system == prompts.MATCH:
-            [first, *_] = json.loads(user.split("Candidates:\n", 1)[1])
-            return {"document_id": first["id"], "reason": "the first"}
+            return picks(user, lambda citation, candidates: candidates[0]["id"])
         return {"supports": True, "quote": "q", "reason": "r"}
 
 

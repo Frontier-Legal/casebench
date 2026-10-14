@@ -14,11 +14,14 @@ judge whether the citations are right. Reply with JSON only: \
 [{"citation": "...", "claim": "...", "kind": "statute" or "decision", \
 "jurisdiction": "<code or null>"}]. Reply [] if the answer cites nothing."""
 
-MATCH = """You decide which document a legal citation refers to. You get the citation and \
-candidate documents from a search, each with its id, court, date, metadata and opening \
-paragraph. Choose the candidate the citation refers to, or none if no candidate is that \
-document; a document on the same topic is not the cited document. Reply with JSON only: \
-{"document_id": "<id or null>", "reason": "..."}"""
+MATCH = """You decide which document each legal citation refers to. You get numbered \
+citations, each with the candidate documents a search returned for it. A candidate has its id \
+and what the corpus says about it: how the corpus cites it, what type of document it is, and \
+the passage the search matched; where the corpus says none of these, its court, date and \
+metadata instead. For each citation choose the candidate it refers to, or none if no candidate \
+is that document. A document on the same topic is not the cited document, and a court decision \
+is never the statute or article a citation names. Reply with JSON only, one item per citation \
+in the order given: [{"citation": <number>, "document_id": "<id or null>", "reason": "..."}]"""
 
 WEIGH = """You decide whether a court decision or statute supports a claim an answer made \
 when citing it. Read the whole document. Reply with JSON only: \
@@ -45,9 +48,18 @@ def list_citations(answer: str, jurisdictions: list[str] | None = None) -> str:
     return f"Answer:\n{answer}{listed}"
 
 
-def match(citation: str, candidates: list[dict[str, Any]]) -> str:
-    listed = json.dumps(candidates, ensure_ascii=False, indent=2)
-    return f"Citation: {citation}\n\nCandidates:\n{listed}"
+def matched_citation(number: int, citation: str, candidates: list[dict[str, Any]]) -> str:
+    """One citation of a matching prompt, numbered from one."""
+    return json.dumps(
+        {"citation": number, "as_written": citation, "candidates": candidates},
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+def match(citations: list[str]) -> str:
+    """`citations` are each from `matched_citation`, numbered in order."""
+    return "Citations:\n[\n" + ",\n".join(citations) + "\n]"
 
 
 def weigh(claim: str, document: dict[str, Any]) -> str:

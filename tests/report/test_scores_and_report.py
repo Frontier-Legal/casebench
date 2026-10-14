@@ -189,7 +189,7 @@ def test_a_score_set_says_what_produced_it(tmp_path: Path, judged: Path):
     report = json.loads((tmp_path / "runs" / "r" / "report.json").read_text("utf-8"))
     assert report["produced_by"] == first
     assert first["metrics"] == {
-        "citation_integrity": {"version": "2", "reads": ["corpus", "judge"]},
+        "citation_integrity": {"version": "3", "reads": ["corpus", "judge"]},
         "outcome": {"version": "1", "reads": []},
     }
     assert first["judges"] == [

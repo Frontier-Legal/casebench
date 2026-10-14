@@ -4,6 +4,10 @@ from typing import Any
 
 from casebench.providers.interface import Completion, HttpRequest, Message
 
+# The openai 3.29.0 SDK honours a server's `retry-after` up to two minutes and does not retry
+# past it (`MAX_RETRY_AFTER_DELAY`, read on 2026-10-14; decision 0037).
+LONGEST_RETRY_AFTER_S = 120.0
+
 
 class Provider:
     speaks = ("@ai-sdk/openai-compatible", "@ai-sdk/openai")
@@ -32,6 +36,7 @@ class Provider:
             url=f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             body=body,
+            longest_retry_after_s=LONGEST_RETRY_AFTER_S,
         )
 
     def parse(self, status: int, body: Any) -> Completion:

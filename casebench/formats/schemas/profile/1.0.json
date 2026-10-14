@@ -85,6 +85,20 @@
       "additionalProperties": true,
       "type": "object"
     },
+    "search_filters": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "What a search for each kind of citation adds, such as a document type, so a statute is searched only among statutes (decision 0037).",
+      "propertyNames": {
+        "enum": [
+          "statute",
+          "decision"
+        ]
+      },
+      "type": "object"
+    },
     "probe": {
       "type": "string"
     },

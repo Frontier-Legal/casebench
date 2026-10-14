@@ -103,6 +103,8 @@ def profile_block(
     block["profile"] = recorded or path.name
     if profile.metered is not Metered.NONE:
         block["metered"] = profile.metered.value
+    if profile.search_filters:
+        block["search_filters"] = profile.search_filters
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")
     if profile.metered is not Metered.NONE:
         notes.append(

@@ -55,11 +55,15 @@ async def run_cases(
     max_concurrency: int = 1,
     capture: CaptureSession | None = None,
 ) -> list[Result]:
-    """At most `max_concurrency` cases at once; cases the log already holds are skipped."""
+    """At most `max_concurrency` cases at once; cases the log already holds are skipped. With
+    nothing left to send, the target is never started, so a stored run is scored again
+    without calling the agent (decision 0037)."""
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be at least 1")
     stored = {result.case_id for result in log.results()}
     pending = [case for case in cases if case.id not in stored]
+    if not pending:
+        return []
     slots = asyncio.Semaphore(max_concurrency)
 
     async def one(case: Case) -> Result:

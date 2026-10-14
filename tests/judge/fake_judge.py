@@ -7,6 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from casebench.judge import prompts
+from tests.judge.matching import picks
 
 LISTED = [
     {
@@ -29,6 +30,15 @@ DOUBTING = "doubting-judge"
 LOST = "lost-judge"
 
 
+def same_docket(citation: str, candidates: list[dict]) -> str | None:
+    """The candidate whose matched passage carries the citation's docket number."""
+    docket = re.search(r"E\. (\d{4}/\d+)", citation)
+    for candidate in candidates:
+        if docket and f"E. {docket.group(1)}" in (candidate.get("passage") or ""):
+            return candidate["id"]
+    return None
+
+
 def graded(criterion: dict, answer: str, model: str) -> dict:
     """A criterion reads "Mentions <words>" and is met when the answer has those words; the
     doubting judge never finds a positive criterion met."""
@@ -44,16 +54,11 @@ def reply(system: str, user: str, model: str = "") -> object:
     if system == prompts.LIST_CITATIONS:
         return LISTED
     if system == prompts.MATCH and model == LOST:
-        return {"document_id": None, "reason": "none of these is the cited decision"}
+        return picks(user, lambda citation, candidates: None)
     if system == prompts.WEIGH and model == DOUBTING:
         return {"supports": False, "quote": None, "reason": "the passage says something else"}
     if system == prompts.MATCH:
-        docket = re.search(r"E\. (\d{4}/\d+)", user.split("Candidates:")[0])
-        candidates = json.loads(user.split("Candidates:\n", 1)[1])
-        for candidate in candidates:
-            if docket and f"E. {docket.group(1)}" in candidate["opening"]:
-                return {"document_id": candidate["id"], "reason": "same docket number"}
-        return {"document_id": None, "reason": "no candidate carries that docket number"}
+        return picks(user, same_docket)
     if system == prompts.WEIGH:
         document_id = re.search(r"Document (\S+) ", user).group(1)  # type: ignore[union-attr]
         quote = SUPPORTING.get(document_id)

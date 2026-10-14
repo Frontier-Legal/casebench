@@ -675,6 +675,32 @@
       "title": "ScoreKind",
       "type": "string"
     },
+    "ScoringError": {
+      "additionalProperties": false,
+      "description": "A metric that could not score one result, such as a judge call that still failed after\nits retries; the case has no score for it until the run is scored again (decision 0037).",
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "repeat": {
+          "default": 0,
+          "type": "integer"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id",
+        "metric",
+        "error"
+      ],
+      "title": "ScoringError",
+      "type": "object"
+    },
     "Table": {
       "additionalProperties": false,
       "properties": {
@@ -738,6 +764,13 @@
     "scores": {
       "items": {
         "$ref": "#/$defs/Score"
+      },
+      "type": "array"
+    },
+    "scoring_errors": {
+      "description": "Results a metric could not score; scoring the run again finishes them (decision 0037).",
+      "items": {
+        "$ref": "#/$defs/ScoringError"
       },
       "type": "array"
     },

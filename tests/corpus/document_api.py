@@ -27,6 +27,13 @@ WORKS = {
 }
 
 
+TYPES = {"101": "case_law", "102": "case_law", "103": "legislation"}
+CITED_AS = {
+    "101": "Yargıtay 9. Hukuk Dairesi, E. 2023/1234 K. 2024/567, 12.03.2024",
+    "102": "Yargıtay 22. Hukuk Dairesi, E. 2022/77 K. 2023/90, 02.05.2024",
+}
+
+
 def work(work_id: str) -> dict:
     data = WORKS[work_id]
     found = {
@@ -43,21 +50,40 @@ def work(work_id: str) -> dict:
     return found
 
 
+def described(work_id: str) -> dict:
+    """A search result as the provider describes it: how it cites the work, the work's type and
+    the passage that matched. The statute carries no citation, so a check can name it."""
+    found: dict = {
+        "work": {"work_id": work_id},
+        "document_type": TYPES[work_id],
+        "highlight": [WORKS[work_id]["text"]],
+    }
+    if work_id in CITED_AS:
+        found["citation"] = CITED_AS[work_id]
+    return found
+
+
 class DocumentApi(BaseHTTPRequestHandler):
     fetches: ClassVar[dict[str, int]] = {}
     searches: ClassVar[list[str]] = []
+    filtered: ClassVar[list[str | None]] = []
 
     def do_GET(self) -> None:
         if self.headers.get("Authorization") != f"Bearer {KEY}":
             return self._send(401, {"error": "missing_key"})
         url = urlsplit(self.path)
         if url.path == "/v1/search":
-            DocumentApi.searches.append(parse_qs(url.query)["q"][0])
-            words = set(re.findall(r"\w+", parse_qs(url.query)["q"][0].casefold()))
+            query = parse_qs(url.query)
+            DocumentApi.searches.append(query["q"][0])
+            DocumentApi.filtered.append(query.get("type", [None])[0])
+            words = set(re.findall(r"\w+", query["q"][0].casefold()))
             hits = [
-                i for i, w in WORKS.items() if words & set(re.findall(r"\w+", w["text"].casefold()))
+                i
+                for i, w in WORKS.items()
+                if words & set(re.findall(r"\w+", w["text"].casefold()))
+                and query.get("type", [TYPES[i]])[0] == TYPES[i]
             ]
-            return self._send(200, {"results": [{"work": {"work_id": i}} for i in hits]})
+            return self._send(200, {"results": [described(i) for i in hits]})
         found = re.fullmatch(r"/v1/documents/(\d+)", url.path)
         if found and found.group(1) in WORKS:
             DocumentApi.fetches[found.group(1)] = DocumentApi.fetches.get(found.group(1), 0) + 1
@@ -79,6 +105,7 @@ class DocumentApi(BaseHTTPRequestHandler):
 def start_document_api() -> ThreadingHTTPServer:
     DocumentApi.fetches = {}
     DocumentApi.searches = []
+    DocumentApi.filtered = []
     server = ThreadingHTTPServer(("127.0.0.1", 0), DocumentApi)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server
