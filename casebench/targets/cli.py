@@ -39,7 +39,7 @@ def describe(result: Result) -> list[str]:
 )
 @click.option(
     "--question",
-    help="What to ask; by default the corpus's probe search, or a general legal question.",
+    help='What to ask; "Hi. How are you?" when not given.',
 )
 def check(config_path: Path, question: str | None) -> None:
     """Send one sample case and show the parsed answer, citations and captured steps."""
