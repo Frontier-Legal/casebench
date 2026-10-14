@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from casebench import envfiles
+from casebench import envfiles, keys
 from casebench.setup.picker import pick, text
 
 SHELL = "\0shell"
@@ -36,7 +36,10 @@ def _file_of(name: str, root: Path, label: str) -> Path | None:
         return None
     if len({v for _, v in holding}) == 1:
         return holding[0][0]
-    choices = [(f"{_relative(p, root)}  ({envfiles.masked(v or '')})", str(p)) for p, v in holding]
+    choices = [
+        (f"{_relative(p, root)}  (fingerprint {keys.fingerprint(v or '')})", str(p))
+        for p, v in holding
+    ]
     return Path(pick(f"{label}: {name} has different values in these files; which one?", choices))
 
 
@@ -62,15 +65,16 @@ def _chosen(root: Path, label: str, expected: str | None) -> KeyFound | None:
 
 
 def use(found: KeyFound) -> None:
-    """Set a key read from a file for this run, so a live check can use it now."""
+    """Hold a key read from a file for this run's own calls, so a live check can use it now;
+    it is not set in the environment."""
     if found.file is not None and not os.environ.get(found.name):
-        os.environ[found.name] = envfiles.value(found.file, found.name) or ""
+        keys.hold(found.name, envfiles.value(found.file, found.name) or "")
 
 
 def key_for(expected: str | None, root: Path, label: str) -> KeyFound | None:
     """The expected variable from the shell or the one .env file that holds it, with no
-    question; a choice only when files disagree or none holds it. Values are never shown,
-    except masked to tell two apart (decision 0043)."""
+    question; a choice only when files disagree or none holds it. No value is shown, only a
+    fingerprint to tell two apart (decision 0043)."""
     if expected and os.environ.get(expected):
         return KeyFound(expected, None)
     if expected and (file := _file_of(expected, root, label)) is not None:

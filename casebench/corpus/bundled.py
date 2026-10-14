@@ -1,11 +1,11 @@
 """The profiles bundled with Casebench: listed by name, checked offline, and found by id or file."""
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from casebench import keys
 from casebench.corpus.from_profile import ProfileProblem, load_profile
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.profile import Profile
@@ -25,7 +25,7 @@ class Bundled:
 
     @property
     def key_found(self) -> bool:
-        return bool(self.profile.key_env and os.environ.get(self.profile.key_env))
+        return bool(self.profile.key_env and keys.get(self.profile.key_env))
 
 
 def bundled(root: Path | None = None) -> list[Bundled]:

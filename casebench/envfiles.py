@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from casebench.keys import hold
+
 # Folders that hold no file of the project's own.
 SKIPPED = {"node_modules", "__pycache__", "site-packages"}
 # A file of placeholders that documents the variables, not one that holds them.
@@ -68,14 +70,10 @@ def value(path: Path, name: str) -> str | None:
     return found or None
 
 
-def masked(secret: str) -> str:
-    """Enough to tell two keys apart, never enough to use one."""
-    return f"{secret[:4]}…{secret[-4:]}" if len(secret) > 12 else "•" * len(secret)
-
-
 def load(keys: dict[str, str], base: Path) -> list[str]:
-    """Each named variable the environment lacks, read from the file the config names for it,
-    relative to the config's folder. Returns the names that could not be found."""
+    """Each named variable the shell lacks, read from the file the config names for it,
+    relative to the config's folder, and held for Casebench's own calls, not set in the
+    environment. Returns the names that could not be found."""
     missing = []
     for name, file in keys.items():
         if os.environ.get(name):
@@ -85,5 +83,5 @@ def load(keys: dict[str, str], base: Path) -> list[str]:
         if found is None:
             missing.append(name)
         else:
-            os.environ[name] = found
+            hold(name, found)
     return missing

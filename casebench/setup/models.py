@@ -1,10 +1,10 @@
 """Ask for one model Casebench calls itself, the judge or an extraction model, from the catalog."""
 
-import os
 from typing import Any
 
 import click
 
+from casebench import keys
 from casebench.setup.catalog import installed, offer, plugins, speakers
 from casebench.setup.picker import pick
 
@@ -50,9 +50,7 @@ def choose(
     notes = [f"{name} · {model_id}, through the {plugin} provider"]
     key = options.get("api_key_env")
     if key:
-        notes.append(
-            f"its key is read from {key}, {'set' if os.environ.get(key) else 'not set'} here"
-        )
+        notes.append(f"its key is read from {key}, {'set' if keys.get(key) else 'not set'} here")
     for package in serving.packages:
         if installed(package):
             notes.append(f"it uses this project's {package} and the credentials it finds")

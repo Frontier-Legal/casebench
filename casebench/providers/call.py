@@ -3,10 +3,10 @@
 The core, not the provider, does the sending.
 """
 
-import os
 from collections.abc import Callable
 from typing import Any
 
+from casebench import keys
 from casebench.providers.interface import Completion, HttpRequest, Message, ModelProvider
 
 Send = Callable[[HttpRequest], tuple[int, Any]]
@@ -24,8 +24,12 @@ def complete(
     own_call = getattr(provider, "complete", None)
     if own_call is not None:
         return own_call(messages, model)
-    api_key = os.environ.get(provider.api_key_env)
+    api_key = keys.get(provider.api_key_env)
     if not api_key:
         raise MissingApiKey(f"set {provider.api_key_env} to call this provider")
     status, body = send(provider.request(messages, model, api_key))
-    return provider.parse(status, body)
+    try:
+        return provider.parse(status, body)
+    except RuntimeError as error:
+        # A refusal may echo the request; the key never reaches a message (decision 0043).
+        raise RuntimeError(keys.scrub(str(error), [provider.api_key_env])) from None

@@ -1,6 +1,5 @@
 """`casebench corpus add http|mcp|profile`: describe a store from one live search and fetch."""
 
-import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -8,6 +7,7 @@ from typing import Any
 import click
 import httpx2
 
+from casebench import keys
 from casebench.config import DEFAULT_CONFIG
 from casebench.core.jurisdiction import UnknownJurisdiction, code
 from casebench.corpus.add import (
@@ -54,6 +54,23 @@ def _pairs(values: tuple[str, ...]) -> dict[str, str]:
             raise click.BadParameter(f"{value!r} must look like NAME=VALUE")
         pairs[name] = rest
     return pairs
+
+
+# RFC 9110 sections 11.6.2 and 11.7.2: the headers that carry credentials.
+CREDENTIAL_HEADERS = {"authorization", "proxy-authorization"}
+
+
+def _headers(values: tuple[str, ...]) -> dict[str, str]:
+    """Headers as given, except a credential typed in place of the variable that holds it:
+    casebench.yaml names a key, never holds one (decision 0043)."""
+    headers = _pairs(values)
+    for name, value in headers.items():
+        if name.lower() in CREDENTIAL_HEADERS and not VARIABLE.search(value):
+            raise click.BadParameter(
+                f"{name} would write a key into casebench.yaml; give it as ${{NAME}}, such as "
+                f"'{name}=Bearer ${{DOC_KEY}}', or pass --key-env NAME"
+            )
+    return headers
 
 
 NOT_THERE = "\0none"
@@ -271,7 +288,7 @@ def http_block(
     )
     if "{id}" not in fetch_path:
         raise click.BadParameter(f"{fetch_path!r} has no {{id}} for the document's id")
-    sent = _pairs(headers)
+    sent = _headers(headers)
     if not sent and key_env is None and ask:
         key_env = click.prompt(
             "the environment variable that holds its API key (leave empty if it needs none)",
@@ -286,9 +303,9 @@ def http_block(
         "search_params": {query_param: "{text}"},
         "fetch_path": fetch_path,
     }
-    unset = sorted(set(VARIABLE.findall(" ".join(sent.values()))) - set(os.environ))
+    unset = sorted(n for n in set(VARIABLE.findall(" ".join(sent.values()))) if not keys.get(n))
     if unset:
-        raise click.ClickException(f"{', '.join(unset)} is not set in this shell; export it first")
+        raise click.ClickException(f"{', '.join(unset)} is not set here; export it first")
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("http", options)
     options |= _map(
