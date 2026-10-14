@@ -10,6 +10,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+from casebench import __version__
 from casebench.cli import main
 from casebench.core.canonical import canonical_json, content_hash
 from casebench.formats.files import SCHEMAS, file_hash, released, schema_path
@@ -43,6 +44,23 @@ def test_the_shipped_schemas_match_the_code():
             f"{item.version} no longer matches its model: raise the format's version if "
             "that version is released, then run `casebench schema export`"
         )
+
+
+def test_a_release_leaves_the_schemas_unchanged():
+    """No schema holds Casebench's own version, which every release changes."""
+
+    def values(node: Any):
+        if isinstance(node, dict):
+            for value in node.values():
+                yield from values(value)
+        elif isinstance(node, list):
+            for value in node:
+                yield from values(value)
+        else:
+            yield node
+
+    for item in FORMATS.values():
+        assert __version__ not in values(json.loads(schema_text(item.model))), item.version
 
 
 def test_a_released_schema_never_changes():

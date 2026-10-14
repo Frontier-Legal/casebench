@@ -28,7 +28,9 @@ class RunInfo(FrozenRecord):
     suite_id: str
     suite_hash: str
     target: str
-    casebench_version: str = __version__
+    # Read when a record is made, so the version is no default in the format's schema, which
+    # would change with every release.
+    casebench_version: str = Field(default_factory=lambda: __version__)
 
 
 class Result(FrozenRecord):
