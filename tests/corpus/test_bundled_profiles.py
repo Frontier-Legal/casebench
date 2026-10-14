@@ -9,11 +9,16 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+import casebench.corpus
 from casebench.cli import main
 from casebench.corpus.bundled import SAMPLES, bundled, offline_problems
+from casebench.report.render import WAITING
 from casebench.setup.corpus_question import LATER, OTHERS, choices
 from tests.corpus.document_api import KEY, start_document_api, work
 from tests.corpus.profiles import http_options, profile
+from tests.report.suites import frozen, mixed
+
+AGENTS = Path(__file__).parents[1] / "report" / "agents.py"
 
 
 @pytest.fixture
@@ -99,6 +104,9 @@ def test_profiles_are_listed_by_name_and_only_a_found_key_is_preselected(
         "Mid Courts  (TR)  · key found",
         "Zeta Law  (TR)  · key found",
     ]
+    docs = (Path(casebench.corpus.__file__).parent / "profiles" / "README.md").read_text("utf-8")
+    assert "by name, in alphabetical order" in docs
+    assert "None is listed above another" in docs
 
 
 def test_init_connects_a_bundled_profile_picked_from_the_list(
@@ -158,9 +166,22 @@ def test_not_now_says_citation_checks_wait(tmp_path: Path, monkeypatch: pytest.M
         ],
     )
 
+    typed = "Is the dismissal valid?\nNo.\n4857 sayılı İş Kanunu m. 18\n\nAv. Deniz Kaya\ny\n"
+    written = CliRunner().invoke(
+        main, ["case", "new", "--manual", "--suite", "lawyer"], input=typed
+    )
+    suite = frozen(mixed(3), tmp_path / "outcomes")
+    scored = CliRunner().invoke(
+        main, ["run", "--suite", str(suite), "--python", f"{AGENTS}:upheld", "--no-capture"]
+    )
+
     assert ran.exit_code == 0, ran.output
     assert LATER in ran.output
     assert "corpus" not in yaml.safe_load((tmp_path / "casebench.yaml").read_text("utf-8"))
+    assert written.exit_code == 0, written.output  # cases are written by hand
+    assert "they resolve with a corpus, then casebench case resolve" in written.output
+    assert scored.exit_code == 0, scored.output
+    assert WAITING in scored.output  # and the report says what waits for a corpus
 
 
 def test_enter_takes_the_profile_whose_key_was_found():

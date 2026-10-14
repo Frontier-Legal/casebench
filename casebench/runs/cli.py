@@ -166,6 +166,8 @@ def run(
     click.echo(render.suite_line(log.info.suite_id, log.info.suite_hash))
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
+    for line in render.corpus_lines(RunLog.read_producer(scored.score_set)):
+        click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):
         click.echo(line)
     click.echo(str(scored.report))
