@@ -2,7 +2,7 @@
 
 Casebench measures the legal accuracy of an AI system against real court decisions and lawyer-written references, in any jurisdiction.
 
-**Status:** early development. There is no release yet; it runs from this repository, as below, and the first release will be announced here. Casebench follows [SemVer](https://semver.org/), and while the version is 0.x any minor release may break the command line, the file formats or the Python interface. The changelog names every break.
+**Status:** early development. Casebench is on [PyPI](https://pypi.org/project/casebench/). It follows [SemVer](https://semver.org/), and while the version is 0.x any minor release may break the command line, the file formats or the Python interface. The changelog names every break.
 
 ## What it will do
 
@@ -16,7 +16,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 
 Paste this into the coding agent you use in your project:
 
-> Set up Casebench for this project. Run `uvx --from git+https://github.com/Frontier-Legal/casebench casebench guide` and follow it.
+> Set up Casebench for this project. Run `uvx casebench guide` and follow it.
 
 The guide has the coding agent read your project and write two things: `casebench.yaml` and an adapter in `.casebench/` that starts your agent the way your production does. Nothing else in your project changes, and no key's value is read or written. It ends when `casebench check` passes, and it asks you one question: which judge model to pay for. Without a coding agent, `casebench init` asks the same things in the terminal.
 
