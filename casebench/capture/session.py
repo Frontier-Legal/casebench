@@ -12,6 +12,7 @@ from casebench.capture.proxy.forward import make_app
 from casebench.capture.proxy.routes import Route, environment
 from casebench.capture.proxy.server import ProxyServer
 from casebench.capture.recorder import Recorder
+from casebench.capture.redirect import REDIRECTS
 from casebench.capture.step import HttpExchange, Step
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
@@ -62,7 +63,12 @@ class CaptureSession:
         self.server = ProxyServer(app, self.port)
         self.port = await self.server.start()
         self.env = environment(list(self.routes.values()), self.port)
-        self.env[PROXY] = f"http://127.0.0.1:{self.port}"
+        proxy = f"http://127.0.0.1:{self.port}"
+        # A client with a literal base URL is sent here by a Python worker (decision 0044).
+        self.env[REDIRECTS] = json.dumps(
+            {route.upstream: f"{proxy}/{route.name}" for route in self.routes.values()}
+        )
+        self.env[PROXY] = proxy
         self.env[PROXY_VARIABLES] = ",".join(name for name in self.env if name != PROXY)
 
         if self.traces:

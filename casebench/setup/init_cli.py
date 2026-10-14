@@ -17,7 +17,7 @@ from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.judge_question import ask_model
-from casebench.setup.key_question import KeyFound
+from casebench.setup.key_question import KeyFound, given_keys, preset
 from casebench.setup.picker import confirm, interactive, pick, text
 from casebench.setup.routes import offers
 from casebench.setup.scan import Scan, scan
@@ -262,6 +262,13 @@ def _review(data: dict[str, Any]) -> list[tuple[str, str]]:
     default=None,
     help="Choose every part, or take what was found and ask only what is missing.",
 )
+@click.option(
+    "--key",
+    "key_files",
+    multiple=True,
+    metavar="NAME=FILE",
+    help="The .env file a key is read from, relative to the config; give it once for each.",
+)
 @click.option("--yes", is_flag=True, help="Write casebench.yaml without asking after the review.")
 @click.option("--details", is_flag=True, help="List everything the code scan found.")
 def init_command(
@@ -283,11 +290,13 @@ def init_command(
     no_live: bool,
     routes: bool | None,
     custom: bool | None,
+    key_files: tuple[str, ...],
     yes: bool,
     details: bool,
 ) -> None:
     """Set Casebench up for the agent in this folder, or bring an existing setup up to date."""
     checkout = config_path.resolve().parent
+    preset(given_keys(key_files, checkout))
     updating = config_path.exists()
     screen.intro(f"{'updating' if updating else 'setting up'} {checkout.name}")
     screen.step("Reading your project")

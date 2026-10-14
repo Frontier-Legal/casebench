@@ -45,7 +45,7 @@ Chosen option 1, because it takes the project knowledge from the coding agent, w
   - When a key is in several files that disagree, a command with no terminal stops and names the files and the flag. It never waits on a prompt.
 - **A corpus keeps its probe.** `corpus add` stores the search it probed with as the corpus block's `probe`. `casebench check` uses it when no `--query` is given.
 - **Literal base URLs are recorded.** A client created with a literal base URL now gets a capture route with no variable.
-  - In a run, the Python target's worker sends that client's calls through the proxy. It rewrites requests for the route's upstream in httpx and requests, the HTTP libraries of the common model SDKs, and only inside the worker process.
+  - In a run, the Python target's worker sends that client's calls through the proxy. It rewrites requests for the route's upstream in httpx2, httpx and requests: the openai 3.x and anthropic 1.x SDKs send through httpx2, earlier SDKs and many agents' own clients through httpx (read on 2026-10-14). The rewrite happens only inside the worker process.
   - Production never loads the worker, so the redirect never reaches it.
   - A command or HTTP target runs in its own process, which Casebench cannot hook. For those, the URL still has to be read from a variable, and init says so.
 - **Providers whose package speaks another's API.** The model catalog's OpenRouter entry names its own package, `@openrouter/ai-sdk-provider`. OpenRouter documents its API as compatible with OpenAI's chat completions, and the catalog gives its address. So the OpenAI-compatible provider lists that package among those it speaks, and no API question is asked.
@@ -57,7 +57,7 @@ Chosen option 1, because it takes the project knowledge from the coding agent, w
 - Good, because nothing the team ships changes. The adapter loads the agent's settings itself, so Casebench never hands its own keys to the agent (0043).
 - Good, because every command the guide uses also serves scripts and CI: JSON out, no prompts.
 - Bad, because the setup is only as good as the coding agent. `casebench check` is the arbiter: the guide is not finished until it passes, or until it says in plain words what cannot pass from here.
-- Bad, because the redirect patches two HTTP libraries inside the worker. A client on another library, or a target outside Python, needs its URL read from a variable.
+- Bad, because the redirect patches three HTTP libraries inside the worker. A client on another library, or a target outside Python, needs its URL read from a variable.
 
 ## Revisit when
 

@@ -31,7 +31,8 @@ class CorpusConfig(Record):
     for: a store that charges per search has each search kept, like each document.
     `search_filters` are what a search for each kind of citation adds, so a statute is
     searched only among statutes (decision 0037). `keep` is what the provider's terms let
-    Casebench keep on disk; left out, documents are kept, and searches when metered (0041)."""
+    Casebench keep on disk; left out, documents are kept, and searches when metered (0041).
+    `probe` is the search the corpus was added with, which `casebench check` runs (0044)."""
 
     connector: str
     jurisdictions: list[Jurisdiction] = Field(default_factory=list)
@@ -42,6 +43,7 @@ class CorpusConfig(Record):
     metered: Charge = "none"
     search_filters: dict[Cited, dict[str, Any]] = Field(default_factory=dict)
     keep: list[Kept] | None = None
+    probe: str | None = None
 
     @property
     def keeps_documents(self) -> bool:

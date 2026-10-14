@@ -10,6 +10,7 @@ from casebench.corpus.add_cli import add
 from casebench.corpus.check import SAMPLE_SIZE, CheckReport, check
 from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
+from casebench.corpus.probe_cli import probe
 
 
 @click.group()
@@ -18,6 +19,7 @@ def corpus() -> None:
 
 
 corpus.add_command(add)
+corpus.add_command(probe)
 
 
 @corpus.command(name="check")

@@ -40,11 +40,22 @@ class Status(StrEnum):
     UNREACHABLE = "not reachable from here"
 
 
+# The step that fixes each part, in words a person or a coding agent acts on (0044).
+NEXT_TARGET = (
+    "make the target answer: its function must run as the project's own start runs it, with the "
+    "settings the agent reads loaded first"
+)
+NEXT_MODEL = "check the model's id and the key casebench.yaml names for it under `keys`"
+NEXT_REACH = "run this where the service is reachable"
+NEXT_PLUGIN = "install the package that provides it"
+
+
 @dataclass(frozen=True)
 class Check:
     name: str
     status: Status
     detail: str = ""
+    next: str = ""
 
     def line(self) -> str:
         return f"{self.name:<8} {self.status.value}" + (f": {self.detail}" if self.detail else "")
@@ -63,9 +74,10 @@ def unreachable(error: BaseException) -> bool:
     return False
 
 
-def _failure(name: str, error: Exception) -> Check:
-    status = Status.UNREACHABLE if unreachable(error) else Status.FAILED
-    return Check(name, status, f"{type(error).__name__}: {error}")
+def _failure(name: str, error: Exception, next_step: str) -> Check:
+    if unreachable(error):
+        return Check(name, Status.UNREACHABLE, f"{type(error).__name__}: {error}", NEXT_REACH)
+    return Check(name, Status.FAILED, f"{type(error).__name__}: {error}", next_step)
 
 
 def _entry_defined(entry: str) -> str | None:
@@ -113,14 +125,14 @@ def offline(config: CasebenchConfig) -> list[Check]:
         try:
             registry.load(kind_named(kind), plugin, source)
         except Exception as error:
-            checks.append(Check(name, Status.FAILED, str(error)))
+            checks.append(Check(name, Status.FAILED, str(error), NEXT_PLUGIN))
     for name, model in models_of(config):
         if not any(c.name == name for c in checks):
             checks += _model_request(name, model)
     if config.target is not None and config.target.get("type") == "python":
         problem = _entry_defined(str(config.target.get("entry", "")))
         if problem:
-            checks.append(Check("target", Status.FAILED, problem))
+            checks.append(Check("target", Status.FAILED, problem, NEXT_TARGET))
     return checks
 
 
@@ -140,12 +152,14 @@ def _model_request(name: str, model: JudgeConfig) -> list[Check]:
         provider = Judge(model).provider
         missing = [p for p in getattr(provider, "packages", ()) if not installed(p)]
         if missing:
-            return [Check(name, Status.FAILED, f"{', '.join(missing)} is not installed here")]
+            listed = ", ".join(missing)
+            installs = f"install {listed} in this environment"
+            return [Check(name, Status.FAILED, f"{listed} is not installed here", installs)]
         if getattr(provider, "complete", None) is None:
             messages = [Message(role="system", content=JUDGE_SYSTEM)]
             provider.request(messages, model.model, "not-sent")
     except Exception as error:
-        return [Check(name, Status.FAILED, str(error))]
+        return [Check(name, Status.FAILED, str(error), NEXT_MODEL)]
     return []
 
 
@@ -155,13 +169,15 @@ def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check
     try:
         report = check(corpora.named(name), queries, size)
     except ListingNotSupported:
-        return Check(label, Status.FAILED, "the store cannot list documents; pass --query")
+        searched = "add it again with `casebench corpus add --probe TEXT`, or pass --query TEXT"
+        return Check(label, Status.FAILED, "the store cannot list documents", searched)
     except Exception as error:
-        return _failure(label, error)
+        return _failure(label, error, "check the corpus's address, paths and key")
     if report.failures or report.missing:
         missing = f"missing {', '.join(report.missing)}" if report.missing else ""
         failed = f"{len(report.failures)} fetches failed" if report.failures else ""
-        return Check(label, Status.FAILED, "; ".join(filter(None, (missing, failed))))
+        mapped = "map each missing field with `casebench corpus add --field NAME=JSONPATH`"
+        return Check(label, Status.FAILED, "; ".join(filter(None, (missing, failed))), mapped)
     return Check(label, Status.PASSED, f"{report.sampled} documents sampled")
 
 
@@ -169,11 +185,12 @@ def _target(config: CasebenchConfig) -> Check:
     try:
         result = asyncio.run(send_sample(config))
     except Exception as error:
-        return _failure("target", error)
+        return _failure("target", error, NEXT_TARGET)
     if result.error:
         # The runner records a failure as "<exception type>: <message>".
-        unreachable = result.error.startswith(CONNECTION_FAILURES)
-        return Check("target", Status.UNREACHABLE if unreachable else Status.FAILED, result.error)
+        if result.error.startswith(CONNECTION_FAILURES):
+            return Check("target", Status.UNREACHABLE, result.error, NEXT_REACH)
+        return Check("target", Status.FAILED, result.error, NEXT_TARGET)
     return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
 
 
@@ -184,12 +201,18 @@ def model_check(name: str, model: JudgeConfig) -> Check:
     try:
         Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
-        failed = _failure(name, error)
+        failed = _failure(name, error, NEXT_MODEL)
         if settings and failed.status is Status.FAILED:
-            failed = Check(name, Status.FAILED, f"refused the call with {shown}: {failed.detail}")
+            refused = f"refused the call with {shown}: {failed.detail}"
+            failed = Check(name, Status.FAILED, refused, f"drop {shown} from its options")
         return failed
     accepted = f", accepting {shown}" if settings else ""
     return Check(name, Status.PASSED, f"{model.provider} {model.model} answered{accepted}")
+
+
+def _probe(probe: str | None) -> list[str]:
+    """The search a corpus was added with, run when no other is given (decision 0044)."""
+    return [probe] if probe else []
 
 
 def live(
@@ -198,7 +221,10 @@ def live(
     """One check for each part the config names: the corpus, the target, each model."""
     checks = []
     corpora = Corpora(config.corpora)
-    checks += [_corpus(corpora, name, queries or [], size) for name in corpora.names]
+    checks += [
+        _corpus(corpora, name, queries or _probe(config.corpora[name].probe), size)
+        for name in corpora.names
+    ]
     if config.target is not None:
         checks.append(_target(config))
     checks += [model_check(name, model) for name, model in models_of(config)]

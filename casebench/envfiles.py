@@ -70,6 +70,13 @@ def value(path: Path, name: str) -> str | None:
     return found or None
 
 
+def holders(name: str, root: Path) -> dict[Path, str]:
+    """Each .env file below the root that gives the variable a value, with that value, for
+    Casebench to compare and use; a caller shows only the files and fingerprints."""
+    held = {path: value(path, name) for path in env_files(root)}
+    return {path: found for path, found in held.items() if found}
+
+
 def load(keys: dict[str, str], base: Path) -> list[str]:
     """Each named variable the shell lacks, read from the file the config names for it,
     relative to the config's folder, and held for Casebench's own calls, not set in the

@@ -30,9 +30,12 @@ class AgentError(RuntimeError):
 
 
 class PythonConfig(Record):
+    """`root` is the config's folder, first on the agent's import path (decision 0044)."""
+
     type: str = "python"
     entry: str
     max_concurrency: int = 1
+    root: str | None = None
 
 
 def worker_environment(worker: int) -> dict[str, str]:
@@ -41,13 +44,13 @@ def worker_environment(worker: int) -> dict[str, str]:
     proxy = env.get(PROXY)
     for name in filter(None, env.get(PROXY_VARIABLES, "").split(",")):
         if proxy and name in env:
-            env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}", 1)
+            env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}")
     return env
 
 
 class Worker:
-    def __init__(self, number: int, entry: str) -> None:
-        self.number, self.entry = number, entry
+    def __init__(self, number: int, entry: str, root: str | None = None) -> None:
+        self.number, self.entry, self.root = number, entry, root
         self.process: asyncio.subprocess.Process | None = None
 
     async def start(self) -> None:
@@ -56,6 +59,7 @@ class Worker:
             "-m",
             WORKER_MODULE,
             self.entry,
+            *([self.root] if self.root else []),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             env=worker_environment(self.number),
@@ -104,7 +108,7 @@ class Target:
         """One worker per parallel slot, each importing the agent once."""
         count = max(slots, self.config.max_concurrency)
         self.idle = asyncio.Queue()
-        self.workers = [Worker(n, self.config.entry) for n in range(count)]
+        self.workers = [Worker(n, self.config.entry, self.config.root) for n in range(count)]
         await asyncio.gather(*(worker.start() for worker in self.workers))
         for worker in self.workers:
             self.idle.put_nowait(worker)

@@ -23,5 +23,6 @@ def test_no_country_in_the_core():
         "metered",  # what the provider charges for, so paid searches are kept
         "search_filters",  # per kind of citation the judge names, statute or decision (0037)
         "keep",  # what the provider's terms let Casebench keep on disk (0041)
+        "probe",  # the search the corpus was added with, which check runs (0044)
     }
     assert plugin_leaks(ROOT) == []

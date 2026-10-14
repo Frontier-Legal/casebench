@@ -26,7 +26,23 @@ def interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _numbered(message: str, choices: list[tuple[str, str]], default: str | None) -> str:
+def _unanswered(message: str, flag: str | None) -> click.UsageError:
+    """A question asked with no terminal and no input left, as a script or a coding agent
+    runs Casebench: it says what was asked and the flag that answers it (decision 0044)."""
+    given = f"; give it with {flag}" if flag else "; give it with a flag (see --help)"
+    return click.UsageError(f"{message.rstrip('?:')}: nothing here can answer it{given}")
+
+
+def _prompt(message: str, flag: str | None, **options: Any) -> str:
+    try:
+        return click.prompt(message, **options)
+    except click.Abort:
+        raise _unanswered(message, flag) from None
+
+
+def _numbered(
+    message: str, choices: list[tuple[str, str]], default: str | None, flag: str | None
+) -> str:
     """Without a terminal: the options numbered, answered by a number or the value itself."""
     click.echo(message)
     for number, (title, _) in enumerate(choices, start=1):
@@ -34,7 +50,10 @@ def _numbered(message: str, choices: list[tuple[str, str]], default: str | None)
     values = [value for _, value in choices]
     first = values.index(default) + 1 if default in values else 1
     while True:
-        answer = click.prompt("number", default=str(first)).strip()
+        try:
+            answer = click.prompt("number", default=str(first)).strip()
+        except click.Abort:
+            raise _unanswered(message, flag) from None
         if answer.isdigit() and 1 <= int(answer) <= len(choices):
             return values[int(answer) - 1]
         if answer in values:
@@ -43,12 +62,17 @@ def _numbered(message: str, choices: list[tuple[str, str]], default: str | None)
 
 
 def pick(
-    message: str, choices: list[tuple[str, str]], default: str | None = None, **terminal: Any
+    message: str,
+    choices: list[tuple[str, str]],
+    default: str | None = None,
+    flag: str | None = None,
+    **terminal: Any,
 ) -> str:
     """Typing narrows the list; arrows move; Enter picks. `default` is the value the cursor
-    starts on. `terminal` passes a test's input and output through to the menu."""
+    starts on; `flag` is the option that answers the question without asking it. `terminal`
+    passes a test's input and output through to the menu."""
     if not terminal and not interactive():
-        return _numbered(message, choices, default)
+        return _numbered(message, choices, default, flag)
     question = questionary.select(
         message,
         choices=[questionary.Choice(title, value) for title, value in choices],
@@ -66,10 +90,12 @@ def pick(
     return answer
 
 
-def text(message: str, default: str | None = None, secret: bool = False) -> str:
+def text(
+    message: str, default: str | None = None, secret: bool = False, flag: str | None = None
+) -> str:
     """A line of text, with the same look as the menus."""
     if not interactive():
-        return click.prompt(message, default=default, hide_input=secret)
+        return _prompt(message, flag, default=default, hide_input=secret)
     ask = questionary.password if secret else questionary.text
     answer = ask(message, default=default or "", qmark=MARK, style=STYLE).unsafe_ask()
     if answer is None:

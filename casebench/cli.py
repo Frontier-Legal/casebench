@@ -17,7 +17,9 @@ from casebench.plugins.cli import plugin
 from casebench.report.cli import compare_command, report_command
 from casebench.runs.cli import run
 from casebench.setup.check_cli import check_command
+from casebench.setup.guide_cli import guide_command
 from casebench.setup.init_cli import init_command
+from casebench.setup.keys_cli import keys_command
 from casebench.suites.cli import generate_command
 from casebench.targets.cli import target
 
@@ -50,5 +52,7 @@ main.add_command(report_command)
 main.add_command(compare_command)
 main.add_command(init_command)
 main.add_command(check_command)
+main.add_command(keys_command)
+main.add_command(guide_command)
 main.add_command(schema)
 main.add_command(validate_command)
