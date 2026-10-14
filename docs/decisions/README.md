@@ -56,3 +56,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0040](0040-init-reads-the-code.md) | Init reads the project's own code, offline, to find its model clients, model names and entry points | accepted |
 | [0041](0041-a-profile-says-what-may-be-kept.md) | A profile says what a provider's terms let Casebench keep on disk, and the cache follows it | accepted |
 | [0042](0042-upgrade-in-place.md) | An existing setup upgrades in place: init updates the config, old files are read as they are, caches carry over | accepted |
+| [0043](0043-guided-onboarding.md) | Onboarding detects first, asks last, and finds keys in the project's .env files; Rich draws it | accepted |
