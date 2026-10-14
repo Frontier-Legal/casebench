@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Frontier-Legal/casebench/compare/v0.1.0...v0.1.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **docs:** the README sets Casebench up from PyPI ([#58](https://github.com/Frontier-Legal/casebench/issues/58)) ([5febc1f](https://github.com/Frontier-Legal/casebench/commit/5febc1f37a21c7ef50c58addbc77996cac3023a7))
+
 ## 0.1.0 (2026-10-14)
 
 
