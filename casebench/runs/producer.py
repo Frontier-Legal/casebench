@@ -31,7 +31,9 @@ class JudgeUsed(FrozenRecord):
 class Producer(FrozenRecord):
     """The first line of every score set, and a copy in its report."""
 
-    casebench_version: str = __version__
+    # Read when a record is made, so the version is no default in the format's schema, which
+    # would change with every release.
+    casebench_version: str = Field(default_factory=lambda: __version__)
     metrics: dict[str, MetricUsed]
     judges: list[JudgeUsed] = Field(default_factory=list)
     prompts: dict[str, str] = Field(
