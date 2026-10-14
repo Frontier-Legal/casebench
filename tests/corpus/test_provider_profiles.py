@@ -12,7 +12,7 @@ import yaml
 from click.testing import CliRunner
 
 from casebench.cli import main
-from tests.corpus.document_api import KEY, start_document_api
+from tests.corpus.document_api import KEY, DocumentApi, start_document_api
 from tests.corpus.profiles import FIELDS, http_options, profile
 
 # A subprocess server is up within seconds on a CI runner; this is only a ceiling.
@@ -160,3 +160,23 @@ def test_a_provider_that_refuses_the_key_says_which_key(
     assert added.exit_code == 1
     assert "refused the live check (it answered 401); check that DOC_KEY holds" in added.output
     assert not (tmp_path / "casebench.yaml").exists()
+
+
+def test_a_provider_whose_terms_forbid_a_local_copy_has_none_kept(api: str, tmp_path: Path):
+    path = profile(tmp_path, "http", http_options(api), keep=[])
+
+    added = invoke("corpus", "add", "profile", str(path))
+    first = invoke("corpus", "check", "--query", "feshi")
+    again = invoke("corpus", "check", "--query", "feshi")
+
+    assert added.exit_code == 0, added.output
+    assert "its terms let Casebench keep none, so each search is paid again" in added.output
+    assert "keep no searches or documents on disk" in added.output
+    written = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
+    assert written["corpora"]["provider"]["keep"] == []
+    assert first.exit_code == 0, first.output
+    assert again.exit_code == 0, again.output
+    assert "(1 fetched, 0 from the cache)" in again.output  # read from the provider again
+    assert DocumentApi.searches.count("feshi") == 3  # the live check and both checks
+    cache = tmp_path / ".casebench" / "corpus-cache"
+    assert not cache.exists() or not any(cache.rglob("*.json"))  # nothing written to disk

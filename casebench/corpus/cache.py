@@ -32,12 +32,20 @@ def corpus_key(connector: str, options: dict[str, Any]) -> str:
 class CachedConnector:
     """Wraps any connector: fetches go to disk first, and so do searches when the store
     charges for them (decision 0033); listings pass through. A free store is searched afresh,
-    so documents added to it are found."""
+    so documents added to it are found. A provider whose terms forbid a local copy of its
+    texts has none kept: each read is a fetch (decision 0041)."""
 
-    def __init__(self, connector: Any, folder: Path, keep_searches: bool = False) -> None:
+    def __init__(
+        self,
+        connector: Any,
+        folder: Path,
+        keep_searches: bool = False,
+        keep_documents: bool = True,
+    ) -> None:
         self.connector = connector
         self.folder = folder
         self.keep_searches = keep_searches
+        self.keep_documents = keep_documents
         self.fetched = 0
         self.searched = 0
 
@@ -45,15 +53,16 @@ class CachedConnector:
         return self.folder / f"{hashlib.sha256(decision_id.encode()).hexdigest()}.json"
 
     def cached(self, decision_id: str) -> bool:
-        return self._path(decision_id).is_file()
+        return self.keep_documents and self._path(decision_id).is_file()
 
     def fetch(self, decision_id: str) -> dict[str, Any]:
         path = self._path(decision_id)
-        if path.is_file():
+        if self.keep_documents and path.is_file():
             return json.loads(path.read_text(encoding="utf-8"))
         document = self.connector.fetch(decision_id)
         self.fetched += 1
-        _write(path, document)
+        if self.keep_documents:
+            _write(path, document)
         return document
 
     def _search_path(self, text: str, limit: int, filters: dict[str, Any] | None = None) -> Path:
