@@ -4,7 +4,6 @@ terminal UI (decision 0043)."""
 import asyncio
 import json
 import os
-import shlex
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -273,8 +272,9 @@ def test_a_key_never_shows_or_leaves_casebench(project: Path):
         encoding="utf-8",
     )
     load_config(project / "casebench.yaml")
-    shows = "import os; print(os.environ.get('OPENAI_API_KEY', 'absent'))"
-    agent = CommandTarget(run=f"{shlex.quote(sys.executable)} -c {shlex.quote(shows)}")
+    shows = project / "shows_its_key.py"
+    shows.write_text("import os\nprint(os.environ.get('OPENAI_API_KEY', 'absent'))\n", "utf-8")
+    agent = CommandTarget(run=f"{sys.executable} {shows}")
 
     def refuses(request):  # a provider whose refusal repeats the key it was sent
         return 401, {"error": f"invalid key {request.headers['Authorization']}"}
