@@ -84,6 +84,11 @@ def _judges(scores: list[Score]) -> list[str]:
     return out
 
 
+def suite_line(suite_id: str | None, suite_hash: str | None) -> str:
+    """The suite a run ran, by the hash that changes with any of its cases (decision 0039)."""
+    return f"suite {suite_id} at {suite_hash}"
+
+
 def error_lines(errors: list[ScoringError], run_id: str) -> list[str]:
     """Each result a metric could not score, and how to finish them (decision 0037)."""
     if not errors:
@@ -105,11 +110,15 @@ def write(
     funnels: list[CaseFunnel],
     summary: FunnelSummary,
     errors: list[ScoringError] | None = None,
+    suite: tuple[str, str] | None = None,
 ) -> Path:
+    """`suite` is the id and hash of the suite the run ran."""
     path = folder / REPORT_FILE
     report = Report(
         format=str(FORMAT),
         score_set=score_set.name,
+        suite_id=suite[0] if suite else None,
+        suite_hash=suite[1] if suite else None,
         produced_by=produced_by,
         tables=tables,
         citations=citation_rates(scores),
