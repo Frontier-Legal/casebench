@@ -107,14 +107,14 @@ def offline(config: CasebenchConfig) -> list[Check]:
     for name, corpus in config.corpora.items():
         label = f"corpus {name}" if len(config.corpora) > 1 else "corpus"
         named.append((label, "connector", corpus.connector, corpus.connector_source))
-    for name, model in _models(config):
+    for name, model in models_of(config):
         named.append((name, "provider", model.provider, model.provider_source))
     for name, kind, plugin, source in named:
         try:
             registry.load(kind_named(kind), plugin, source)
         except Exception as error:
             checks.append(Check(name, Status.FAILED, str(error)))
-    for name, model in _models(config):
+    for name, model in models_of(config):
         if not any(c.name == name for c in checks):
             checks += _model_request(name, model)
     if config.target is not None and config.target.get("type") == "python":
@@ -124,7 +124,7 @@ def offline(config: CasebenchConfig) -> list[Check]:
     return checks
 
 
-def _models(config: CasebenchConfig) -> list[tuple[str, JudgeConfig]]:
+def models_of(config: CasebenchConfig) -> list[tuple[str, JudgeConfig]]:
     """Every model Casebench calls itself: the judges and the extraction models."""
     names = ["judge", "second judge"]
     models = [(names[n], model) for n, model in enumerate(config.judges)]
@@ -201,5 +201,5 @@ def live(
     checks += [_corpus(corpora, name, queries or [], size) for name in corpora.names]
     if config.target is not None:
         checks.append(_target(config))
-    checks += [_model(name, model) for name, model in _models(config)]
+    checks += [_model(name, model) for name, model in models_of(config)]
     return checks

@@ -69,7 +69,10 @@ def compare_command(first: Path, second: Path) -> None:
     if RunLog(second).info.suite_hash != info.suite_hash:
         raise click.ClickException("the two runs ran different suites; compare runs of one suite")
     sets = latest_set(first), latest_set(second)
-    found = changes(*(RunLog.read_producer(path) for path in sets))
+    before, after = (RunLog.read_producer(path) for path in sets)
+    if before is None or after is None:
+        click.echo("a score set is from before score sets said what produced them; score it again")
+    found = changes(before, after) if before and after else []
     if found:
         click.echo("the two score sets were produced differently:")
     for change in found:

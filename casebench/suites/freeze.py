@@ -104,8 +104,15 @@ def freeze(
 
 
 def _declared(raw: dict[str, Any], path: Path) -> FormatVersion:
+    """A manifest that names no format was frozen before formats existed, in the 1.0 shape,
+    so it is read as 1.0 (decision 0042)."""
     if "format" not in raw:
-        raise UnreadableFormat(f"{path} names no format; freeze the suite again")
+        if FORMAT.major != 1:
+            raise UnreadableFormat(f"{path} names no format; freeze the suite again")
+        warnings.warn(
+            f"{path} was frozen before suites named their format; read as {FORMAT}", stacklevel=3
+        )
+        raw.update(format=str(FORMAT), case_format=raw.get("case_format", str(CASE_FORMAT)))
     return FormatVersion.parse(raw["format"])
 
 

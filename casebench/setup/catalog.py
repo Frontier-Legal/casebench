@@ -73,6 +73,16 @@ def speakers(provider: dict[str, Any]) -> list[str]:
     ]
 
 
+def entry_for(catalog: dict[str, Any], model_id: str) -> dict[str, Any] | None:
+    """The catalog's entry for a model id, matched by the id or its last path segment."""
+    short = model_id.rsplit("/", 1)[-1]
+    for provider in catalog.values():
+        for found_id, model in (provider.get("models") or {}).items():
+            if found_id in (model_id, short) or found_id.rsplit("/", 1)[-1] == short:
+                return model
+    return None
+
+
 def families(catalog: dict[str, Any], names: list[str]) -> dict[str, str]:
     """The family of each model id the catalog knows, by its id or its last path segment, so
     `accounts/x/models/name` is found as `name`."""
