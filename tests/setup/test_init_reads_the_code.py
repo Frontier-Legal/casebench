@@ -89,7 +89,8 @@ def init(*flags: str, typed: str = ""):
 
 
 def test_two_providers_found(project: Path):
-    made = init("--target", "python", "--entry", "agent.py:answer", "--routes", "--details", *QUIET)
+    command = ["--target", "command", "--run", "python agent.py {question}"]
+    made = init(*command, "--routes", "--details", *QUIET)
 
     assert made.exit_code == 0, made.output
     assert "clients  openai.OpenAI in 2 places" in made.output

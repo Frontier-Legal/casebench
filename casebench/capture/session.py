@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from casebench import keys
 from casebench.capture.backend import backend_step
 from casebench.capture.config import CaptureConfig, routes_for
+from casebench.capture.corpus_routes import corpus_routes
 from casebench.capture.functions import STEP_FUNCTIONS, StepFunction
 from casebench.capture.interface import CaptureParser
 from casebench.capture.proxy.forward import make_app
@@ -16,6 +17,7 @@ from casebench.capture.proxy.server import ProxyServer
 from casebench.capture.recorder import Recorder
 from casebench.capture.redirect import FOLLOW
 from casebench.capture.step import HttpExchange, Step
+from casebench.corpus.binding import CorpusConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
@@ -151,8 +153,13 @@ class CaptureSession:
             self.server = None
 
 
-def session_for(capture: CaptureConfig | None) -> CaptureSession:
-    """The session the config's `capture:` section describes, or the defaults without one."""
+def session_for(
+    capture: CaptureConfig | None, corpora: dict[str, CorpusConfig] | None = None
+) -> CaptureSession:
+    """The session the config's `capture:` section describes, or the defaults without one,
+    with a route at each corpus the agent may search itself (decision 0044)."""
+    routes = routes_for(capture)
+    routes += corpus_routes(corpora or {}, routes)
     if capture is None:
-        return CaptureSession(routes_for(None))
-    return CaptureSession(routes_for(capture), capture.port, capture.functions, capture.traces)
+        return CaptureSession(routes)
+    return CaptureSession(routes, capture.port, capture.functions, capture.traces)

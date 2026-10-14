@@ -319,7 +319,11 @@ def init_command(
     sources = corpus_for_init(corpus_kind, corpus_path, profiles, checkout, choose_all)
     if sources.corpora:
         data["corpora"] = sources.corpora
-    if found.clients:
+    if found.clients and data["target"].get("type") == "python":
+        # Its worker sends each call through the proxy to where it goes (decision 0044).
+        screen.step("Recording your agent's calls")
+        screen.line("each model and search call is recorded where it goes; no route is needed")
+    elif found.clients:
         screen.step("Recording your agent's calls")
         accept = routes if routes is not None or choose_all else True
         chosen_routes = _routes(found, sources.corpora, accept)

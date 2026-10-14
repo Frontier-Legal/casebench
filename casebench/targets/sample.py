@@ -12,7 +12,7 @@ SAMPLE_QUESTION = "What is the time limit for appealing a first-instance civil j
 
 async def send_sample(config: CasebenchConfig, question: str = SAMPLE_QUESTION) -> Result:
     agent = target_from_config(target_of(config))
-    capture = session_for(config.capture)
+    capture = session_for(config.capture, config.corpora)
     sample = Case(
         id="target-check",
         task=Task.model_validate({"type": "qa", "question": question}),

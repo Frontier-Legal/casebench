@@ -12,7 +12,7 @@ You are a coding agent. The user asked you to set up Casebench (version @VERSION
   uv run --with "@SPEC@" casebench <command>
   ```
 
-  This runs Casebench with the project's own dependencies, as the agent needs them; in a uv project that has no `.venv` yet, uv creates one, which uv projects ignore. In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
+  Run it from the project's folder, or add `--directory <project>` after `uv run`. This runs Casebench with the project's own dependencies, as the agent needs them; in a uv project that has no `.venv` yet, uv creates one, which uv projects ignore. In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
 - **`casebench.yaml` is yours to edit.** To redo a corpus, delete its block under `corpora:` and add it again. `--key NAME=FILE` takes a path relative to the project's folder.
 - **Commands never prompt.** If a command stops with "nothing here can answer it; give it with …", it names the flag to add. Do not pipe answers into it.
 
@@ -32,7 +32,7 @@ def answer(question: str, facts: str | None = None) -> str | dict: ...
 ```
 
 - First, do what production does before it answers. Load the same settings, the same way, for example by calling the project's own settings loader or loading the same `.env` files into `os.environ`. Do not print or log any value.
-- Then call the function production calls, and return its final answer. Return a string, or a mapping with `answer` and, if the agent gives them, `citations` (a list of citation strings) and `documents` (a list of document ids).
+- Then call the function production calls, and return its final answer. Return a string, or a mapping with `answer` and, if the agent gives them, `citations` (a list of citation strings) and `documents` (a list of document ids). Leave out what the agent does not give; Casebench reads the recorded calls too.
 - `facts`, when given, holds the case's facts as text. Pass it the way the agent takes extra context, or add it to the question.
 - Casebench puts the project's folder first on the import path, so `import` the project's packages as code at the project's root does.
 - Leave the agent's base URLs and keys as its settings set them. Casebench records each model and search call where it goes, without changing where it goes.
@@ -64,16 +64,17 @@ casebench keys NAME --json
 The judge grades the agent's answers, so it costs money on every run.
 
 - Find which models the agent itself uses, from the model names in its code or settings.
+- `casebench models --json` lists the catalog's providers, with the variable each one's key is read from; `casebench models PROVIDER --json` lists that provider's models, with their family, price per million tokens and context. Take both ids from there.
 - Propose a strong model from a different family than the agent's models, through a provider whose key you found in step 3. A judge from the agent's own family tends to favour its answers.
 - **Ask the user once** to confirm the provider and model, and say the provider will be billed for each run. This is the only question you ask the user, apart from keys whose files disagree.
 
-The provider and model ids are the model catalog's (models.dev), such as `--judge-provider openrouter --judge-model anthropic/<model>`.
+Both ids are the model catalog's (models.dev), as `casebench models` lists them.
 
 ## 5. Write the setup
 
 ```
 casebench init --entry .casebench/target.py:answer --corpus none \
-  --judge-provider PROVIDER --judge-model MODEL --no-extract --routes --no-live --yes \
+  --judge-provider PROVIDER --judge-model MODEL --no-extract --no-routes --no-live --yes \
   [--key NAME=FILE ...]
 ```
 

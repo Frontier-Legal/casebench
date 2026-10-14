@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
+from casebench.capture.corpus_routes import ids_path
 from casebench.capture.proxy.routes import Route, default_routes
 from casebench.corpus.binding import CorpusConfig
 from casebench.setup.scan import Client
@@ -26,14 +27,6 @@ def _name(host: str, taken: set[str]) -> str:
     while candidate in taken:
         candidate, number = f"{name}-{number}", number + 1
     return candidate
-
-
-def _ids_path(options: dict[str, Any]) -> str | None:
-    """Where a corpus's search response holds its ids, as one JSONPath."""
-    results, fields = options.get("search_results"), options.get("result_fields") or {}
-    if results and fields.get("id"):
-        return f"{results}{str(fields['id']).removeprefix('$')}"
-    return options.get("search_ids")
 
 
 def _corpus_at(host: str, corpora: dict[str, CorpusConfig]) -> CorpusConfig | None:
@@ -103,7 +96,7 @@ def offers(clients: list[Client], corpora: dict[str, CorpusConfig]) -> list[Offe
                 continue
             route |= {
                 "step": "retrieval",
-                "doc_ids": _ids_path(corpus.options),
+                "doc_ids": ids_path(corpus.options),
                 "fetch_path": corpus.options.get("fetch_path"),
             }
         Route.model_validate(route)

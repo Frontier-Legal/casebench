@@ -129,7 +129,7 @@ def run(
     target_config = target_of(config)
     target = target_from_config(target_config)
     concurrency = max_concurrency or int(target_config.get("max_concurrency", 1))
-    capture = None if no_capture else session_for(config.capture)
+    capture = None if no_capture else session_for(config.capture, config.corpora)
     log = _log(
         runs_dir,
         run_id,

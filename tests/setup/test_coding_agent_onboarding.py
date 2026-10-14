@@ -17,7 +17,7 @@ from click.testing import CliRunner
 
 from casebench import keys
 from casebench.capture.config import routes_for
-from casebench.capture.session import CaptureSession
+from casebench.capture.session import CaptureSession, session_for
 from casebench.capture.step import StepKind
 from casebench.cli import main
 from casebench.config import load_config
@@ -131,11 +131,12 @@ def test_one_prompt_sets_a_project_up(project: Path):
         write(project / ".casebench" / "target.py", ADAPTER)
         write(project / ".casebench" / ".gitignore", "*\n!.gitignore\n!target.py\n")
         located = invoke("keys", "ANTHROPIC_API_KEY", "DOC_KEY", "--json")
+        listed = invoke("models", "anthropic", "--catalog", str(CATALOG), "--json")
         initialised = invoke(
             "init", "--entry", ".casebench/target.py:answer", "--corpus", "none",
             "--judge-provider", "anthropic", "--judge-model", "judge-model",
             "--judge-option", judged, "--catalog", str(CATALOG),
-            "--no-extract", "--routes", "--no-live", "--yes",
+            "--no-extract", "--no-routes", "--no-live", "--yes",
         )  # fmt: skip
         searched = invoke("corpus", "probe", "http", *corpus, "--query", "feshi", "--fetch", "101")
         added = invoke(
@@ -148,8 +149,9 @@ def test_one_prompt_sets_a_project_up(project: Path):
         judge.shutdown()
     changed = git(project, "status", "--porcelain", "--untracked-files=all").splitlines()
 
-    for step in (guide, located, initialised, searched, added):
+    for step in (guide, located, listed, initialised, searched, added):
         assert step.exit_code == 0, step.output
+    assert "judge-model" in [model["id"] for model in json.loads(listed.output)]
     assert "Create only `casebench.yaml` and files under `.casebench/`" in guide.output
     assert json.loads(checked.output)["passed"] is True, checked.output
     assert sorted(changed) == [
@@ -362,7 +364,7 @@ def test_a_hard_coded_url_is_still_recorded(project: Path):
         upstream.shutdown()
 
     assert initialised.exit_code == 0, initialised.output
-    assert "recorded as it calls when the target is Python" in initialised.output
+    assert "each model and search call is recorded where it goes" in initialised.output
     assert result.error is None, result.error
     assert result.output == "Short: invalid."
     [call] = [step for step in result.steps if step.kind is StepKind.LLM]
@@ -446,3 +448,57 @@ def test_a_key_reaches_only_the_host_the_agent_chose(
         assert result.output == "Short: invalid.", kind
         [call] = [step for step in result.steps if step.kind is StepKind.LLM]
         assert (call.provider, call.model) == ("openai", "gpt-5"), kind
+
+
+SEARCHES = """
+import os
+
+import requests
+
+
+def answer(question):
+    base, key = os.environ["DOCS_URL"], {"Authorization": f"Bearer {os.environ['DOC_KEY']}"}
+    hits = requests.get(f"{base}/search", params={"q": question}, headers=key).json()["results"]
+    found = hits[0]["work"]["work_id"]
+    return requests.get(f"{base}/documents/{found}", headers=key).json()["work_id"]
+"""
+
+
+def test_an_agents_own_search_is_recorded(project: Path):
+    api = start_document_api()
+    os.environ["DOCS_URL"] = f"http://127.0.0.1:{api.server_port}/v1"
+    os.environ["DOC_KEY"] = KEY
+    write(project / "searching_agent.py", SEARCHES)
+    corpus = {
+        "connector": "http",
+        "options": {
+            "base_url": "${DOCS_URL}",
+            "headers": {"Authorization": "Bearer ${DOC_KEY}"},
+            "search_path": "/search",
+            "fetch_path": "/documents/{id}",
+            "search_results": "$.results[*]",
+            "result_fields": {"id": "$.work.work_id"},
+        },
+    }
+    target = {"type": "python", "entry": "searching_agent.py:answer"}
+    write(project / "casebench.yaml", yaml.safe_dump({"target": target, "corpus": corpus}))
+    config = load_config(project / "casebench.yaml")
+    log = RunLog.create(
+        project / "run", RunInfo(run_id="r", suite_id="s", suite_hash="h", target="python")
+    )
+    session = session_for(config.capture, config.corpora)
+    try:
+        [result] = asyncio.run(
+            run_cases(
+                [case("c1", "feshi")], target_from_config(config.target or {}), log, capture=session
+            )
+        )
+    finally:
+        api.shutdown()
+
+    assert result.error is None, result.error
+    assert result.output == "101"
+    [searched] = [step for step in result.steps if step.kind is StepKind.RETRIEVAL]
+    [read] = [step for step in result.steps if step.kind is StepKind.DOCUMENT]
+    assert searched.doc_ids_out == ["101"]
+    assert read.doc_ids_out == ["101"]
