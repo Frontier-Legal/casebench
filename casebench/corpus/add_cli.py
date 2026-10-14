@@ -116,6 +116,11 @@ def live_call(call: Any, what: str) -> Any:
     """A refused request says why in the user's terms; a connection that fails propagates."""
     try:
         return call()
+    except (httpx2.UnsupportedProtocol, httpx2.InvalidURL) as error:
+        raise click.ClickException(
+            f"the {what} has no full http:// or https:// URL to go to; give the API's root URL, "
+            "or a variable that holds it, such as --base-url '${DOCS_URL}'"
+        ) from error
     except httpx2.HTTPStatusError as error:
         status = error.response.status_code
         hint = (
@@ -300,9 +305,9 @@ def http_block(
     return {**corpus_block("http", options, jurisdictions), "probe": probe}
 
 
-def key_names(headers: tuple[str, ...], key_env: str | None) -> set[str]:
-    """Every variable the headers name, and the key's own."""
-    named = set(VARIABLE.findall(" ".join(_pairs(headers).values())))
+def key_names(base_url: str, headers: tuple[str, ...], key_env: str | None) -> set[str]:
+    """Every variable the base URL and the headers name, and the key's own."""
+    named = set(VARIABLE.findall(" ".join([base_url, *_pairs(headers).values()])))
     return named | {key_env} if key_env else named
 
 
@@ -320,7 +325,8 @@ def http_options(
     if "{id}" not in fetch_path:
         raise click.BadParameter(f"{fetch_path!r} has no {{id}} for the document's id")
     sent = _headers(headers) | key_header(key_env or None, key_header_name)
-    unset = sorted(n for n in set(VARIABLE.findall(" ".join(sent.values()))) if not keys.get(n))
+    named = " ".join([base_url, *sent.values()])
+    unset = sorted(n for n in set(VARIABLE.findall(named)) if not keys.get(n))
     if unset:
         raise click.ClickException(
             f"{', '.join(unset)} is set neither in this shell nor in any .env file here; "
@@ -472,7 +478,7 @@ def http(
             default="",
             flag="--key-env NAME",
         )
-    found = hold_located(key_names(headers, key_env), project)
+    found = hold_located(key_names(base_url or "", headers, key_env), project)
     block = http_block(
         base_url=base_url,
         search_path=search_path,

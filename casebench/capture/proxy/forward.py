@@ -17,6 +17,7 @@ from casebench.capture.proxy.redact import redact_url
 from casebench.capture.proxy.routes import Route
 from casebench.capture.proxy.sse import parse_events
 from casebench.capture.recorder import Recorder
+from casebench.capture.redirect import FOLLOWED
 from casebench.capture.step import HttpExchange
 
 # RFC 9110 section 7.6.1: connection-specific headers a proxy must not forward.
@@ -49,15 +50,24 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
     client = httpx2.AsyncClient(timeout=None)
 
     async def forward(request: Request) -> Response:
-        route = by_name.get(request.path_params["route"])
-        if route is None:
-            return PlainTextResponse(f"no route {request.path_params['route']!r}", status_code=404)
-        url = f"{route.upstream.rstrip('/')}/{request.path_params['path']}"
+        if "netloc" in request.path_params:
+            # A Python agent's call, to the host its own code chose (decision 0044).
+            scheme, route = request.path_params["scheme"], None
+            if scheme not in ("http", "https"):
+                return PlainTextResponse(f"no scheme {scheme!r}", status_code=404)
+            base = f"{scheme}://{request.path_params['netloc']}"
+        else:
+            route = by_name.get(request.path_params["route"])
+            if route is None:
+                missing = request.path_params["route"]
+                return PlainTextResponse(f"no route {missing!r}", status_code=404)
+            base = route.upstream
+        url = f"{base.rstrip('/')}/{request.path_params['path']}"
         if request.url.query:
             url = f"{url}?{request.url.query}"
         raw = await request.body()
         body = _json(raw)
-        hook = prepare.get(route.name)
+        hook = prepare.get(route.name) if route is not None else None
         if hook is not None and body is not None:
             body = hook(body)
             raw = json.dumps(body).encode()
@@ -89,7 +99,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
                         status=upstream.status_code,
                         response_body=None if streamed else _json(content),
                         response_events=parse_events(content) if streamed else None,
-                        route=route.name,
+                        route=route.name if route is not None else None,
                         started=started,
                         ended=ended,
                         duration_ms=took * 1000,
@@ -118,6 +128,14 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
     return Starlette(
         routes=[
             StarletteRoute("/v1/traces", traces, methods=["POST"]),
+            StarletteRoute(
+                f"/w/{{worker}}/{FOLLOWED}/{{scheme}}/{{netloc}}/{{path:path}}",
+                forward,
+                methods=methods,
+            ),
+            StarletteRoute(
+                f"/{FOLLOWED}/{{scheme}}/{{netloc}}/{{path:path}}", forward, methods=methods
+            ),
             StarletteRoute("/w/{worker}/{route}/{path:path}", forward, methods=methods),
             StarletteRoute("/{route}/{path:path}", forward, methods=methods),
         ],

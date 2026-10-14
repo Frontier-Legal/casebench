@@ -47,9 +47,10 @@ def _corpus_at(host: str, corpora: dict[str, CorpusConfig]) -> CorpusConfig | No
 def offers(clients: list[Client], corpora: dict[str, CorpusConfig]) -> list[Offer]:
     """A model client on its parser's default base URL needs no new route; one that reads
     its base URL from a variable gets a route through that variable; one with a literal base
-    URL gets a route with no variable, which a Python target's worker sends its calls through
-    (decision 0044). A backend at a corpus's host is recorded by the corpus's own paths:
-    searches as retrievals, fetches as documents."""
+    URL needs no route when the target is Python, whose worker records each call where it
+    goes, and cannot be routed for a command or HTTP target (decision 0044). A backend at a
+    corpus's host is recorded by the corpus's own paths: searches as retrievals, fetches as
+    documents."""
     defaults = {route.parser: route for route in default_routes()}
     taken = {route.name for route in defaults.values()}
     made: list[Offer] = []
@@ -61,8 +62,15 @@ def offers(clients: list[Client], corpora: dict[str, CorpusConfig]) -> list[Offe
                 made.append(Offer(client, None, f"its parser's route, through {default.env}"))
             continue
         # A base URL passed to the client overrides the SDK's own variable, so only the
-        # variable the code reads it from, or the worker's redirect, reaches the proxy.
-        if source.env is not None and default is not None and source.env == default.env:
+        # variable the code reads it from, or a Python worker, reaches the proxy.
+        if source.env is None:
+            note = (
+                f"fixes its base URL as {source.literal}: recorded as it calls when the target "
+                "is Python; a command or HTTP target needs the URL read from a variable"
+            )
+            made.append(Offer(client, None, note))
+            continue
+        if default is not None and source.env == default.env:
             made.append(Offer(client, None, f"its parser's route, through {default.env}"))
             continue
         url = source.literal
@@ -74,9 +82,12 @@ def offers(clients: list[Client], corpora: dict[str, CorpusConfig]) -> list[Offe
         host = parts.hostname or ""
         name = _name(host, taken)
         taken.add(name)
-        route: dict[str, Any] = {"name": name, "upstream": f"{parts.scheme}://{parts.netloc}"}
-        if source.env is not None:
-            route |= {"env": source.env, "env_suffix": parts.path.rstrip("/")}
+        route: dict[str, Any] = {
+            "name": name,
+            "upstream": f"{parts.scheme}://{parts.netloc}",
+            "env": source.env,
+            "env_suffix": parts.path.rstrip("/"),
+        }
         if client.parser is not None:
             route["parser"] = client.parser
         else:
@@ -96,11 +107,7 @@ def offers(clients: list[Client], corpora: dict[str, CorpusConfig]) -> list[Offe
                 "fetch_path": corpus.options.get("fetch_path"),
             }
         Route.model_validate(route)
-        through = (
-            f"through {source.env}"
-            if source.env is not None
-            else "its literal URL redirected by a Python target; a command or HTTP target "
-            "needs the URL read from a variable"
+        made.append(
+            Offer(client, route, f"route {name} -> {route['upstream']}, through {source.env}")
         )
-        made.append(Offer(client, route, f"route {name} -> {route['upstream']}, {through}"))
     return made

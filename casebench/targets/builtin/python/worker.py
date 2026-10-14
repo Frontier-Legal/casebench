@@ -29,7 +29,7 @@ def main(entry: str, root: str | None = None) -> None:
         sys.path.insert(0, root)
     try:
         install(specs_from_environment(os.environ.get(STEP_FUNCTIONS)))
-        redirect.install(os.environ.get(redirect.REDIRECTS))
+        redirect.install(os.environ.get(redirect.FOLLOW))
         function = load_entry(entry)
     except Exception as error:
         replies.write(encode({"ready": False, "error": f"{type(error).__name__}: {error}"}))

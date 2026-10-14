@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -209,7 +210,7 @@ def test_check_speaks_to_a_coding_agent(project: Path):
     assert "settings the agent reads loaded first" in parts["target"]["next"]
     assert parts["judge"]["passed"] is False
     assert "${ANTHROPIC_API_KEY}" in parts["judge"]["reason"]  # the key by name
-    assert parts["judge"]["next"]
+    assert parts["judge"]["next"].startswith("the provider refused the key")
     assert JUDGE_KEY not in checked.output
 
 
@@ -237,8 +238,9 @@ def test_a_key_is_located_by_name(project: Path):
 
 def test_the_corpus_is_described_from_one_probe(project: Path):
     api = start_document_api()
-    base = f"http://127.0.0.1:{api.server_port}/v1"
-    corpus = ["--base-url", base, *PATHS, "--key-env", "DOC_KEY"]
+    # The project keeps the store's address in a .env file, as it keeps the key.
+    write(project / "env" / "docs.env", f"DOCS_URL=http://127.0.0.1:{api.server_port}/v1\n")
+    corpus = ["--base-url", "${DOCS_URL}", *PATHS, "--key-env", "DOC_KEY"]
     try:
         searched = invoke("corpus", "probe", "http", *corpus, "--query", "feshi")
         fetched = invoke("corpus", "probe", "http", *corpus, "--fetch", "101")
@@ -259,7 +261,8 @@ def test_the_corpus_is_described_from_one_probe(project: Path):
     assert block["probe"] == "feshi"
     assert block["options"]["result_fields"] == {"id": "$.work.work_id", "citation": "$.citation"}
     assert block["options"]["fields"]["text"] == "$.expressions[0].text"
-    assert config["keys"] == {"DOC_KEY": "env/eval.env"}
+    assert block["options"]["base_url"] == "${DOCS_URL}"  # named, not held
+    assert config["keys"] == {"DOCS_URL": "env/docs.env", "DOC_KEY": "env/eval.env"}
     for step in (searched, fetched, added):
         assert KEY not in step.output
 
@@ -344,7 +347,7 @@ def test_a_hard_coded_url_is_still_recorded(project: Path):
         upstream.shutdown()
 
     assert initialised.exit_code == 0, initialised.output
-    assert "its literal URL redirected by a Python target" in initialised.output
+    assert "recorded as it calls when the target is Python" in initialised.output
     assert result.error is None, result.error
     assert result.output == "Short: invalid."
     [call] = [step for step in result.steps if step.kind is StepKind.LLM]
@@ -376,3 +379,55 @@ def test_a_judge_on_openrouter_needs_no_api_question(project: Path):
     assert written["judge"]["provider"] == "openai"
     assert written["judge"]["options"]["base_url"] == "https://openrouter.ai/api/v1"
     assert written["judge"]["options"]["api_key_env"] == "OPENROUTER_API_KEY"
+
+
+ASKS = """
+def answer(question):
+    asked = [{"role": "user", "content": question}]
+    reply = OpenAI().chat.completions.create(model="gpt-5", messages=asked)
+    return reply.choices[0].message.content
+"""
+
+
+def test_a_key_reaches_only_the_host_the_agent_chose(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+):
+    upstream = start_openai()
+    chosen = f"http://127.0.0.1:{upstream.server_port}/v1"
+    # A Python agent's own settings choose its provider, as a settings loader does.
+    write(
+        project / "python_agent.py",
+        "import os\n\nfrom openai import OpenAI\n\n"
+        f"os.environ.setdefault('OPENAI_BASE_URL', '{chosen}')\n"
+        "os.environ.setdefault('OPENAI_API_KEY', 'a-key-for-that-provider')\n\n" + ASKS,
+    )
+    write(
+        project / "command_agent.py",
+        "import sys\n\nfrom openai import OpenAI\n\n" + ASKS + "\n\nprint(answer(sys.argv[1]))\n",
+    )
+    runs = {
+        "python": {"type": "python", "entry": str(project / "python_agent.py")},
+        "command": {"type": "command", "run": f"{sys.executable} command_agent.py {{question}}"},
+    }
+    results = {}
+    try:
+        for kind, target in runs.items():
+            if kind == "command":  # a command agent's provider is set in the shell
+                monkeypatch.setenv("OPENAI_BASE_URL", chosen)
+                monkeypatch.setenv("OPENAI_API_KEY", "a-key-for-that-provider")
+            log = RunLog.create(
+                project / kind, RunInfo(run_id=kind, suite_id="s", suite_hash="h", target=kind)
+            )
+            session = CaptureSession(routes_for(None))
+            agent = target_from_config(target)
+            [results[kind]] = asyncio.run(
+                run_cases([case("c1", "Is it valid?")], agent, log, capture=session)
+            )
+    finally:
+        upstream.shutdown()
+
+    for kind, result in results.items():
+        assert result.error is None, (kind, result.error)  # not sent to api.openai.com
+        assert result.output == "Short: invalid.", kind
+        [call] = [step for step in result.steps if step.kind is StepKind.LLM]
+        assert (call.provider, call.model) == ("openai", "gpt-5"), kind

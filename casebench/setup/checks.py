@@ -18,6 +18,7 @@ from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
+from casebench.providers.call import KeyRefused
 from casebench.providers.interface import Message
 from casebench.providers.settings import settings_of
 from casebench.setup.catalog import installed
@@ -178,7 +179,8 @@ def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check
         failed = f"{len(report.failures)} fetches failed" if report.failures else ""
         mapped = "map each missing field with `casebench corpus add --field NAME=JSONPATH`"
         return Check(label, Status.FAILED, "; ".join(filter(None, (missing, failed))), mapped)
-    return Check(label, Status.PASSED, f"{report.sampled} documents sampled")
+    sampled = f"{report.sampled} document{'s' if report.sampled != 1 else ''} sampled"
+    return Check(label, Status.PASSED, sampled)
 
 
 def _target(config: CasebenchConfig) -> Check:
@@ -194,6 +196,16 @@ def _target(config: CasebenchConfig) -> Check:
     return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
 
 
+def _refused(error: BaseException) -> bool:
+    """Whether a provider refused the key, anywhere in the chain of causes."""
+    seen: BaseException | None = error
+    while seen is not None:
+        if isinstance(seen, KeyRefused):
+            return True
+        seen = seen.__cause__ or seen.__context__
+    return False
+
+
 def model_check(name: str, model: JudgeConfig) -> Check:
     """Asked with its settings, so the check says whether the provider takes them (0038)."""
     settings = settings_of(model.options)
@@ -201,8 +213,15 @@ def model_check(name: str, model: JudgeConfig) -> Check:
     try:
         Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
-        failed = _failure(name, error, NEXT_MODEL)
-        if settings and failed.status is Status.FAILED:
+        named = getattr(Judge(model).provider, "api_key_env", None)
+        refused = (
+            f"the provider refused the key: check that {named} holds a key for this provider; "
+            f"`casebench keys {named}` says where it is read from"
+            if named
+            else "the provider refused the credentials it found here"
+        )
+        failed = _failure(name, error, refused if _refused(error) else NEXT_MODEL)
+        if settings and failed.status is Status.FAILED and not _refused(error):
             refused = f"refused the call with {shown}: {failed.detail}"
             failed = Check(name, Status.FAILED, refused, f"drop {shown} from its options")
         return failed

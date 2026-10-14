@@ -17,7 +17,11 @@ def probe() -> None:
 
 
 @probe.command()
-@click.option("--base-url", required=True, help="The API's root URL.")
+@click.option(
+    "--base-url",
+    required=True,
+    help="The API's root URL, or a variable that holds it, such as '${DOCS_URL}'.",
+)
 @click.option("--search-path", default="/search", show_default=True)
 @click.option("--query-param", default="q", show_default=True)
 @click.option("--fetch-path", default="/documents/{id}", show_default=True)
@@ -54,7 +58,7 @@ def http(
         raise click.UsageError("give --query to search, --fetch ID to read one document, or both")
     project = config_path.resolve().parent
     preset(given_keys(key_files, project))
-    hold_located(key_names(headers, key_env), project)
+    hold_located(key_names(base_url, headers, key_env), project)
     options = http_options(
         base_url, search_path, query_param, fetch_path, headers, key_env, key_header
     )

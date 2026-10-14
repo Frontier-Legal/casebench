@@ -302,7 +302,7 @@ def init_command(
     screen.step("Reading your project")
     with screen.working("reading your project"):
         found = scan(checkout)
-    screen.rows(summary(found, checkout))
+    screen.rows(summary(found, checkout, entry))
     if details:
         for line in scan_details(found):
             screen.line(line, "dim")

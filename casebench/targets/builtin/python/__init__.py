@@ -1,13 +1,15 @@
 """The python target: answer each case in one of N worker processes running the agent."""
 
 import asyncio
+import json
 import os
 import sys
 from collections.abc import Mapping
 from typing import Any
 
 from casebench.capture.context import current_traceparent, record, set_worker
-from casebench.capture.session import PROXY, PROXY_VARIABLES
+from casebench.capture.redirect import FOLLOW
+from casebench.capture.session import PROXY, PROXY_VARIABLES, SHADOWED
 from casebench.capture.step import Step
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, to_answer
@@ -39,11 +41,19 @@ class PythonConfig(Record):
 
 
 def worker_environment(worker: int) -> dict[str, str]:
-    """The run's environment, with each proxy variable under this worker's own path."""
+    """The run's environment with the project's own base URLs: the worker sends each call
+    through the proxy itself, under this worker's own path (decision 0044)."""
     env = dict(os.environ)
     proxy = env.get(PROXY)
+    for name, before in json.loads(env.get(SHADOWED) or "{}").items():
+        if before is None:
+            env.pop(name, None)
+        else:
+            env[name] = before
+    if proxy and FOLLOW in os.environ:
+        env[FOLLOW] = f"{proxy}/w/{worker}"
     for name in filter(None, env.get(PROXY_VARIABLES, "").split(",")):
-        if proxy and name in env:
+        if proxy and name in env and name != FOLLOW:
             env[name] = env[name].replace(proxy, f"{proxy}/w/{worker}")
     return env
 

@@ -5,14 +5,14 @@ You are a coding agent. The user asked you to set up Casebench (version @VERSION
 ## Rules
 
 - **Create only `casebench.yaml` and files under `.casebench/`.** Do not change any other file: not the agent's code, not `pyproject.toml`, not a lockfile, not `.gitignore`. If something seems to need a change elsewhere, stop and tell the user instead.
-- **Never read, print or copy a key's value.** Do not open `.env` files. To learn where a key is kept, run `casebench keys NAME`; it prints file names and fingerprints, never values.
+- **Never read, print or copy a value from a `.env` file**, a key or anything else. Do not open `.env` files; their `.env.example` files show the names. To learn where a variable is kept, run `casebench keys NAME`; it prints file names and fingerprints, never values. Where Casebench needs a value from such a file, such as a URL, give the variable by name, as `${NAME}`.
 - **Run Casebench without installing it into the project.** In a uv project, run every command as:
 
   ```
   uv run --with "@SPEC@" casebench <command>
   ```
 
-  In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
+  This runs Casebench with the project's own dependencies, as the agent needs them; in a uv project that has no `.venv` yet, uv creates one, which uv projects ignore. In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
 - **Commands never prompt.** If a command stops with "nothing here can answer it; give it with …", it names the flag to add. Do not pipe answers into it.
 
 ## 1. Find how the agent answers and how it starts
@@ -34,6 +34,7 @@ def answer(question: str, facts: str | None = None) -> str | dict: ...
 - Then call the function production calls, and return its final answer. Return a string, or a mapping with `answer` and, if the agent gives them, `citations` (a list of citation strings) and `documents` (a list of document ids).
 - `facts`, when given, holds the case's facts as text. Pass it the way the agent takes extra context, or add it to the question.
 - Casebench puts the project's folder first on the import path, so `import` the project's packages as code at the project's root does.
+- Leave the agent's base URLs and keys as its settings set them. Casebench records each model and search call where it goes, without changing where it goes.
 - Keep the file short. It is an adapter, not a copy of the agent.
 
 Also create `.casebench/.gitignore` containing exactly:
@@ -46,9 +47,9 @@ Also create `.casebench/.gitignore` containing exactly:
 
 This keeps runs and caches out of git and keeps the adapter in it.
 
-## 3. Locate the keys Casebench needs
+## 3. Locate what Casebench reads itself
 
-Casebench needs a key for the judge model and, usually, one for the document store. For each key name you find in the agent's code or the project's `.env.example` files, run:
+Casebench reads a few variables for its own calls: the judge's key, the document store's key, and the store's URL when the project keeps it in a variable. The agent's own settings are the adapter's business, not Casebench's; do not list them. For each variable Casebench will read, from the agent's code or the project's `.env.example` files, run:
 
 ```
 casebench keys NAME --json
@@ -75,11 +76,11 @@ casebench init --entry .casebench/target.py:answer --corpus none \
   [--key NAME=FILE ...]
 ```
 
-This writes `casebench.yaml`: the target, the judge, a capture route for each model client the code creates, and under `keys` the name and file of each key, never a value.
+This writes `casebench.yaml`: the target, the judge, and under `keys` the name and file of each key, never a value. Model calls need no route for a Python target: Casebench records each call where the agent sends it.
 
 ## 6. Connect the document store
 
-Casebench checks every citation against the documents the agent's own search uses. Find, in the agent's code, the store it searches: its base URL, search path, query parameter, fetch path, and the variable and header that carry its key.
+Casebench checks every citation against the documents the agent's own search uses. Find, in the agent's code, the store it searches: its base URL, search path, query parameter, fetch path, and the variable and header that carry its key. When the code reads the base URL from a variable, such as `DOCS_URL`, give `--base-url '${DOCS_URL}'` in single quotes; Casebench reads it from the same file as a key, and `casebench.yaml` names it rather than holding it.
 
 For an HTTP API:
 
@@ -99,7 +100,7 @@ For an HTTP API:
 3. From the two responses, write the mapping. Use JSONPaths taken from the responses you saw, not guessed ones:
    - `--results`: each result in the search response, such as `$.results[*]`.
    - `--result-field id=…`, `citation=…` (how the store cites the document; prefer the fullest form), `type=…` (what kind of document), `passage=…` (the text the search matched). Paths are relative to one result.
-   - `--field id=…`, `jurisdiction=…`, `court=…`, `date=…`, `text=…` (the full text), and `level=…` only if the document states the court's level. Paths are relative to the fetched document.
+   - `--field id=…`, `jurisdiction=…`, `court=…`, `date=…`, `text=…` (the full text), and `level=…` only if the document states where the court sits in the hierarchy, such as first instance, appeal or supreme court; a field such as `national`, which says how far a jurisdiction reaches, is not it. Paths are relative to the fetched document. A filter such as `$.dates[?(@.type=='decided')].date` picks one of several entries.
    - `--jurisdiction CODE` for each country or region the store covers, as ISO 3166 codes such as `TR` or `US-CA`.
 
 4. Add it:
@@ -107,8 +108,10 @@ For an HTTP API:
    ```
    casebench corpus add http --base-url URL --search-path /search --query-param q \
      --fetch-path "/documents/{id}" --key-env KEY_NAME --probe "the same topic" \
-     --results … --result-field … --field … --jurisdiction CODE --yes [--key NAME=FILE]
+     --results … --result-field … --field … --jurisdiction CODE --name NAME --yes [--key NAME=FILE]
    ```
+
+   `--name` is how reports name the store, such as the provider's name; without it, a name is made from its host.
 
 For a folder of decisions, use `casebench corpus add folder`; for an MCP server, `casebench corpus add mcp`. Run either with `--help` for its flags.
 

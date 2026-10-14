@@ -16,7 +16,8 @@ class HttpCorpusConfig(Record):
     """Paths are relative to `base_url`; `{id}`, `{text}` and `{limit}` are filled per call.
     `search_results` finds each result in a search response, and `result_fields` reads its
     `id`, `citation`, `type` and `passage` inside it (decision 0037); without them,
-    `search_ids` finds the ids alone."""
+    `search_ids` finds the ids alone. `base_url` may name a variable, such as
+    `${DOCS_URL}`, read like a header's key (decision 0044)."""
 
     base_url: str
     headers: dict[str, str] = Field(default_factory=dict)
@@ -41,8 +42,9 @@ class HttpCorpusConfig(Record):
 class Connector:
     def __init__(self, **options: Any) -> None:
         self.config = HttpCorpusConfig.model_validate(options)
+        base_url = expand_env({"base_url": self.config.base_url})["base_url"]
         self.client = httpx2.Client(
-            base_url=self.config.base_url.rstrip("/"),
+            base_url=base_url.rstrip("/"),
             headers=expand_env(self.config.headers),
             timeout=self.config.timeout_s,
         )

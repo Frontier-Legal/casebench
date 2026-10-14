@@ -6,7 +6,7 @@ decision-makers: Casebench maintainers
 
 # A coding agent sets Casebench up from one prompt, and only `casebench.yaml` and `.casebench/` change
 
-Amends [0043](0043-guided-onboarding.md) (who answers init's questions), [0040](0040-init-reads-the-code.md) (what happens to a client with a literal base URL) and [0036](0036-several-corpora.md) (what a corpus block holds).
+Amends [0043](0043-guided-onboarding.md) (who answers init's questions), [0040](0040-init-reads-the-code.md) (what happens to a client with a literal base URL), [0019](0019-recording-proxy.md) and [0020](0020-python-process-wrapper.md) (where a captured call is forwarded, and how a Python worker reaches the proxy) and [0036](0036-several-corpora.md) (what a corpus block holds).
 
 ## Context and problem statement
 
@@ -44,10 +44,15 @@ Chosen option 1, because it takes the project knowledge from the coding agent, w
   - `corpus add` and `init` take `--key NAME=FILE`, which records where a key is read from, so a script never exports a key's value.
   - When a key is in several files that disagree, a command with no terminal stops and names the files and the flag. It never waits on a prompt.
 - **A corpus keeps its probe.** `corpus add` stores the search it probed with as the corpus block's `probe`. `casebench check` uses it when no `--query` is given.
-- **Literal base URLs are recorded.** A client created with a literal base URL now gets a capture route with no variable.
-  - In a run, the Python target's worker sends that client's calls through the proxy. It rewrites requests for the route's upstream in httpx2, httpx and requests: the openai 3.x and anthropic 1.x SDKs send through httpx2, earlier SDKs and many agents' own clients through httpx (read on 2026-10-14). The rewrite happens only inside the worker process.
-  - Production never loads the worker, so the redirect never reaches it.
-  - A command or HTTP target runs in its own process, which Casebench cannot hook. For those, the URL still has to be read from a variable, and init says so.
+- **A call is recorded where it goes, and goes where the agent sends it.**
+  - Before, a parser's default route pointed its SDK's variable, such as `OPENAI_BASE_URL`, at the proxy and forwarded to the parser's default host. A project whose own settings set that variable for another provider kept the proxy's value, so its calls and its key went to the default host. That was measured on 2026-10-14 with a sample project: its provider key reached `api.openai.com`.
+  - A Python target's worker now sends every call through the proxy's follow path, which carries the call's own scheme and host, and the proxy forwards it there unchanged. The worker keeps the project's own value of each variable a default route sets. A route the config gives its own upstream keeps its variable.
+  - The rewrite happens in httpx2, httpx and requests, inside the worker only. The openai 3.x and anthropic 1.x SDKs send through httpx2; earlier SDKs and many agents' own clients send through httpx (read on 2026-10-14). Production never loads the worker.
+  - A followed call is read by the route at its host, or else by each parser in turn. A parser reads only its own API's paths, such as `/chat/completions`, so the first parser that returns steps is the one whose API the call is. Nothing is chosen by the host's name.
+  - This covers a client created with a literal base URL too, with no route.
+  - A command or HTTP target runs in its own process, which Casebench cannot hook, so its routes still work through variables. Such a route now forwards to the value the variable already has, in the shell or in a file named under `keys`, rather than to the parser's default host.
+- **A store's URL may be a variable.** A corpus's `base_url` may be `${NAME}`, read like a header's key. A project that keeps the store's address in a `.env` file is connected without anyone opening that file, and `casebench.yaml` names the variable rather than holding the URL.
+- **A refused key is named as such.** When a provider answers 401 or 403 (RFC 9110 sections 15.5.2 and 15.5.4), `check` says the key was refused and names the variable and the command that locates it, not the model's settings.
 - **Providers whose package speaks another's API.** The model catalog's OpenRouter entry names its own package, `@openrouter/ai-sdk-provider`. OpenRouter documents its API as compatible with OpenAI's chat completions, and the catalog gives its address. So the OpenAI-compatible provider lists that package among those it speaks, and no API question is asked.
 - **The judge.** The guide tells the coding agent to propose a judge from a family other than the agent's, using a key it found. That proposal is the one question the user is asked.
 
@@ -57,7 +62,8 @@ Chosen option 1, because it takes the project knowledge from the coding agent, w
 - Good, because nothing the team ships changes. The adapter loads the agent's settings itself, so Casebench never hands its own keys to the agent (0043).
 - Good, because every command the guide uses also serves scripts and CI: JSON out, no prompts.
 - Bad, because the setup is only as good as the coding agent. `casebench check` is the arbiter: the guide is not finished until it passes, or until it says in plain words what cannot pass from here.
-- Bad, because the redirect patches three HTTP libraries inside the worker. A client on another library, or a target outside Python, needs its URL read from a variable.
+- Good, because a key reaches only the host the agent's own code and settings chose.
+- Bad, because the follow path patches three HTTP libraries inside the worker. A call on another library is not recorded, though it still goes where the agent sends it. A command or HTTP target is recorded only through variables, and only to the host Casebench can see that variable holding.
 
 ## Revisit when
 

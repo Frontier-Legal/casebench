@@ -1,32 +1,37 @@
-"""Send an agent's calls to a captured upstream through the recording proxy, in its worker only.
+"""Send each call a Python agent makes through the recording proxy, to the host it chose.
 
-A client created with a literal base URL ignores the variables that point other clients at
-the proxy. The Python target's worker rewrites such a call's URL inside httpx2, httpx and
-requests, the HTTP libraries the common model SDKs send through, before the call leaves the
-process. Production never loads the worker, so it never runs this (decision 0044).
+The Python target's worker rewrites every outgoing call in httpx2, httpx and requests, the
+HTTP libraries the common model SDKs send through, to the proxy's follow path. The path
+carries the call's own scheme and host, and the proxy forwards it there unchanged. A call
+always reaches the host the agent's code chose, whatever base URL its settings give, and a
+key never reaches another host. Production never loads the worker, so it never runs this
+(decision 0044).
 """
 
 import importlib
-import json
 from typing import Any
+from urllib.parse import urlsplit
 
-# The variable that carries `{upstream: proxy route}` to the worker.
-REDIRECTS = "CASEBENCH_REDIRECTS"
+# The variable that carries the worker's proxy address, such as http://127.0.0.1:5000/w/0.
+FOLLOW = "CASEBENCH_FOLLOW"
+# The path segment under which the proxy forwards a call to the host the path names.
+FOLLOWED = "~"
 # The openai 3.x and anthropic 1.x SDKs send through httpx2; earlier ones, and many agents'
 # own clients, through httpx (both read on 2026-10-14). The two share these names.
 HTTPX_MODULES = ("httpx2", "httpx")
 
 
-def rewritten(url: str, redirects: dict[str, str]) -> str | None:
-    """The proxy's URL for a call to a captured upstream, or None for any other call."""
-    for upstream, routed in redirects.items():
-        base = upstream.rstrip("/")
-        if url == base or url.startswith((f"{base}/", f"{base}?")):
-            return routed.rstrip("/") + url[len(base) :]
-    return None
+def followed(url: str, proxy: str) -> str | None:
+    """The proxy's URL for a call, or None for a call to the proxy itself."""
+    parts, own = urlsplit(url), urlsplit(proxy)
+    if parts.scheme not in ("http", "https") or parts.netloc == own.netloc:
+        return None
+    query = f"?{parts.query}" if parts.query else ""
+    path = parts.path or "/"
+    return f"{proxy.rstrip('/')}/{FOLLOWED}/{parts.scheme}/{parts.netloc}{path}{query}"
 
 
-def _httpx(name: str, redirects: dict[str, str]) -> None:
+def _httpx(name: str, proxy: str) -> None:
     try:
         module: Any = importlib.import_module(name)
     except ImportError:
@@ -35,7 +40,7 @@ def _httpx(name: str, redirects: dict[str, str]) -> None:
     asynchronous = module.AsyncHTTPTransport.handle_async_request
 
     def move(request: Any) -> None:
-        new = rewritten(str(request.url), redirects)
+        new = followed(str(request.url), proxy)
         if new is not None:
             request.url = module.URL(new)
             request.headers["host"] = request.url.netloc.decode("ascii")
@@ -52,7 +57,7 @@ def _httpx(name: str, redirects: dict[str, str]) -> None:
     module.AsyncHTTPTransport.handle_async_request = handle_async_request
 
 
-def _requests(redirects: dict[str, str]) -> None:
+def _requests(proxy: str) -> None:
     try:
         from requests.adapters import HTTPAdapter
     except ImportError:
@@ -60,7 +65,7 @@ def _requests(redirects: dict[str, str]) -> None:
     send = HTTPAdapter.send
 
     def moved(self: Any, request: Any, *args: Any, **kwargs: Any) -> Any:
-        new = rewritten(str(request.url), redirects)
+        new = followed(str(request.url), proxy)
         if new is not None:
             request.url = new
             request.headers.pop("Host", None)
@@ -69,11 +74,10 @@ def _requests(redirects: dict[str, str]) -> None:
     HTTPAdapter.send = moved  # type: ignore[method-assign]
 
 
-def install(raw: str | None) -> None:
-    """Rewrite calls to each captured upstream, when the run captures any."""
-    if not raw:
+def install(proxy: str | None) -> None:
+    """Send every call through the proxy, when the run captures."""
+    if not proxy:
         return
-    redirects = json.loads(raw)
     for name in HTTPX_MODULES:
-        _httpx(name, redirects)
-    _requests(redirects)
+        _httpx(name, proxy)
+    _requests(proxy)
