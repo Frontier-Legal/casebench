@@ -29,6 +29,7 @@ Chosen option: "pre-commit locally and the same tools in CI, pinned by SHA", bec
 - `main` takes changes only through pull requests with green CI, and push protection refuses secrets. Those are repository settings; `.github/rulesets/main.json` holds the ruleset so it is reviewable.
 - While the project has one maintainer, the ruleset requires no approving review: GitHub never lets the author of a pull request approve it, so a required review would block every merge. The count goes to 1, with code-owner review, when a second maintainer joins.
 - Pull requests opened by `GITHUB_TOKEN`, such as the release pull request, do not trigger other workflows. A maintainer closes and reopens the release pull request to run CI on it.
+- release-please signs off the release commit itself (`signoff` in `release-please-config.json`), so the release pull request passes the DCO check.
 
 ### Consequences
 
