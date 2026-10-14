@@ -69,7 +69,7 @@ CATALOG = {
         "models": {"kimi-judge": {"name": "Kimi Judge", "family": "kimi"}},
     },
 }
-QUIET = ["--corpus", "none", "--no-judge", "--no-extract", "--no-live"]
+QUIET = ["--corpus", "none", "--no-judge", "--no-extract", "--no-live", "--yes"]
 
 
 @pytest.fixture
@@ -89,23 +89,24 @@ def init(*flags: str, typed: str = ""):
 
 
 def test_two_providers_found(project: Path):
-    made = init("--target", "python", "--entry", "agent.py:answer", "--routes", *QUIET)
+    made = init("--target", "python", "--entry", "agent.py:answer", "--routes", "--details", *QUIET)
 
     assert made.exit_code == 0, made.output
+    assert "clients  openai.OpenAI in 2 places" in made.output
     assert (
-        "found    openai.OpenAI at agent.py:6, base URL from FIREWORKS_BASE_URL, else "
+        "openai.OpenAI at agent.py:6, base URL from FIREWORKS_BASE_URL, else "
         "https://api.fireworks.ai/inference/v1, key from FIREWORKS_API_KEY"
     ) in made.output
-    assert "found    openai.OpenAI at agent.py:10, base URL its SDK's default" in made.output
+    assert "openai.OpenAI at agent.py:10, base URL its SDK's default" in made.output
     assert "anthropic" not in made.output  # the virtual environment was skipped
-    assert "capture  openai.OpenAI at agent.py:6: route fireworks" in made.output
+    assert "✓ openai.OpenAI at agent.py:6: route api-fireworks-ai" in made.output
     assert (
-        "capture  openai.OpenAI at agent.py:10: its parser's route, through OPENAI_BASE_URL"
+        "openai.OpenAI at agent.py:10: its parser's route, through OPENAI_BASE_URL"
     ) in made.output
     config = yaml.safe_load((project / "casebench.yaml").read_text(encoding="utf-8"))
     assert config["capture"]["routes"] == [
         {
-            "name": "fireworks",
+            "name": "api-fireworks-ai",
             "upstream": "https://api.fireworks.ai",
             "env": "FIREWORKS_BASE_URL",
             "env_suffix": "/inference/v1",
@@ -118,10 +119,10 @@ def test_the_agent_s_entry_point_suggested(project: Path):
     made = init("--target", "python", "--no-routes", *QUIET, typed="\n")
 
     assert made.exit_code == 0, made.output
-    assert (
-        "the functions that call a model, nearest the question first: agent.py:answer, "
-        "agent.py:draft, agent.py:verify"
-    ) in made.output
+    # draft and verify reach a model too, but need arguments a case does not give.
+    assert "agent.py:answer, the one function Casebench can call" in made.output
+    assert "1. agent.py:answer" in made.output
+    assert "agent.py:draft" not in made.output
     config = yaml.safe_load((project / "casebench.yaml").read_text(encoding="utf-8"))
     assert config["target"]["entry"] == "agent.py:answer"
 
@@ -131,7 +132,7 @@ def test_the_target_s_model_family_known(project: Path, monkeypatch: pytest.Monk
     catalog = project / "catalog.json"
     catalog.write_text(json.dumps(CATALOG), encoding="utf-8")
     flags = ["--target", "python", "--entry", "agent.py:answer", "--no-routes"]
-    flags += ["--corpus", "none", "--no-extract", "--no-live", "--catalog", str(catalog)]
+    flags += ["--corpus", "none", "--no-extract", "--no-live", "--catalog", str(catalog), "--yes"]
 
     made = init(*flags, "--judge-provider", "moonshot", "--judge-model", "kimi-judge")
 
@@ -189,7 +190,7 @@ def test_nothing_leaves_the_machine(project: Path, monkeypatch: pytest.MonkeyPat
         "nothing was sent"
     )
     assert made.exit_code == 0, made.output
-    assert f"found    {found.said()}" in made.output
+    assert found.said() in made.output
     assert "fw-secret-value" not in made.output
     assert "fw-secret-value" not in (project / "casebench.yaml").read_text(encoding="utf-8")
 
@@ -232,7 +233,7 @@ def test_routes_split_by_path(project: Path):
     )
 
     assert route == {
-        "name": "example",
+        "name": "data-example-com",
         "upstream": "https://data.example.com",
         "env": "DOCS_URL",
         "env_suffix": "/v1",

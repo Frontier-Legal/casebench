@@ -68,17 +68,19 @@ def test_set_up_in_the_checkout(checkout: Path):
             "--no-extract",
             "--catalog",
             str(CATALOG),
+            "--yes",
         ],
-        input=f"{production}\n/search\n/documents/{{id}}\n\ndismissal\n",
+        # The address, the two paths, "no key is needed" (2), and a search.
+        input=f"{production}\n/search\n/documents/{{id}}\n2\ndismissal\n",
     )
 
     assert ran.exit_code == 0, ran.output
-    assert "found    anthropic: read by the anthropic parser" in ran.output
+    assert "anthropic, read by the anthropic parser" in ran.output
     assert "litellm" not in ran.output  # no installed parser reads it
-    assert "corpus   not reachable from here; run `casebench corpus add http`" in ran.output
-    assert "target   passed" in ran.output
-    assert "judge    not reachable from here" in ran.output
-    assert "run `casebench check` where the rest is reachable" in ran.output
+    assert "not added: not reachable from here" in ran.output
+    assert "✓ target: answered" in ran.output
+    assert "the judge is not reachable from here; casebench check asks it there" in ran.output
+    assert "casebench check                      where the rest is reachable" in ran.output
     written = (checkout / "casebench.yaml").read_text(encoding="utf-8")
     assert "secret-judge-key" not in written
     config = yaml.safe_load(written)
@@ -100,6 +102,7 @@ def test_init_refuses_an_entry_that_does_not_exist(checkout: Path):
             "--no-judge",
             "--no-extract",
             "--no-live",
+            "--yes",
         ],
     )
 
@@ -207,24 +210,28 @@ def test_sdks_found_in_a_lock_and_a_package_json(tmp_path: Path):
 def test_a_corpus_that_refuses_says_why(checkout: Path, monkeypatch: pytest.MonkeyPatch):
     api = start_document_api()
     base = f"http://127.0.0.1:{api.server_port}/v1"
-    asked = f"{base}\n/search\n/documents/{{id}}\nDOC_KEY\nfeshi\n"
+    # The address, the two paths, "it is set in my shell" (1), its name, and a search.
+    asked = f"{base}\n/search\n/documents/{{id}}\n1\nDOC_KEY\nfeshi\n"
+    # Then each field picked: the results, a result's id, no citation, type or passage; the
+    # document's suggested id, its jurisdiction and court, the suggested date and text, no level.
+    fields = "\n$.work.work_id\n\n\n\n\n$.jurisdiction.code\n$.issuers[0].name\n\n\n\n"
     flags = ["init", "--target", "python", "--entry", "agent.py:answer", "--corpus", "http"]
-    flags += ["--no-judge", "--no-extract", "--no-live"]
+    flags += ["--no-judge", "--no-extract", "--no-live", "--yes"]
     monkeypatch.setenv("DOC_KEY", "a-wrong-key")
     try:
         refused = CliRunner().invoke(main, flags, input=asked)
         (checkout / "casebench.yaml").unlink()
         monkeypatch.setenv("DOC_KEY", KEY)
-        added = CliRunner().invoke(main, flags, input=asked + "\n" * 13)
+        added = CliRunner().invoke(main, flags, input=asked + fields)
     finally:
         api.shutdown()
 
     assert refused.exit_code == 0, refused.output
     assert (
-        "corpus   not added: the API answered 401 to the search: it needs an API key, or the "
+        "not added: the API answered 401 to the search: it needs an API key, or the "
         "key it got is wrong"
     ) in refused.output
     assert added.exit_code == 0, added.output
-    assert "corpus   added after one live search and fetch" in added.output
+    assert "✓ one search and one fetch answered" in added.output
     [corpus] = yaml.safe_load((checkout / "casebench.yaml").read_text("utf-8"))["corpora"].values()
     assert corpus["options"]["headers"] == {"Authorization": "Bearer ${DOC_KEY}"}

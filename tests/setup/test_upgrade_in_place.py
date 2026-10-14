@@ -58,9 +58,9 @@ def test_init_updates_an_existing_setup(tmp_path: Path, monkeypatch: pytest.Monk
     again = invoke("init", "--catalog", "catalog.json")
 
     assert updated.exit_code == 0, updated.output
-    assert "add      judge judge-model: price $3.0 and $15.0 a million" in updated.output
-    assert "add      judge judge-model: context window of 200000 tokens" in updated.output
-    assert "add      openai.OpenAI at agent.py:6: route fireworks" in updated.output
+    assert "add judge judge-model: price $3.0 and $15.0 a million" in updated.output
+    assert "add judge judge-model: context window of 200000 tokens" in updated.output
+    assert "add openai.OpenAI at agent.py:6: route api-fireworks-ai" in updated.output
     after = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
     assert after["target"] == before["target"]  # every setting already there stays
     assert after["capture"]["functions"] == before["capture"]["functions"]
@@ -69,7 +69,7 @@ def test_init_updates_an_existing_setup(tmp_path: Path, monkeypatch: pytest.Monk
         "price": {"input": 3.0, "output": 15.0},
         "context_window": 200000,
     }
-    assert [route["name"] for route in after["capture"]["routes"]] == ["fireworks"]
+    assert [route["name"] for route in after["capture"]["routes"]] == ["api-fireworks-ai"]
     assert again.exit_code == 0, again.output
     assert "has everything this version adds; nothing to change" in again.output
 

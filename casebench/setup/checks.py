@@ -177,7 +177,7 @@ def _target(config: CasebenchConfig) -> Check:
     return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
 
 
-def _model(name: str, model: JudgeConfig) -> Check:
+def model_check(name: str, model: JudgeConfig) -> Check:
     """Asked with its settings, so the check says whether the provider takes them (0038)."""
     settings = settings_of(model.options)
     shown = ", ".join(f"{key}={value}" for key, value in settings.items())
@@ -201,5 +201,5 @@ def live(
     checks += [_corpus(corpora, name, queries or [], size) for name in corpora.names]
     if config.target is not None:
         checks.append(_target(config))
-    checks += [_model(name, model) for name, model in models_of(config)]
+    checks += [model_check(name, model) for name, model in models_of(config)]
     return checks

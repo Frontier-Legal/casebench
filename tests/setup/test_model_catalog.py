@@ -38,7 +38,9 @@ def scripted(answers: list[str]):
 
 def test_models_picked_from_the_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
+    # Keys set in the shell are found there and not asked for (decision 0043).
+    monkeypatch.setenv("FIREWORKS_API_KEY", "set")
+    monkeypatch.setenv("GROQ_API_KEY", "set")
     monkeypatch.setattr(
         models,
         "pick",
@@ -69,12 +71,14 @@ def test_models_picked_from_the_catalog(tmp_path: Path, monkeypatch: pytest.Monk
             "--catalog",
             str(CATALOG),
             "--no-live",
+            "--yes",
         ],
         input="y\nhttps://api.groq.com/openai/v1\n",
     )
 
     assert ran.exit_code == 0, ran.output
-    assert "its key is read from FIREWORKS_API_KEY, not set here" in ran.output
+    assert "✓ key FIREWORKS_API_KEY, set in this shell" in ran.output
+    assert "set" not in [line.strip() for line in ran.output.splitlines()]  # no value shown
     config = yaml.safe_load((tmp_path / "casebench.yaml").read_text("utf-8"))
     assert config["judge"] == {
         "provider": "openai",

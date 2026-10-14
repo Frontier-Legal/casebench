@@ -11,6 +11,9 @@ from casebench.formats.extensions import Extensions
 from casebench.formats.version import FormatVersion
 
 FORMAT = FormatVersion("case", 1, 0)
+# The inputs Casebench's own cases give a target, by name: every case asks a question, and a
+# case drawn from a decision also gives its facts. A Python target is called with them.
+INPUTS = ("question", "facts")
 
 
 class ReferenceSource(StrEnum):
