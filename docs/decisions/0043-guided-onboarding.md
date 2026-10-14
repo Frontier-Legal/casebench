@@ -57,10 +57,18 @@ Chosen option 1, because it gives the look and flow of the tools studied while s
   - **Keys** are matched by the exact name the config expects, and otherwise picked from a file's names.
 - **Keys in .env files.** A key named in the config is read from the environment first. When it is not set there, Casebench looks for that name in the project's `.env` files: files named `.env`, `.env.*` or `*.env` (such as `env/eval.env`), except placeholder files such as `.env.example` or `eval.env.example`, outside virtual environments, `node_modules` and hidden folders.
   - **One file has it:** that file is used, and the step says so (`✓ CORPUS_API_KEY in research/.env`).
-  - **Several files have it with different values:** the user picks the file, each shown with a masked preview (first and last four characters).
+  - **Several files have it with different values:** the user picks the file, each shown with a fingerprint: the first 8 hex characters of the value's SHA-256. It tells two keys apart and shows no character of either.
   - **None has it:** the user picks a `.env` file, then a key from the names in it. The config then refers to that name.
 
-  `casebench.yaml` gains `keys`, a map from a variable's name to the file it is read from, never its value. Every command reads exactly those variables from those files, when the environment does not already set them. No other line of a `.env` file is read into the process.
+  `casebench.yaml` gains `keys`, a map from a variable's name to the file it is read from, never its value. Every command reads exactly those variables from those files, when the environment does not already set them. A file is read to find the name; only that one value is kept.
+
+  **What happens to a key.** Casebench needs a key in memory to call the service it belongs to, and it does nothing else with it:
+
+  - **Kept out of child processes.** A key read from a `.env` file is held in Casebench's own memory, never set in the environment, so the agent under test, a command target and every other child process start without it. A key the shell sets is the shell's: Casebench reads it where it is and children inherit it as they always did. An MCP server started by Casebench gets the MCP library's minimal default environment.
+  - **Sent only to its service.** A model key goes only in the request to its provider's configured URL. A corpus key goes only in the headers configured for that corpus, written in `casebench.yaml` as `${NAME}` and filled in at request time.
+  - **Never shown.** No value is printed, not even in part, and the summary and review name only the variable and its file. A provider refusal that repeats the request has the key replaced by `${NAME}` before it reaches a message, a log or a run's results.
+  - **Never written.** `casebench.yaml` holds names and files. `corpus add` refuses a literal value in `Authorization` or `Proxy-Authorization`, the headers that carry credentials (RFC 9110 sections 11.6.2 and 11.7.2), and asks for `${NAME}` instead. Recorded captures leave out every request header and redact query parameters whose names say they hold a secret.
+  - **Never sent elsewhere.** There is no telemetry (AGENTS.md rule 5).
 - **Re-runs.** On a folder that has a config, `init` runs the repair pass of [0042](0042-upgrade-in-place.md) in the same look.
 - **Rich.** Rich 15 (MIT) draws the logo, the steps, notes, spinners and the review box. It writes plain text, without colour or cursor control, when the output is not a terminal.
 
@@ -68,7 +76,8 @@ Chosen option 1, because it gives the look and flow of the tools studied while s
 
 - Good, because a project like that first one is set up with a handful of Enter presses: the agent function, the corpus key and the judge's key are found or picked, not typed.
 - Good, because keys stay where the team keeps them, and the config says where each one is read from.
-- Bad, because Casebench now reads named variables from files in the project; it reads only the names the config lists, and never writes a value.
+- Bad, because Casebench now reads named variables from files in the project; it keeps only the values the config names, holds them in its own memory, and never shows, writes or hands one on.
+- Bad, because a key typed as a literal value into a header other than the credential headers, such as `--header x-api-key=...` in `corpus add`, is written as given: nothing tells such a value from a plain one without guessing from the header's name. `--key-env NAME` with `--key-header` is the way to give such a key, and init never asks for a header value.
 - Bad, because a new dependency, Rich, is added; it is widely used, pure Python and has no dependencies beyond `markdown-it-py` and `pygments`.
 - Bad, because Esc does not step back in a questionary prompt, unlike the tools studied; Ctrl-C ends the run without writing, and every step can be redone by running `init` again.
 
