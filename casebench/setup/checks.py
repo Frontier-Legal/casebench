@@ -12,7 +12,7 @@ import httpx2
 
 from casebench.capture.step import StepKind
 from casebench.config import CasebenchConfig
-from casebench.corpus.check import SAMPLE_SIZE, check
+from casebench.corpus.check import check
 from casebench.corpus.corpora import Corpora
 from casebench.corpus.interface import ListingNotSupported
 from casebench.judge.client import Judge
@@ -42,6 +42,10 @@ class Status(StrEnum):
     UNREACHABLE = "not reachable from here"
 
 
+# One search for one result, and that one document: enough to know the store answers and
+# its fields map, at a cost known in advance; a larger sample is `casebench corpus check`'s
+# (decision 0045).
+SETUP_SAMPLE = 1
 # The step that fixes each part, in words a person or a coding agent acts on (0044).
 NEXT_TARGET = (
     "make the target answer: its function must run as the project's own start runs it, with the "
@@ -245,7 +249,7 @@ def _probe(probe: str | None) -> list[str]:
 
 
 def live(
-    config: CasebenchConfig, queries: list[str] | None = None, size: int = SAMPLE_SIZE
+    config: CasebenchConfig, queries: list[str] | None = None, size: int = SETUP_SAMPLE
 ) -> list[Check]:
     """One check for each part the config names: the corpus, the target, each model."""
     checks = []

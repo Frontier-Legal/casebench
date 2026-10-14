@@ -1,5 +1,6 @@
 """`casebench corpus add http|mcp|profile`: describe a store from one live search and fetch."""
 
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from casebench.corpus.add import (
 )
 from casebench.corpus.bundled import resolve
 from casebench.corpus.from_profile import ProfileProblem, profile_block
+from casebench.corpus.ids import NAME
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.record import REQUIRED_FIELDS
 from casebench.corpus.results import read_results
@@ -227,6 +229,17 @@ def _map(
     return options | {"fields": fields}
 
 
+def valid_name(name: str | None) -> str | None:
+    """A --name as casebench.yaml takes it, checked before anything is searched (0045)."""
+    if name is not None and not re.fullmatch(NAME, name):
+        raise click.BadParameter(
+            f"{name!r} is not a name casebench.yaml takes: use lowercase letters, digits and "
+            "hyphens, such as frontier-legal",
+            param_hint="--name",
+        )
+    return name
+
+
 def _save(config: Path, block: dict[str, Any], ask: bool, name: str | None = None) -> None:
     """Add the block under its name: the one given, or one made from the store."""
     name = name or name_for(block, taken_names(config))
@@ -408,7 +421,12 @@ COMMON = [
         multiple=True,
         help="A jurisdiction the store covers, such as NO or US-CA; give it once for each.",
     ),
-    click.option("--name", help="The corpus's name in casebench.yaml; made from the store if not."),
+    click.option(
+        "--name",
+        callback=lambda _context, _option, value: valid_name(value),
+        help="The corpus's name in casebench.yaml, such as frontier-legal; made from the store "
+        "if not.",
+    ),
     click.option("--yes", is_flag=True, help="Ask nothing: take the flags and suggestions."),
 ]
 
@@ -563,7 +581,11 @@ def mcp(
     multiple=True,
     help="Cover only these jurisdictions, instead of the profile's.",
 )
-@click.option("--name", help="The corpus's name in casebench.yaml; the profile's id if not.")
+@click.option(
+    "--name",
+    callback=lambda _context, _option, value: valid_name(value),
+    help="The corpus's name in casebench.yaml; the profile's id if not.",
+)
 def profile(
     given: str, config_path: Path, jurisdictions: tuple[str, ...], name: str | None
 ) -> None:

@@ -14,6 +14,13 @@ You are a coding agent. The user asked you to set up Casebench (version @VERSION
 
   Run it from the project's folder, or add `--directory <project>` after `uv run`. This runs Casebench with the project's own dependencies, as the agent needs them; in a uv project that has no `.venv` yet, uv creates one, which uv projects ignore. In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
 - **`casebench.yaml` is yours to edit.** To redo a corpus, delete its block under `corpora:` and add it again. `--key NAME=FILE` takes a path relative to the project's folder.
+- **Spend little, and only once.** Many document stores and every model charge per call. These are the only commands here that call out, and what each spends:
+  - `casebench corpus probe http`: 1 search for 1 result with `--query`, 1 document with `--fetch`.
+  - `casebench corpus add http`: 1 search for 1 result, and 1 document.
+  - `casebench check`: 1 search for 1 result and 1 document, 1 turn of the agent, and 1 short call to each judge.
+  - `casebench demo`: what it prints before it starts, about 5 calls.
+
+  Run each when a step calls for it and not again to look around; after a failure, fix what it said and run it once more. Never run `casebench corpus check` or `casebench run` during setup.
 - **Commands never prompt.** If a command stops with "nothing here can answer it; give it with …", it names the flag to add. Do not pipe answers into it.
 
 ## 1. Find how the agent answers and how it starts
@@ -113,7 +120,7 @@ For an HTTP API:
      --results … --result-field … --field … --jurisdiction CODE --name NAME --yes [--key NAME=FILE]
    ```
 
-   `--name` is how reports name the store, such as the provider's name; without it, a name is made from its host.
+   `--name` is how reports name the store, such as the provider's name, in lowercase letters, digits and hyphens, such as `frontier-legal`; without it, a name is made from its host.
 
 For a folder of decisions, use `casebench corpus add folder`; for an MCP server, `casebench corpus add mcp`. Run either with `--help` for its flags.
 
@@ -125,12 +132,22 @@ casebench check --json
 
 Each part has `passed`, a `reason` and the `next` step. The target is asked the corpus's probe search; `casebench target check --question "…"` asks it something else and shows its answer, its citations and each call recorded. Fix the adapter or the flags you gave, and run it again. Stop and tell the user only what you cannot fix from here, such as a service that is not reachable from this machine or a key that is refused.
 
-## 8. Show the user what changed
+## 8. Show what Casebench does
+
+When `casebench check` passes, run once:
+
+```
+casebench demo
+```
+
+It takes one decision from the corpus with the probe search, has the judge draft a question the decision answers, asks the agent, and grades the answer against what the court decided, including whether it cites the decision. It prints what it will spend first, then a table. Show the user that table as it is.
+
+## 9. Show the user what changed
 
 Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Then tell the user:
 
 - what the adapter calls and which settings it loads;
 - the judge you set and that it is billed per run;
 - the corpus you connected;
-- the result of `casebench check`;
-- the next step: a lawyer writes the first case with `casebench case new --suite first`, then `casebench run --suite first` asks the agent and grades it.
+- the result of `casebench check`, and the demo's table;
+- the next step: a lawyer reads the demo's case in `.casebench/demo/`, or writes a first case with `casebench case new --suite first`, then `casebench run --suite first` asks the agent and grades it.
