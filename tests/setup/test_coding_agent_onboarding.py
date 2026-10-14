@@ -219,8 +219,22 @@ def test_a_key_is_located_by_name(project: Path):
     write(project / "env" / "shared.env", "SHARED_KEY=second-value-bbbb\nOTHER=1\n")
 
     located = invoke("keys", "SHARED_KEY", "DOC_KEY", "MISSING_KEY", "--json")
+    # The files that disagree are settled with --key, which is recorded however init runs:
+    # writing a new setup, updating one, or with the variable also set in the shell.
+    agent = ["--entry", "app/agent.py:answer_question", "--corpus", "none", "--no-judge"]
+    quiet = ["--no-extract", "--no-routes", "--no-live", "--yes"]
+    made = invoke("init", *agent, *quiet, "--key", "SHARED_KEY=env/shared.env")
+    os.environ["DOC_KEY"] = KEY
+    updated = invoke("init", *agent, *quiet, "--key", "DOC_KEY=env/eval.env")
+    no_file = invoke("init", *agent, *quiet, "--key", "OTHER=env/none.env")
+    recorded = yaml.safe_load((project / "casebench.yaml").read_text(encoding="utf-8"))["keys"]
 
     assert located.exit_code == 0, located.output
+    assert made.exit_code == 0, made.output
+    assert updated.exit_code == 0, updated.output
+    assert recorded == {"SHARED_KEY": "env/shared.env", "DOC_KEY": "env/eval.env"}
+    assert no_file.exit_code == 2
+    assert "env/none.env is not a file under" in no_file.output
     shared, doc, missing = json.loads(located.output)
     assert sorted(item["file"] for item in shared["files"]) == ["env/shared.env", "research/.env"]
     assert shared["values_agree"] is False
@@ -315,6 +329,7 @@ def test_an_adapter_in_casebench_reaches_the_projects_code(
     for checked in (from_root, from_elsewhere):
         assert checked.exit_code == 0, checked.output
         assert checked.output.startswith("target   passed")
+        assert "no call was recorded" in checked.output  # this adapter calls no model
 
 
 def test_a_hard_coded_url_is_still_recorded(project: Path):

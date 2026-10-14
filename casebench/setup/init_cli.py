@@ -10,6 +10,7 @@ import yaml
 
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
+from casebench.key_record import record_keys
 from casebench.setup import catalog as model_catalog
 from casebench.setup import screen
 from casebench.setup.advice import advice
@@ -17,7 +18,7 @@ from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.judge_question import ask_model
-from casebench.setup.key_question import KeyFound, given_keys, preset
+from casebench.setup.key_question import KeyFound, given_files, given_keys, preset
 from casebench.setup.picker import confirm, interactive, pick, text
 from casebench.setup.routes import offers
 from casebench.setup.scan import Scan, scan
@@ -307,6 +308,8 @@ def init_command(
         for line in scan_details(found):
             screen.line(line, "dim")
     if updating:
+        for name, file in record_keys(config_path, given_files(checkout)).items():
+            screen.ok(f"key {name}: read from {file}, by name")
         _update(config_path, found, catalog_path, routes)
         return
     choose_all = _lane(custom)
@@ -378,7 +381,7 @@ def init_command(
         data["extract"] = {"models": chosen}
     elif not choose_all and not no_extract:
         screen.line("test cases from many decisions can come later: casebench extract", "dim")
-    if found_keys := _keys(keys, checkout):
+    if found_keys := {**_keys(keys, checkout), **given_files(checkout)}:
         data["keys"] = found_keys
     screen.review(f"{config_path.name} will hold", _review(data))
     if not yes and not confirm(f"Write {config_path}?"):

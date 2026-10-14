@@ -193,6 +193,13 @@ def _target(config: CasebenchConfig) -> Check:
         if result.error.startswith(CONNECTION_FAILURES):
             return Check("target", Status.UNREACHABLE, result.error, NEXT_REACH)
         return Check("target", Status.FAILED, result.error, NEXT_TARGET)
+    if not result.steps:
+        # Answering is what the check needs; the funnel needs the calls (decision 0044).
+        quiet = (
+            "answered, but no call was recorded, so a report cannot say where an authority was "
+            "lost; a Python target records calls made through httpx2, httpx or requests"
+        )
+        return Check("target", Status.PASSED, quiet)
     return Check("target", Status.PASSED, f"answered, {len(result.steps)} steps captured")
 
 

@@ -13,6 +13,7 @@ You are a coding agent. The user asked you to set up Casebench (version @VERSION
   ```
 
   This runs Casebench with the project's own dependencies, as the agent needs them; in a uv project that has no `.venv` yet, uv creates one, which uv projects ignore. In a project that uses pip, install it into the project's virtual environment with `pip install "@SPEC@"` and run `casebench <command>`. Below, `casebench` stands for whichever form applies.
+- **`casebench.yaml` is yours to edit.** To redo a corpus, delete its block under `corpora:` and add it again. `--key NAME=FILE` takes a path relative to the project's folder.
 - **Commands never prompt.** If a command stops with "nothing here can answer it; give it with …", it names the flag to add. Do not pipe answers into it.
 
 ## 1. Find how the agent answers and how it starts

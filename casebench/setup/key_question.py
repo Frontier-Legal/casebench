@@ -49,6 +49,8 @@ def given_keys(pairs: tuple[str, ...], root: Path) -> dict[str, Path]:
         path = (root / file).resolve()
         if not sep or not name:
             raise click.BadParameter(f"{pair!r} must look like NAME=FILE", param_hint="--key")
+        if not path.is_file():
+            raise click.BadParameter(f"{file} is not a file under {root}", param_hint="--key")
         if envfiles.value(path, name) is None:
             raise click.BadParameter(f"{file} gives {name} no value", param_hint="--key")
         found[name] = path
@@ -94,12 +96,20 @@ def _chosen(root: Path, label: str, expected: str | None) -> KeyFound | None:
     return KeyFound(name, path)
 
 
+def given_files(root: Path) -> dict[str, str]:
+    """Each key a script named with --key, by its file relative to the root, for `keys`."""
+    return {name: _relative(path, root) for name, path in _given.items()}
+
+
 def hold_located(names: set[str], root: Path) -> dict[str, str]:
     """Each named key the shell lacks, located in the project's .env files and held for this
-    run's own calls; returns each one's file, relative to the root, for `keys` (0044)."""
+    run's own calls; returns each one's file, relative to the root, for `keys`. A key named
+    with --key is recorded even when the shell sets it too, since later runs may not (0044)."""
     found: dict[str, str] = {}
-    for name in sorted(names):
+    for name in sorted(names | set(_given)):
         if os.environ.get(name):
+            if name in _given:
+                found[name] = _relative(_given[name], root)
             continue
         path = located(name, root)
         if path is not None:
