@@ -8,9 +8,8 @@ import click
 
 from casebench import keys
 from casebench.config import DEFAULT_CONFIG, load_config
-from casebench.corpus.check import SAMPLE_SIZE
 from casebench.setup.advice import advice
-from casebench.setup.checks import Check, Status, live, offline
+from casebench.setup.checks import SETUP_SAMPLE, Check, Status, live, offline
 
 
 def _part(item: Check) -> dict[str, Any]:
@@ -39,7 +38,13 @@ def _part(item: Check) -> dict[str, Any]:
     help="A search that finds documents, for a store that cannot list them; the corpus's own "
     "probe search is run when none is given.",
 )
-@click.option("--size", type=click.IntRange(min=1), default=SAMPLE_SIZE, show_default=True)
+@click.option(
+    "--size",
+    type=click.IntRange(min=1),
+    default=SETUP_SAMPLE,
+    show_default=True,
+    help="Search results to take and documents to fetch; `casebench corpus check` samples more.",
+)
 @click.option(
     "--json",
     "as_json",
