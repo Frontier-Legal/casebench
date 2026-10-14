@@ -120,7 +120,7 @@ def test_init_connects_one_provider_per_profile(tmp_path: Path, monkeypatch: pyt
     norway = profile(tmp_path, "http", http_options("http://a.example"), "no-law.yaml")
     turkey = profile(tmp_path, "http", http_options("http://b.example"), "tr-law.yaml")
 
-    setup = ["init", "--target", "python", "--entry", "agent.py:answer", "--no-live"]
+    setup = ["init", "--target", "python", "--entry", "agent.py:answer", "--no-live", "--yes"]
     ran = CliRunner().invoke(
         main,
         [*setup, "--no-judge", "--no-extract", "--profile", str(norway), "--profile", str(turkey)],

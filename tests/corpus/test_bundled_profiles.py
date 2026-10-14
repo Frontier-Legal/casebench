@@ -127,7 +127,16 @@ def test_init_connects_a_bundled_profile_picked_from_the_list(
 
     ran = CliRunner().invoke(
         main,
-        ["init", "--target", "python", "--entry", "agent.py:answer", "--no-judge", "--no-extract"],
+        [
+            "init",
+            "--target",
+            "python",
+            "--entry",
+            "agent.py:answer",
+            "--no-judge",
+            "--no-extract",
+            "--yes",
+        ],
     )
 
     assert ran.exit_code == 0, ran.output
@@ -136,7 +145,7 @@ def test_init_connects_a_bundled_profile_picked_from_the_list(
     assert second["message"].startswith("Connect another source?")
     assert ("that's all", "none") in second["listed"]
     assert "profile:test-provider" not in [value for _, value in second["listed"]]
-    assert "corpus   Test Provider: searched 'feshi' and fetched document 101" in ran.output
+    assert "Test Provider: searched 'feshi' and fetched document 101" in ran.output
     config = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
     assert config["corpora"]["test-provider"]["profile"] == "test-provider"
 
@@ -163,6 +172,7 @@ def test_not_now_says_citation_checks_wait(tmp_path: Path, monkeypatch: pytest.M
             "--no-judge",
             "--no-extract",
             "--no-live",
+            "--yes",
         ],
     )
 

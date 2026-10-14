@@ -8,9 +8,6 @@ from casebench.capture.proxy.routes import Route, default_routes
 from casebench.corpus.binding import CorpusConfig
 from casebench.setup.scan import Client
 
-# Host labels that say what a host is rather than whose it is.
-GENERIC_LABELS = {"api", "www", "data", "inference"}
-
 
 @dataclass(frozen=True)
 class Offer:
@@ -22,8 +19,9 @@ class Offer:
 
 
 def _name(host: str, taken: set[str]) -> str:
-    labels = [label for label in host.split(".")[:-1] if label not in GENERIC_LABELS]
-    name = (labels[-1] if labels else host.split(".")[0]) or "backend"
+    """The whole host, as a route name: `api.fireworks.ai` is `api-fireworks-ai`."""
+    parts = [part for part in host.lower().replace("_", "-").split(".") if part]
+    name = "-".join(parts) or "backend"
     candidate, number = name, 2
     while candidate in taken:
         candidate, number = f"{name}-{number}", number + 1

@@ -65,7 +65,8 @@ def test_a_profile_sets_up_the_corpus_with_no_questions(api: str, tmp_path: Path
 
     assert added.exit_code == 0, added.output
     assert "Test Provider: searched 'feshi' and fetched document 101" in added.output
-    assert "Test Provider charges per search" in added.output
+    # Its terms say nothing against keeping searches, so each one is paid once (0041).
+    assert "Casebench keeps each search so it is paid once" in added.output
     written = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
     corpus = written["corpora"]["provider"]
     assert corpus["connector"] == "http"
@@ -89,10 +90,11 @@ def test_init_sets_up_the_corpus_from_a_profile(api: str, tmp_path: Path):
         str(path),
         "--no-judge",
         "--no-extract",
+        "--yes",
     )
 
     assert ran.exit_code == 0, ran.output
-    assert "corpus   Test Provider: searched 'feshi'" in ran.output
+    assert "Test Provider: searched 'feshi'" in ran.output
     config = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
     assert config["corpora"]["provider"]["profile"] == "provider.yaml"
 

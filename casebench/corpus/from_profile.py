@@ -108,7 +108,7 @@ def profile_block(
         block["metered"] = profile.metered.value
     if profile.search_filters:
         block["search_filters"] = profile.search_filters
-    kept = list(KEPT_FOR) if profile.keep is None else list(profile.keep)
+    kept = list(KEPT_FOR.values()) if profile.keep is None else list(profile.keep)
     if profile.keep is not None:
         block["keep"] = kept
     notes.append(f"{profile.name}: searched {profile.probe!r} and fetched document {fetched}")

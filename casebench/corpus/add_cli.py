@@ -1,6 +1,7 @@
 """`casebench corpus add http|mcp|profile`: describe a store from one live search and fetch."""
 
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -22,14 +23,22 @@ from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.record import REQUIRED_FIELDS
 from casebench.corpus.results import read_results
-from casebench.corpus.suggest import document_fields, results_path, search_ids
-from casebench.corpus.suggest import result_fields as described_fields
+from casebench.corpus.suggest import (
+    document_fields,
+    first_result,
+    leaves,
+    results_path,
+    search_ids,
+)
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.setup.checks import unreachable
+from casebench.setup.picker import interactive, pick
 from casebench.targets.placeholders import VARIABLE, split_command
 
 FIELDS = (*REQUIRED_FIELDS, "level")
+# The menu's own marks around a field's path and value.
+GUTTER_ROOM = "  »  … "
 
 
 def connector(name: str, options: dict[str, Any]) -> Any:
@@ -47,9 +56,40 @@ def _pairs(values: tuple[str, ...]) -> dict[str, str]:
     return pairs
 
 
-def _choose(label: str, given: str | None, suggestion: str | None, ask: bool) -> str | None:
+NOT_THERE = "\0none"
+TYPED = "\0typed"
+
+
+def _shown(value: Any, room: int) -> str:
+    """A field's value on one line, cut to the room the terminal leaves for it."""
+    flat = " ".join(str(value).split())
+    return flat if len(flat) <= room else f"{flat[: max(room - 1, 0)]}…"
+
+
+def _choose(
+    label: str,
+    given: str | None,
+    suggestion: str | None,
+    ask: bool,
+    fields: list[tuple[str, Any]] | None = None,
+) -> str | None:
+    """A flag's answer, else the suggestion when not asking. Asked on a terminal, the fields
+    of the real response are listed with their values to pick from (decision 0043); asked
+    elsewhere, the JSONPath is typed."""
     if given is not None or not ask:
         return given if given is not None else suggestion
+    if fields and interactive():
+        width = shutil.get_terminal_size().columns
+        choices = [
+            (f"{path}  {_shown(value, width - len(path) - len(GUTTER_ROOM))}", path)
+            for path, value in fields
+        ]
+        choices += [("none of these", NOT_THERE), ("type a JSONPath…", TYPED)]
+        picked = pick(label, choices, suggestion if suggestion in dict(fields) else None)
+        if picked == NOT_THERE:
+            return None
+        if picked != TYPED:
+            return picked
     return click.prompt(label, default=suggestion or "", show_default=bool(suggestion)) or None
 
 
@@ -79,25 +119,22 @@ def _results(
 ) -> tuple[dict[str, Any], str] | None:
     """Where each result is and what it says about its document, which is what the judge
     sees to match a citation (decision 0037); None when the results carry only ids."""
-    suggested = results_path(response)
     where = _choose(
         "JSONPath to each result in a search response (empty if results carry only ids)",
         results_given,
-        suggested[0] if suggested else None,
+        results_path(response),
         ask,
     )
     if not where:
         return None
-    id_hint = suggested[1] if suggested and suggested[0] == where else None
-    id_path = _choose("JSONPath to the id inside one result", given.get("id"), id_hint, ask)
+    item = first_result(response, where)
+    inside = leaves(item) if item is not None else None
+    id_path = _choose("Which field of a result is its id?", given.get("id"), None, ask, inside)
     if not id_path:
         raise click.ClickException("no document id found in the search result; check the path")
     fields = {"id": id_path}
-    hints = described_fields(response, where)
     for name, says in SAYS.items():
-        path = _choose(
-            f"JSONPath to {says}, inside one result", given.get(name), hints.get(name), ask
-        )
+        path = _choose(f"Which field is {says}?", given.get(name), None, ask, inside)
         if path:
             fields[name] = path
     found = read_results(response, where, fields)
@@ -124,13 +161,15 @@ def _map(
     ask: bool,
     results_given: str | None = None,
     result_fields_given: dict[str, str] | None = None,
+    show: bool = True,
 ) -> dict[str, Any]:
     """One live search and one fetch; show them, suggest paths, let the user correct them.
     Returns the connector options they set."""
     results = _live(lambda: store.search_raw(probe, 1), "search")
-    click.echo(f"search for {probe!r} returned:")
-    for line in describe(results):
-        click.echo(f"  {line}")
+    if show:  # what a user checks the paths against; Quick start takes them as suggested
+        click.echo(f"search for {probe!r} returned:")
+        for line in describe(results):
+            click.echo(f"  {line}")
     # Ids given alone keep the results undescribed, as before.
     ids_only = ids_given is not None and results_given is None
     described = (
@@ -146,13 +185,16 @@ def _map(
             raise click.ClickException("no document id found in the search result; check the path")
         options, first_id = {"search_ids": ids_path}, str(every(ids_path, results)[0])
     document = _live(lambda: store.fetch_raw(first_id), f"fetch of document {first_id}")
-    click.echo(f"document {first_id} returned:")
-    for line in describe(document):
-        click.echo(f"  {line}")
-    suggested = document_fields(document)
+    if show:
+        click.echo(f"document {first_id} returned:")
+        for line in describe(document):
+            click.echo(f"  {line}")
+    suggested = document_fields(document, first_id)
+    found_fields = leaves(document)
     fields = {}
     for name in FIELDS:
-        path = _choose(f"JSONPath to {name}", fields_given.get(name), suggested.get(name), ask)
+        asked = f"Which field of the document is its {name}?"
+        path = _choose(asked, fields_given.get(name), suggested.get(name), ask, found_fields)
         if path:
             fields[name] = path
     mapped = record_fields(document, fields)
@@ -214,8 +256,10 @@ def http_block(
     result_fields: tuple[str, ...] = (),
     jurisdictions: list[str] | None = None,
     ask: bool = True,
+    show: bool = True,
 ) -> dict[str, Any]:
-    """Ask for what was not given, make one live search and fetch, and return the corpus block."""
+    """Ask for what was not given, make one live search and fetch, and return the corpus block.
+    `show` prints the responses the paths are suggested from."""
     base_url = _ask(
         base_url, "the document API's root URL, such as https://api.example.com/v1", ask
     )
@@ -247,7 +291,9 @@ def http_block(
         raise click.ClickException(f"{', '.join(unset)} is not set in this shell; export it first")
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("http", options)
-    options |= _map(store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields))
+    options |= _map(
+        store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields), show
+    )
     return corpus_block("http", options, jurisdictions)
 
 

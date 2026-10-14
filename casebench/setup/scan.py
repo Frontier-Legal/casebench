@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from casebench.core.case import INPUTS
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
@@ -14,6 +15,30 @@ BACKENDS = ("httpx.Client", "httpx.AsyncClient")
 # Folders that hold no code of the project's own.
 SKIPPED = {"node_modules", "__pycache__", "site-packages"}
 ENVIRON_GETTERS = ("os.environ.get", "os.getenv")
+
+
+def is_test(relative: Path) -> bool:
+    """A file pytest collects as tests, by its documented default patterns (`test_*.py`,
+    `*_test.py`) and `conftest.py`: not the agent, and not the models it uses (0043)."""
+    name = relative.name
+    return name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
+
+
+def callable_by_casebench(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Whether a Python target can call it with a case's inputs (`INPUTS`), as the target
+    calls every entry point: it takes the question, by name or through `**kwargs`, and every
+    parameter it requires is one Casebench gives (decision 0043)."""
+    arguments = function.args
+    if arguments.posonlyargs or arguments.vararg:
+        return False
+    named = [*arguments.args, *arguments.kwonlyargs]
+    defaults = len(arguments.defaults)
+    required = [a.arg for a in arguments.args[: len(arguments.args) - defaults]]
+    required += [
+        a.arg for a, d in zip(arguments.kwonlyargs, arguments.kw_defaults, strict=True) if d is None
+    ]
+    takes_question = arguments.kwarg is not None or any(a.arg == INPUTS[0] for a in named)
+    return takes_question and all(name in INPUTS for name in required)
 
 
 @dataclass(frozen=True)
@@ -72,7 +97,8 @@ def python_files(root: Path) -> list[Path]:
             capture_output=True,
             check=True,
         )
-        return sorted(root / name for name in listed.stdout.decode().split("\0") if name)
+        listed_paths = [Path(name) for name in listed.stdout.decode().split("\0") if name]
+        return sorted(root / path for path in listed_paths if not is_test(path))
     except (OSError, subprocess.CalledProcessError):
         pass
     found = []
@@ -84,7 +110,8 @@ def python_files(root: Path) -> list[Path]:
             (root.joinpath(*folders[: n + 1]) / "pyvenv.cfg").is_file() for n in range(len(folders))
         ):
             continue
-        found.append(path)
+        if not is_test(path.relative_to(root)):
+            found.append(path)
     return found
 
 
@@ -168,6 +195,7 @@ def scan(root: Path) -> Scan:
     reaches: dict[str, bool] = {}
     callees: dict[str, set[str]] = {}
     defined: dict[str, tuple[str, int]] = {}
+    fits: dict[str, bool] = {}
     for path in python_files(root):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -178,8 +206,9 @@ def scan(root: Path) -> Scan:
         module = _Module(tree)
         for call in _calls(tree):
             kind = module.dotted(call.func)
-            if kind in kinds:
-                base, key = _keyword(call, "base_url"), _keyword(call, "api_key")
+            base, key = _keyword(call, "base_url"), _keyword(call, "api_key")
+            # A backend client with no base URL says nothing a route could use (decision 0043).
+            if kind in kinds and (kinds[kind] is not None or base is not None):
                 found.clients.append(
                     Client(
                         kind=kind,
@@ -197,12 +226,14 @@ def scan(root: Path) -> Scan:
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue
             calls = list(_calls(node))
-            defined[node.name] = (relative, node.lineno)
-            callees[node.name] = {name for c in calls if (name := _callee(c.func)) is not None}
-            reaches[node.name] = any(
+            qualified = f"{relative}:{node.name}"
+            defined[qualified] = (relative, node.lineno)
+            fits[qualified] = callable_by_casebench(node)
+            callees[qualified] = {name for c in calls if (name := _callee(c.func)) is not None}
+            reaches[qualified] = any(
                 _keyword(c, "model") is not None or module.dotted(c.func) in kinds for c in calls
             )
-    found.entries = _entries(reaches, callees, defined)
+    found.entries = _entries(reaches, callees, defined, fits)
     return found
 
 
@@ -215,17 +246,31 @@ def _callee(func: ast.expr) -> str | None:
 
 
 def _entries(
-    reaches: dict[str, bool], callees: dict[str, set[str]], defined: dict[str, tuple[str, int]]
+    reaches: dict[str, bool],
+    callees: dict[str, set[str]],
+    defined: dict[str, tuple[str, int]],
+    fits: dict[str, bool],
 ) -> list[str]:
-    """Functions that reach a model call through the project's own functions, those no other
-    project function calls first: they are nearest the user's question."""
+    """Public functions a Python target can call with a case's inputs and that reach a model
+    call through the project's own functions, in the order of the files (decision 0043). Each
+    is `path.py:function`; a call by name may reach any of the project's functions of that name,
+    as no import is followed."""
+    named: dict[str, set[str]] = {}
+    for qualified in defined:
+        named.setdefault(qualified.rsplit(":", 1)[1], set()).add(qualified)
     changed = True
     while changed:
         changed = False
-        for name, called in callees.items():
-            if not reaches[name] and any(reaches.get(c) for c in called if c != name):
-                reaches[name] = changed = True
-    called_by_others = {c for name, called in callees.items() for c in called if c != name}
-    found = [name for name, yes in reaches.items() if yes]
-    found.sort(key=lambda name: (name in called_by_others, defined[name]))
-    return [f"{defined[name][0]}:{name}" for name in found]
+        for qualified, called in callees.items():
+            if reaches[qualified]:
+                continue
+            others = {other for name in called for other in named.get(name, ())} - {qualified}
+            if any(reaches[other] for other in others):
+                reaches[qualified] = changed = True
+    found = [
+        qualified
+        for qualified, yes in reaches.items()
+        if yes and fits[qualified] and not qualified.rsplit(":", 1)[1].startswith("_")
+    ]
+    found.sort(key=lambda qualified: defined[qualified])
+    return found

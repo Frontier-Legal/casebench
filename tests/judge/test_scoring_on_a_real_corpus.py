@@ -154,6 +154,11 @@ def test_candidates_are_shown_by_the_corpus_s_own_description(api: str, tmp_path
     config = tmp_path / "casebench.yaml"
     flags = ["--search-path", "/search", "--fetch-path", "/documents/{id}"]
     flags += ["--header", "Authorization=Bearer ${DOC_KEY}", "--probe", "feshi", "--yes"]
+    # The fields a person picks from the live response, named as a script names them (0043).
+    flags += ["--results", "$.results[*]", "--result-field", "id=$.work.work_id"]
+    flags += ["--result-field", "citation=$.citation", "--result-field", "type=$.document_type"]
+    flags += ["--result-field", "passage=$.highlight", "--field", "court=$.issuers[0].name"]
+    flags += ["--field", "jurisdiction=$.jurisdiction.code"]
 
     added = invoke("corpus", "add", "http", "--base-url", api, "--config", str(config), *flags)
     checked = invoke("corpus", "check", "--config", str(config), "--query", "feshi")
