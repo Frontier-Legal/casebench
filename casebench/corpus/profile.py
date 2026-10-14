@@ -46,5 +46,10 @@ class Profile(Record):
         description="What a search for each kind of citation adds, such as a document type, so "
         "a statute is searched only among statutes (decision 0037).",
     )
+    keep: list[Literal["documents", "searches"]] | None = Field(
+        default=None,
+        description="What the provider's terms let a customer keep on disk; left out, "
+        "documents are kept, and searches when metered (decision 0041).",
+    )
     probe: str
     extensions: Extensions = Field(default_factory=dict)
