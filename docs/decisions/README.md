@@ -53,3 +53,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0037](0037-match-by-the-corpus-description.md) | The judge matches citations by what the corpus says about each result, one call per answer; scoring runs in parallel and survives a dropped call | accepted |
 | [0038](0038-model-settings-by-measurement.md) | Each model takes its provider's own settings, and a team picks them from measured agreement, time and cost | accepted |
 | [0039](0039-one-case-by-a-lawyer.md) | A lawyer writes one case at a time, from a decision found by topic or by hand, and approves it | accepted |
+| [0040](0040-init-reads-the-code.md) | Init reads the project's own code, offline, to find its model clients, model names and entry points | accepted |
