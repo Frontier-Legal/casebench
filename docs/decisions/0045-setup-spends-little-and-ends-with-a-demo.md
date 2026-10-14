@@ -33,7 +33,7 @@ Chosen option 1. A setup step should cost what it says, whoever runs it and howe
   - the criteria metric grades every criterion in one call per judge;
   - a table shows the question, what the court decided, the agent's answer, and each criterion with its result and the quote that shows it.
 - **The demo's case** is kept as a draft under `.casebench/demo/`, with the agent's answer. A lawyer can approve it into a suite later. It is never a reference until a lawyer approves it.
-- **A corpus's name.** `corpus add --name` turns what it is given into the form `casebench.yaml` accepts, such as `frontier-legal` for "Frontier Legal", and says so.
+- **A corpus's name.** `corpus add --name` refuses a name `casebench.yaml` would reject, such as "Frontier Legal", before anything is searched, and says what a valid one looks like, such as `frontier-legal`. It does not rewrite a name: what to call the store is the user's choice.
 
 ### Consequences
 
