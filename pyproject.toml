@@ -55,6 +55,7 @@ mcp = "casebench.corpus.connectors.mcp:Connector"
 
 [project.entry-points."casebench.metrics"]
 citation_integrity = "casebench.metrics.builtin.citation_integrity:CitationIntegrity"
+criteria = "casebench.metrics.builtin.criteria:Metric"
 outcome = "casebench.metrics.builtin.outcome:Metric"
 precedent = "casebench.metrics.builtin.precedent:Metric"
 statute = "casebench.metrics.builtin.statute:Metric"

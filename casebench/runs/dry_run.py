@@ -12,6 +12,7 @@ from casebench.judge import prompts
 # OpenAI's published rule of thumb for English text; other languages differ (decision 0028).
 CHARACTERS_PER_TOKEN = 4
 JUDGED = ("citation_integrity", "statute", "precedent")
+GRADED = "criteria"
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,8 @@ class DryRun:
     cached: int | None = None
     searches_cached: int = 0
     corpora: dict[str, tuple[int, int, int]] = field(default_factory=dict)
+    grading_calls: int = 0
+    grading_input_tokens_at_least: int = 0
 
     @property
     def _each(self) -> str:
@@ -42,6 +45,12 @@ class DryRun:
                 f"{self.judge_input_tokens_at_least} input tokens (one call per answer to list "
                 f"its citations, then up to two per citation{self._each}, known only once the "
                 "answers exist)"
+            )
+        if self.grading_calls:
+            out.append(
+                f"judge: {self.grading_calls} calls to grade criteria (one per answer for each "
+                f"judge) and at least {self.grading_input_tokens_at_least} input tokens before "
+                "the answers"
             )
         if self.judge_calls_at_least and self.candidates is not None:
             out.append(
@@ -73,13 +82,23 @@ def estimate(
     characters = sum(len(str(value)) for case in pending for value in case.task.inputs.values())
     checked = sum(1 for case in pending if set(JUDGED) & set(case.metrics))
     corpora = config.corpora.values()
+    judges = max(len(config.judges), 1)
+    graded = [case for case in pending if GRADED in case.metrics]
+    grading = sum(
+        len(prompts.GRADE)
+        + sum(len(str(value)) for value in case.task.inputs.values())
+        + sum(len(c.text) for c in case.reference.criteria)
+        for case in graded
+    )
     return DryRun(
         target_calls=len(pending),
         target_input_tokens=_tokens(characters),
         stored=len(cases) - len(pending),
         judge_calls_at_least=checked,
         judge_input_tokens_at_least=checked * _tokens(len(prompts.LIST_CITATIONS)),
-        judges=max(len(config.judges), 1),
+        judges=judges,
+        grading_calls=len(graded) * judges,
+        grading_input_tokens_at_least=_tokens(grading) * judges,
         candidates=config.judge.candidates if config.judge and corpora else None,
         cached=(
             sum(cached_documents(c.connector, c.options, cache_root) for c in corpora)

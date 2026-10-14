@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+from pydantic import Field
+
 from casebench.core.case import Approval, Case, ReferenceSource
 from casebench.core.model import FrozenRecord
 from casebench.core.score import Score
@@ -23,6 +25,13 @@ class Row(FrozenRecord):
     high: float
     majority_baseline: float | None = None
     text_only_baseline: float | None = None
+    strict: float | None = Field(
+        default=None,
+        description="The share of cases where every criterion passed, for metrics with "
+        "criteria; never folded into the mean (decision 0035).",
+    )
+    strict_low: float | None = None
+    strict_high: float | None = None
 
 
 class Table(FrozenRecord):
@@ -68,6 +77,8 @@ def build_tables(
                 majority, text = _baselines(
                     [by_id[m.case_id] for m in members if m.case_id in by_id]
                 )
+            strict = [float(all(v.passed for v in m.criteria)) for m in members if m.criteria]
+            passed = mean_interval(strict, suite_id) if strict else None
             built.append(
                 Row(
                     reference_source=source,
@@ -79,6 +90,9 @@ def build_tables(
                     high=interval.high,
                     majority_baseline=majority,
                     text_only_baseline=text,
+                    strict=mean(strict) if strict else None,
+                    strict_low=passed.low if passed else None,
+                    strict_high=passed.high if passed else None,
                 )
             )
         tables.append(Table(task_type=task_type, metric=metric, rows=built))

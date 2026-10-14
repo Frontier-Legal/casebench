@@ -48,7 +48,8 @@ Chosen option 1, because comparability becomes a property of the data rather tha
   - The report gives the two judges' agreement per metric.
 
   With one judge, nothing changes.
-- **Writing criteria.** The authoring template and the workbench ask for one checkable point per criterion, written as "Passes if … Fails if …". `casebench validate` warns about a criterion without that form; it does not refuse it.
+- **Grading criteria.** The `criteria` metric asks the judge about every criterion of an answer in one call, with the task, the facts the criteria come from and their evidence. The judge says whether each criterion is met and quotes the passage of the answer that decides it. With two judges, a criterion passes only when both pass it.
+- **Writing criteria.** The authoring template and the workbench ask for one checkable point per criterion, written as "Passes if … Fails if …", and the judge's prompt follows that form where a criterion uses it. Casebench does not check the form: lawyers write criteria in their own language, and a check for English words would flag every criterion written in another.
 
 ### Consequences
 
