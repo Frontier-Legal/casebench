@@ -55,6 +55,8 @@ def _from_events(events: list[Any]) -> tuple[str | None, int | None, int | None,
 class Parser:
     hosts: ClassVar[list[str]] = ["api.anthropic.com"]
     packages: ClassVar[list[str]] = ["anthropic", "@anthropic-ai/sdk"]
+    # The client classes whose calls this parser reads, for `casebench init` (decision 0040).
+    clients: ClassVar[list[str]] = ["anthropic.Anthropic", "anthropic.AsyncAnthropic"]
     default_route: ClassVar[dict[str, str]] = {
         "name": "anthropic",
         "upstream": "https://api.anthropic.com",
