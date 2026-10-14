@@ -1,6 +1,7 @@
 """Read decisions with two models and keep the answer keys they agree on."""
 
 import json
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -21,14 +22,32 @@ REPORT_FILE = "extraction.json"
 
 @dataclass
 class Extraction:
+    """`seconds` is the whole run's wall time and `per_decision` each decision's (0038)."""
+
     decisions: int = 0
     keys: list[AnswerKey] = field(default_factory=list)
     agreed: dict[str, int] = field(default_factory=lambda: dict.fromkeys(FIELDS, 0))
     failures: list[str] = field(default_factory=list)
+    seconds: float = 0.0
+    per_decision: list[float] = field(default_factory=list)
+
+    @property
+    def read(self) -> int:
+        return self.decisions - len(self.failures)
 
     def rate(self, name: str) -> float:
-        read = self.decisions - len(self.failures)
-        return self.agreed[name] / read if read else 0.0
+        return self.agreed[name] / self.read if self.read else 0.0
+
+
+@dataclass(frozen=True)
+class Progress:
+    """One decision finished: which, how long it took, and how many are done of how many."""
+
+    done: int
+    total: int
+    decision_id: str
+    seconds: float
+    failed: bool
 
 
 def _read(model: Judge, text: str) -> Reading:
@@ -61,20 +80,26 @@ def extract(
     ids: list[str],
     *,
     workers: int = 1,
-    progress: Callable[[int], None] | None = None,
+    progress: Callable[[Progress], None] | None = None,
 ) -> Extraction:
-    """Each decision read by both models; a failure is that decision's, not the run's."""
+    """Each decision read by both models; a failure is that decision's, not the run's. The
+    time of each decision and of the whole run is kept, so settings can be compared (0038)."""
     result = Extraction(decisions=len(ids))
+    started = time.perf_counter()
 
-    def attempt(decision_id: str) -> tuple[str, Any]:
+    def attempt(decision_id: str) -> tuple[str, Any, float]:
+        begun = time.perf_counter()
         try:
-            return decision_id, _one(corpus, models, decision_id)
+            outcome: Any = _one(corpus, models, decision_id)
         except Exception as error:
-            return decision_id, error
+            outcome = error
+        return decision_id, outcome, time.perf_counter() - begun
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for done, (decision_id, outcome) in enumerate(pool.map(attempt, ids), start=1):
-            if isinstance(outcome, Exception):
+        finished = enumerate(pool.map(attempt, ids), start=1)
+        for done, (decision_id, outcome, seconds) in finished:
+            failed = isinstance(outcome, Exception)
+            if failed:
                 result.failures.append(f"{decision_id}: {type(outcome).__name__}: {outcome}")
             else:
                 key, agreed = outcome
@@ -82,8 +107,10 @@ def extract(
                     result.agreed[name] += ok
                 if key is not None:
                     result.keys.append(key)
+                result.per_decision.append(seconds)
             if progress:
-                progress(done)
+                progress(Progress(done, len(ids), decision_id, seconds, failed))
+    result.seconds = time.perf_counter() - started
     return result
 
 
@@ -99,8 +126,10 @@ def write(result: Extraction, models: list[Judge], folder: Path, corpus: str) ->
     with (folder / KEYS_FILE).open("w", encoding="utf-8") as stream:
         for key in [*others, *result.keys]:
             stream.write(key.model_dump_json() + "\n")
+    costs = [m.cost for m in models]
     report = {
         "decisions": result.decisions,
+        "read": result.read,
         "keys": len(result.keys),
         "fields": {
             name: {"agreed": result.agreed[name], "rate": result.rate(name)} for name in FIELDS
@@ -109,11 +138,20 @@ def write(result: Extraction, models: list[Judge], folder: Path, corpus: str) ->
             {
                 "provider": m.config.provider,
                 "model": m.config.model,
+                "settings": m.settings,
+                "calls": m.calls,
                 "input_tokens": m.input_tokens,
                 "output_tokens": m.output_tokens,
+                "cost": m.cost,
             }
             for m in models
         ],
+        "seconds": {
+            "total": result.seconds,
+            "per_decision": result.per_decision,
+        },
+        # Unknown when any model has no price in casebench.yaml (decision 0038).
+        "cost": None if None in costs else sum(c for c in costs if c is not None),
         "failures": result.failures,
     }
     (folder / REPORT_FILE).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

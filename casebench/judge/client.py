@@ -6,13 +6,14 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from casebench.judge.config import JudgeConfig
+from casebench.judge.config import PER_PRICE, JudgeConfig
 from casebench.judge.memo import Memo, memo_key
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.providers.call import complete
 from casebench.providers.interface import HttpRequest, Message, ModelProvider
 from casebench.providers.send import send as send_over_http
+from casebench.providers.settings import build, settings_of
 
 FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
@@ -39,10 +40,9 @@ class Judge:
         memo: Memo | None = None,
     ) -> None:
         self.config = config
-        kind = kind_named("provider")
-        self.provider: ModelProvider = registry.load(kind, config.provider, config.provider_source)(
-            **config.options
-        )
+        plugin = registry.load(kind_named("provider"), config.provider, config.provider_source)
+        self.provider: ModelProvider = build(plugin, config.provider, config.options)
+        self.settings = settings_of(config.options)
         self.send = send
         self.memo = memo
         self.calls = 0
@@ -55,9 +55,21 @@ class Judge:
     def family(self) -> str:
         return self.provider.family
 
+    @property
+    def cost(self) -> float | None:
+        """What the calls so far cost at the model's price, or None without one (0038)."""
+        price = self.config.price
+        if price is None:
+            return None
+        return (self.input_tokens * price.input + self.output_tokens * price.output) / PER_PRICE
+
     def ask(self, system: str, user: str) -> Any:
-        """A question already in the memo is answered from it, with no call."""
-        key = memo_key(self.config.provider, self.config.model, system, user)
+        """A question already in the memo is answered from it, with no call. A reply made at
+        other settings is not the same answer, so the settings are part of the question."""
+        model = self.config.model
+        if self.settings:
+            model += " " + json.dumps(self.settings, sort_keys=True)
+        key = memo_key(self.config.provider, model, system, user)
         if self.memo is not None and (kept := self.memo.get(key)) is not None:
             return kept
         with self.counting:
