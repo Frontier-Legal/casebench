@@ -10,7 +10,7 @@ Amends [0030](0030-set-up-here-run-there.md) (what `casebench init` asks and sho
 
 ## Context and problem statement
 
-The first real `casebench init` on a production repository (Frontier Legal's agent, 1,454 Python files, 2026-10-14) was not usable:
+The first real `casebench init` on a production legal agent's repository (1,454 Python files, 2026-10-14) was not usable:
 
 - the scan printed about 60 lines of HTTP clients and model names from tests;
 - it offered several hundred functions, most of them tests, as the agent's entry point, in one comma-separated line;
@@ -18,15 +18,15 @@ The first real `casebench init` on a production repository (Frontier Legal's age
 
 Each question was plain text, typed paths were the norm, and a refused step meant starting again. A legal team evaluating its agent would leave before the first run.
 
-We studied the first-run experience of four tools whose onboarding users praise, and they agree on a short list of practices (links in More information):
+A first run that people finish follows a short list of practices:
 
-- **detect before asking:** all four;
-- **two lanes, quick and custom:** OpenClaw;
-- **summaries rather than logs:** herdr, pi;
-- **searchable pickers, never typed values:** pi, Claude Code;
-- **say where each key came from:** pi, OpenClaw;
-- **check with a real call, then loop back:** OpenClaw;
-- **review before writing, with re-runs that repair:** Claude Code, OpenClaw.
+- detect before asking;
+- two lanes, one that takes what was found and one that asks every part;
+- summaries rather than logs;
+- pickers rather than typed values;
+- say where each key came from;
+- check with a real call, and on a failure loop back to the step rather than start again;
+- review before writing, with re-runs that repair.
 
 ## Considered options
 
@@ -55,7 +55,7 @@ Chosen option 1, because it gives the look and flow of the tools studied while s
     - The summary has one line per kind; the full detail stays available with `casebench init --details`.
   - **A corpus's fields** are picked from a real search and fetch: each field is offered with its path and a sample value, in both lanes. A script names them with flags. The only suggestions are structural: the id is the field whose value is the fetched id, the text is the longest string and a date is a value in ISO form.
   - **Keys** are matched by the exact name the config expects, and otherwise picked from a file's names.
-- **Keys in .env files.** A key named in the config is read from the environment first. When it is not set there, Casebench looks for that name in the project's `.env` files: files named `.env` or `.env.*`, except placeholder files such as `.env.example`, outside virtual environments, `node_modules` and hidden folders.
+- **Keys in .env files.** A key named in the config is read from the environment first. When it is not set there, Casebench looks for that name in the project's `.env` files: files named `.env`, `.env.*` or `*.env` (such as `env/eval.env`), except placeholder files such as `.env.example` or `eval.env.example`, outside virtual environments, `node_modules` and hidden folders.
   - **One file has it:** that file is used, and the step says so (`✓ CORPUS_API_KEY in research/.env`).
   - **Several files have it with different values:** the user picks the file, each shown with a masked preview (first and last four characters).
   - **None has it:** the user picks a `.env` file, then a key from the names in it. The config then refers to that name.
@@ -66,7 +66,7 @@ Chosen option 1, because it gives the look and flow of the tools studied while s
 
 ### Consequences
 
-- Good, because a project like Frontier Legal's is set up with a handful of Enter presses: the agent function, the corpus key and the judge's key are found or picked, not typed.
+- Good, because a project like that first one is set up with a handful of Enter presses: the agent function, the corpus key and the judge's key are found or picked, not typed.
 - Good, because keys stay where the team keeps them, and the config says where each one is read from.
 - Bad, because Casebench now reads named variables from files in the project; it reads only the names the config lists, and never writes a value.
 - Bad, because a new dependency, Rich, is added; it is widely used, pure Python and has no dependencies beyond `markdown-it-py` and `pygments`.
@@ -75,13 +75,8 @@ Chosen option 1, because it gives the look and flow of the tools studied while s
 ## Revisit when
 
 - Users ask for a back key in the flow; that needs a full-screen interface (option 2).
-- A team keeps keys in a secret manager rather than `.env` files; pi's `!command` references are the model to follow.
+- A team keeps keys in a secret manager rather than `.env` files; a key could then name the command that prints it.
 
 ## More information
 
-Studied on 2026-10-14:
-- [pi coding agent](https://github.com/earendil-works/pi/tree/main/packages/coding-agent): credential source shown inline, searchable pickers with a position counter, collapsed summaries.
-- [OpenClaw](https://github.com/openclaw/openclaw): Quick start and Custom lanes, "use existing KEY (sk-a…xyz1)?", live test completion with typed failure reasons and loop back, `doctor --fix`.
-- [herdr](https://github.com/herdrdev/herdr): a first run with no questions, one status row per detected item, single-key config edits.
-- [Claude Code](https://github.com/anthropics/claude-code): `/init` proposes a reviewable result, `/doctor` holds diagnostics, errors name the next command.
 - [Rich](https://github.com/Textualize/rich) and [questionary](https://github.com/tmbo/questionary).
