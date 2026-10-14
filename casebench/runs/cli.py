@@ -163,6 +163,7 @@ def run(
         concurrency,
         on_scored=progress.scored_one if progress else None,
     )
+    click.echo(render.suite_line(log.info.suite_id, log.info.suite_hash))
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):

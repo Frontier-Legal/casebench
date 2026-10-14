@@ -11,7 +11,7 @@ from casebench.formats.version import FormatVersion, UnreadableFormat
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.record import FORMAT, Report
-from casebench.report.render import REPORT_FILE, error_lines, lines
+from casebench.report.render import REPORT_FILE, error_lines, lines, suite_line
 from casebench.runs.log import RunLog
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -38,6 +38,8 @@ def report_command(run_dir: Path) -> None:
     report, ignored = read(Report, saved, declared, FORMAT)
     if ignored:
         click.echo(ignored_note(str(path), declared, FORMAT, ignored), err=True)
+    if report.suite_hash:
+        click.echo(suite_line(report.suite_id, report.suite_hash))
     for line in lines(report.tables, report.scores, report.funnel.summary):
         click.echo(line)
     for line in error_lines(report.scoring_errors, run_dir.name):

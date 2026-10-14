@@ -138,5 +138,15 @@ def score(
     traced, unfunnelled = funnels(log, cases, context, errors)
     errors += unfunnelled
     summary = summarise(traced)
-    report = render.write(log.folder, produced_by, tables, scores, path, traced, summary, errors)
+    report = render.write(
+        log.folder,
+        produced_by,
+        tables,
+        scores,
+        path,
+        traced,
+        summary,
+        errors,
+        (log.info.suite_id, log.info.suite_hash),
+    )
     return Scored(path, scores, tables, summary, report, errors)
