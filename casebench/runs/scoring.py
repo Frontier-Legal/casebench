@@ -10,6 +10,7 @@ from casebench.core.score import Score
 from casebench.corpus.cache import corpus_key
 from casebench.corpus.corpora import Corpora
 from casebench.judge.client import Judge
+from casebench.judge.judges import judges_for
 from casebench.judge.memo import MEMO_FILE, Memo
 from casebench.judge.resolve import Resolver, cited_documents
 from casebench.metrics.base import Metric
@@ -34,9 +35,11 @@ class Scored:
 def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, Any]:
     """What metrics may ask for: the judge and the corpus, when the config has them."""
     context: dict[str, Any] = {}
-    if config.judge is not None:
-        context["judge"] = Judge(config.judge, memo=memo)
-        context["candidates"] = config.judge.candidates
+    if config.judges:
+        first, *second = judges_for(config.judges, memo)
+        context["judge"] = first
+        context["second_judge"] = second[0] if second else None
+        context["candidates"] = first.config.candidates
     if config.corpora:
         context["corpus"] = Corpora(config.corpora)
     return context
@@ -71,19 +74,17 @@ def funnels(log: RunLog, cases: list[Case], context: dict[str, Any]) -> list[Cas
 def producer(
     metrics: list[Metric], cases: list[Case], config: CasebenchConfig, context: dict[str, Any]
 ) -> Producer:
-    """The judge's family comes from its provider, which is why the built judge is read."""
-    judge: Judge | None = context.get("judge")
-    judges: list[JudgeUsed] = []
-    if judge is not None:
-        used = judge.config
-        judges.append(
-            JudgeUsed(
-                provider=used.provider,
-                model=used.model,
-                family=judge.family,
-                candidates=used.candidates,
-            )
+    """A judge's family comes from its provider, which is why the built judges are read."""
+    judges = [
+        JudgeUsed(
+            provider=judge.config.provider,
+            model=judge.config.model,
+            family=judge.family,
+            candidates=judge.config.candidates,
         )
+        for judge in (context.get("judge"), context.get("second_judge"))
+        if judge is not None
+    ]
     corpora = {name: corpus_key(c.connector, c.options) for name, c in config.corpora.items()}
     return producer_for(metrics, cases, judges, corpora)
 

@@ -78,7 +78,7 @@ def test_the_dry_run_counts_the_searches_already_kept(api: str, tmp_path: Path):
     invoke("corpus", "check", "--query", "feshi")
     # A judge is what makes the run search for citations at all.
     judged = load_config(config).model_copy(
-        update={"judge": JudgeConfig(provider="anthropic", model="m")}
+        update={"judges": [JudgeConfig(provider="anthropic", model="m")]}
     )
     pending = [case().model_copy(update={"metrics": ["citation_integrity"]})]
 

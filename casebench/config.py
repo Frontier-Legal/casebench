@@ -24,17 +24,36 @@ class ConfigError(ValueError):
 # The name a single `corpus:` is read under (decision 0036).
 SINGLE = "corpus"
 CorpusName = Annotated[str, StringConstraints(pattern=NAME)]
+# A judge and, optionally, a second one from another model family (decision 0035).
+MOST_JUDGES = 2
 
 
 class CasebenchConfig(Record):
     """`corpora:` names every corpus; `corpus:` is the form for one, read as one named
-    `corpus`."""
+    `corpus`. Likewise `judges:` and `judge:`."""
 
     target: dict[str, Any] | None = None
     corpora: dict[CorpusName, CorpusConfig] = Field(default_factory=dict)
     capture: CaptureConfig | None = None
-    judge: JudgeConfig | None = None
+    judges: list[JudgeConfig] = Field(default_factory=list, max_length=MOST_JUDGES)
     extract: ExtractConfig | None = None
+
+    @property
+    def judge(self) -> JudgeConfig | None:
+        """The first judge: it lists an answer's citations, and decides alone when it is the
+        only one."""
+        return self.judges[0] if self.judges else None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _one_judge_is_a_list_of_one(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "judge" not in data:
+            return data
+        if data.get("judges"):
+            raise ValueError("give `judge:` for one judge or `judges:` for two, not both")
+        single = data["judge"]
+        rest = {key: value for key, value in data.items() if key != "judge"}
+        return {**rest, "judges": [single]} if single is not None else rest
 
     @model_validator(mode="before")
     @classmethod

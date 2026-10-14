@@ -5,6 +5,7 @@ from pathlib import Path
 
 from casebench.core.score import Score
 from casebench.corpus.routing import Route
+from casebench.report.agreement import agreement
 from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
@@ -51,8 +52,29 @@ def lines(
                 "  searched by: "
                 + ", ".join(f"{routes[r.value]} {ROUTED[r]}" for r in Route if routes[r.value])
             )
+    out += _judges(scores)
     if funnel is not None:
         out += funnel_lines(funnel)
+    return out
+
+
+def _judges(scores: list[Score]) -> list[str]:
+    """Only with two judges; every disagreement is listed, since a lawyer decides each one."""
+    agreed = agreement(scores)
+    if not agreed:
+        return []
+    out = ["judges"]
+    out += [
+        f"  {a.metric}: agreed on {a.items - a.disagreed} of {a.items} items ({_percent(a.rate)})"
+        for a in agreed
+    ]
+    differ = [(s, d) for s in scores for d in s.disagreements]
+    if differ:
+        out.append("  disagreements, counted as failed until a lawyer decides them:")
+        out += [
+            f"    {s.case_id} · {s.metric} · {d.item}: first {d.first}, second {d.second}"
+            for s, d in differ
+        ]
     return out
 
 
@@ -72,6 +94,7 @@ def write(
         produced_by=produced_by,
         tables=tables,
         citations=citation_rates(scores),
+        agreement=agreement(scores),
         funnel=Funnel(summary=summary, cases=funnels),
         scores=scores,
     )

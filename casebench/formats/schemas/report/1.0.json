@@ -237,6 +237,28 @@
       "title": "Direction",
       "type": "string"
     },
+    "Disagreement": {
+      "additionalProperties": false,
+      "description": "One item two judges decided differently; the stricter verdict is the one that counted,\nuntil a lawyer decides it (decision 0035).",
+      "properties": {
+        "item": {
+          "type": "string"
+        },
+        "first": {
+          "type": "string"
+        },
+        "second": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "item",
+        "first",
+        "second"
+      ],
+      "title": "Disagreement",
+      "type": "object"
+    },
     "Funnel": {
       "additionalProperties": false,
       "description": "How many gold authorities survived each step, over the run and per case.",
@@ -303,6 +325,31 @@
         "cited_checked"
       ],
       "title": "FunnelSummary",
+      "type": "object"
+    },
+    "JudgeAgreement": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "items": {
+          "type": "integer"
+        },
+        "disagreed": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "metric",
+        "items",
+        "disagreed",
+        "rate"
+      ],
+      "title": "JudgeAgreement",
       "type": "object"
     },
     "JudgeUsed": {
@@ -537,6 +584,17 @@
           },
           "type": "array"
         },
+        "judged_twice": {
+          "default": 0,
+          "description": "Items both judges decided (decision 0035).",
+          "type": "integer"
+        },
+        "disagreements": {
+          "items": {
+            "$ref": "#/$defs/Disagreement"
+          },
+          "type": "array"
+        },
         "task_type": {
           "type": "string"
         },
@@ -630,6 +688,13 @@
     "citations": {
       "items": {
         "$ref": "#/$defs/CitationRate"
+      },
+      "type": "array"
+    },
+    "agreement": {
+      "description": "Per metric, with two judges (decision 0035).",
+      "items": {
+        "$ref": "#/$defs/JudgeAgreement"
       },
       "type": "array"
     },

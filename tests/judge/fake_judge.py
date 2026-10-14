@@ -23,11 +23,19 @@ LISTED = [
     },
 ]
 SUPPORTING = {"101": "İşçinin feshi geçersizdir."}
+# Second judges that see things differently: one never finds a claim supported, the other never
+# recognises a cited document among the candidates.
+DOUBTING = "doubting-judge"
+LOST = "lost-judge"
 
 
-def reply(system: str, user: str) -> object:
+def reply(system: str, user: str, model: str = "") -> object:
     if system == prompts.LIST_CITATIONS:
         return LISTED
+    if system == prompts.MATCH and model == LOST:
+        return {"document_id": None, "reason": "none of these is the cited decision"}
+    if system == prompts.WEIGH and model == DOUBTING:
+        return {"supports": False, "quote": None, "reason": "the passage says something else"}
     if system == prompts.MATCH:
         docket = re.search(r"E\. (\d{4}/\d+)", user.split("Candidates:")[0])
         candidates = json.loads(user.split("Candidates:\n", 1)[1])
@@ -50,7 +58,8 @@ class FakeJudge(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeJudge.calls.append(body["system"][:20])
-        text = json.dumps(reply(body["system"], body["messages"][0]["content"]), ensure_ascii=False)
+        asked = reply(body["system"], body["messages"][0]["content"], body.get("model", ""))
+        text = json.dumps(asked, ensure_ascii=False)
         payload = json.dumps(
             {
                 "type": "message",
