@@ -16,6 +16,8 @@ A parser may list `packages`, the SDKs whose calls it reads (such as `openai` on
 
 A connector holds no legal logic. One connector can serve many countries; each decision carries its jurisdiction, and a corpus in `casebench.yaml` may name one to filter by.
 
+The judge matches a citation by what the store says about each search result: how it cites the document, its type and the passage the search matched. A connector whose store returns these also defines `search_results(text, limit, filters)`, returning `casebench.corpus.results.SearchResult` items, and applies `filters`, which `casebench.yaml` sets per kind of citation under `search_filters`. The `http` and `mcp` connectors read them with `search_results` and `result_fields`, which `corpus add` suggests and `corpus check` reports on. A connector with only `search(text, limit)` still works: Casebench fetches each candidate and describes it from the document ([decision 0037](docs/decisions/0037-match-by-the-corpus-description.md)).
+
 ## Steps
 
 1. Scaffold it: `casebench plugin new <kind> --name <name>`. It writes a `casebench-<name>` package with the interface stubs, a conformance test and a README. With `--built-in`, it writes a folder inside the core instead, for a plugin the maintainers will release with Casebench.

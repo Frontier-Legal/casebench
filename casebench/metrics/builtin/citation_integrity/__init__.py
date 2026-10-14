@@ -7,7 +7,7 @@ from casebench.core.score import CitationCheck, CitationLabel, Direction, Disagr
 from casebench.corpus.corpora import Corpora
 from casebench.judge import prompts
 from casebench.judge.client import Judge
-from casebench.judge.resolve import Resolver
+from casebench.judge.resolve import Resolution, Resolver
 from casebench.metrics.base import Verdict
 from casebench.runs.log import Result
 
@@ -17,7 +17,7 @@ class CitationIntegrity:
     two judges, a citation is verified only when both verify it."""
 
     name = "citation_integrity"
-    version = "2"
+    version = "3"
     kind = ScoreKind.LLM
     direction = Direction.HIGHER
 
@@ -35,11 +35,10 @@ class CitationIntegrity:
             self.resolvers.append(Resolver(second_judge, corpus, second_judge.config.candidates))
 
     def check(
-        self, resolver: Resolver, item: dict[str, Any], case_jurisdiction: str | None
+        self, resolver: Resolver, item: dict[str, Any], resolved: Resolution
     ) -> CitationCheck:
-        """One judge's verdict on one citation."""
+        """One judge's verdict on one citation, once it has been matched to a document."""
         citation, claim = str(item["citation"]), str(item.get("claim", ""))
-        resolved = resolver.resolve_listed(item, case_jurisdiction)
         if resolved.document_id is None:
             unchecked = CitationLabel.UNCHECKED if resolved.unchecked else None
             return CitationCheck(
@@ -69,9 +68,15 @@ class CitationIntegrity:
         checks: list[CitationCheck] = []
         disagreements: list[Disagreement] = []
         twice = 0
-        # The first judge lists the citations; each judge then decides each one (decision 0035).
-        for item in self.resolvers[0].list_citations(result.output):
-            each = [self.check(resolver, item, place) for resolver in self.resolvers]
+        # The first judge lists the citations; each judge then decides each one (decision 0035),
+        # matching all of them in one call (decision 0037).
+        items = self.resolvers[0].list_citations(result.output)
+        matched = [resolver.resolve_all(items, place) for resolver in self.resolvers]
+        for position, item in enumerate(items):
+            each = [
+                self.check(resolver, item, resolved[position])
+                for resolver, resolved in zip(self.resolvers, matched, strict=True)
+            ]
             checks.append(next((c for c in each if c.label is not CitationLabel.VERIFIED), each[0]))
             if len(each) > 1 and each[0].label is not CitationLabel.UNCHECKED:
                 twice += 1

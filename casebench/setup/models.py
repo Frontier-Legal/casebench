@@ -58,4 +58,9 @@ def choose(
             notes.append(f"it uses this project's {package} and the credentials it finds")
         else:
             notes.append(f"{package} is not installed here; add it to the project first")
-    return {"provider": plugin, "model": model_id, "options": options}, notes
+    block: dict[str, Any] = {"provider": plugin, "model": model_id, "options": options}
+    # A matching call is split only when it would not fit this window (decision 0037).
+    window = (model.get("limit") or {}).get("context")
+    if window:
+        block["context_window"] = window
+    return block, notes

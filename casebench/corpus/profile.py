@@ -1,7 +1,7 @@
 """A data provider profile: a reviewed, saved answer to `casebench corpus add` (decision 0033)."""
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -41,5 +41,10 @@ class Profile(Record):
     )
     connector: str
     options: dict[str, Any]
+    search_filters: dict[Literal["statute", "decision"], dict[str, Any]] = Field(
+        default_factory=dict,
+        description="What a search for each kind of citation adds, such as a document type, so "
+        "a statute is searched only among statutes (decision 0037).",
+    )
     probe: str
     extensions: Extensions = Field(default_factory=dict)

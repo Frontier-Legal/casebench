@@ -21,7 +21,9 @@ from casebench.corpus.bundled import resolve
 from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.record import REQUIRED_FIELDS
-from casebench.corpus.suggest import document_fields, search_ids
+from casebench.corpus.results import read_results
+from casebench.corpus.suggest import document_fields, results_path, search_ids
+from casebench.corpus.suggest import result_fields as described_fields
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.setup.checks import unreachable
@@ -65,20 +67,84 @@ def _live(call: Any, what: str) -> Any:
         raise click.ClickException(f"the API answered {status} to the {what}: {hint}") from error
 
 
+SAYS = {
+    "citation": "how the corpus cites the document",
+    "type": "what kind of document it is",
+    "passage": "the passage the search matched",
+}
+
+
+def _results(
+    response: Any, results_given: str | None, given: dict[str, str], ask: bool
+) -> tuple[dict[str, Any], str] | None:
+    """Where each result is and what it says about its document, which is what the judge
+    sees to match a citation (decision 0037); None when the results carry only ids."""
+    suggested = results_path(response)
+    where = _choose(
+        "JSONPath to each result in a search response (empty if results carry only ids)",
+        results_given,
+        suggested[0] if suggested else None,
+        ask,
+    )
+    if not where:
+        return None
+    id_hint = suggested[1] if suggested and suggested[0] == where else None
+    id_path = _choose("JSONPath to the id inside one result", given.get("id"), id_hint, ask)
+    if not id_path:
+        raise click.ClickException("no document id found in the search result; check the path")
+    fields = {"id": id_path}
+    hints = described_fields(response, where)
+    for name, says in SAYS.items():
+        path = _choose(
+            f"JSONPath to {says}, inside one result", given.get(name), hints.get(name), ask
+        )
+        if path:
+            fields[name] = path
+    found = read_results(response, where, fields)
+    if not found:
+        raise click.ClickException("no document id found in the search result; check the path")
+    seen = [name for name in SAYS if getattr(found[0], name) is not None]
+    missing = [name for name in SAYS if name not in seen]
+    click.echo(
+        f"to match a citation the judge sees each result's {', '.join(seen) or 'id alone'}"
+        + (
+            f"; missing: {', '.join(missing)}, which Casebench fills from the document where it can"
+            if missing
+            else ""
+        )
+    )
+    return {"search_results": where, "result_fields": fields}, found[0].id
+
+
 def _map(
-    store: Any, probe: str, ids_given: str | None, fields_given: dict[str, str], ask: bool
-) -> tuple[str, dict[str, str]]:
-    """One live search and one fetch; show them, suggest paths, let the user correct them."""
+    store: Any,
+    probe: str,
+    ids_given: str | None,
+    fields_given: dict[str, str],
+    ask: bool,
+    results_given: str | None = None,
+    result_fields_given: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """One live search and one fetch; show them, suggest paths, let the user correct them.
+    Returns the connector options they set."""
     results = _live(lambda: store.search_raw(probe, 1), "search")
     click.echo(f"search for {probe!r} returned:")
     for line in describe(results):
         click.echo(f"  {line}")
-    ids_path = _choose(
-        "JSONPath to the ids in a search result", ids_given, search_ids(results), ask
+    # Ids given alone keep the results undescribed, as before.
+    ids_only = ids_given is not None and results_given is None
+    described = (
+        None if ids_only else _results(results, results_given, result_fields_given or {}, ask)
     )
-    if not ids_path or not every(ids_path, results):
-        raise click.ClickException("no document id found in the search result; check the path")
-    first_id = str(every(ids_path, results)[0])
+    if described is not None:
+        options, first_id = described
+    else:
+        ids_path = _choose(
+            "JSONPath to the ids in a search result", ids_given, search_ids(results), ask
+        )
+        if not ids_path or not every(ids_path, results):
+            raise click.ClickException("no document id found in the search result; check the path")
+        options, first_id = {"search_ids": ids_path}, str(every(ids_path, results)[0])
     document = _live(lambda: store.fetch_raw(first_id), f"fetch of document {first_id}")
     click.echo(f"document {first_id} returned:")
     for line in describe(document):
@@ -92,7 +158,7 @@ def _map(
     mapped = record_fields(document, fields)
     missing = [name for name in REQUIRED_FIELDS if name not in mapped]
     click.echo("missing: " + ", ".join(missing) if missing else "every required field found")
-    return ids_path, fields
+    return options | {"fields": fields}
 
 
 def _save(config: Path, block: dict[str, Any], ask: bool, name: str | None = None) -> None:
@@ -144,6 +210,8 @@ def http_block(
     probe: str | None = None,
     ids_path: str | None = None,
     fields: tuple[str, ...] = (),
+    results: str | None = None,
+    result_fields: tuple[str, ...] = (),
     jurisdictions: list[str] | None = None,
     ask: bool = True,
 ) -> dict[str, Any]:
@@ -179,7 +247,7 @@ def http_block(
         raise click.ClickException(f"{', '.join(unset)} is not set in this shell; export it first")
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("http", options)
-    options["search_ids"], options["fields"] = _map(store, probe, ids_path, _pairs(fields), ask)
+    options |= _map(store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields))
     return corpus_block("http", options, jurisdictions)
 
 
@@ -194,6 +262,8 @@ def mcp_block(
     probe: str | None = None,
     ids_path: str | None = None,
     fields: tuple[str, ...] = (),
+    results: str | None = None,
+    result_fields: tuple[str, ...] = (),
     jurisdictions: list[str] | None = None,
     ask: bool = True,
 ) -> dict[str, Any]:
@@ -218,7 +288,7 @@ def mcp_block(
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("mcp", options)
     try:
-        options["search_ids"], options["fields"] = _map(store, probe, ids_path, _pairs(fields), ask)
+        options |= _map(store, probe, ids_path, _pairs(fields), ask, results, _pairs(result_fields))
     finally:
         store.close()
     return corpus_block("mcp", options, jurisdictions)
@@ -235,6 +305,13 @@ COMMON = [
     click.option("--probe", help="A search that finds at least one document."),
     click.option("--ids", "ids_path", help="JSONPath to the ids in a search result."),
     click.option("--field", "fields", multiple=True, help="NAME=JSONPath, such as text=$.body."),
+    click.option("--results", help="JSONPath to each result in a search response."),
+    click.option(
+        "--result-field",
+        "result_fields",
+        multiple=True,
+        help="NAME=JSONPath inside one result, for id, citation, type or passage.",
+    ),
     click.option(
         "--jurisdiction",
         "jurisdictions",
@@ -288,6 +365,8 @@ def http(
     probe: str | None,
     ids_path: str | None,
     fields: tuple[str, ...],
+    results: str | None,
+    result_fields: tuple[str, ...],
     jurisdictions: tuple[str, ...],
     name: str | None,
     yes: bool,
@@ -304,6 +383,8 @@ def http(
         probe=probe,
         ids_path=ids_path,
         fields=fields,
+        results=results,
+        result_fields=result_fields,
         jurisdictions=codes(jurisdictions),
         ask=not yes,
     )
@@ -329,6 +410,8 @@ def mcp(
     probe: str | None,
     ids_path: str | None,
     fields: tuple[str, ...],
+    results: str | None,
+    result_fields: tuple[str, ...],
     jurisdictions: tuple[str, ...],
     name: str | None,
     yes: bool,
@@ -344,6 +427,8 @@ def mcp(
         probe=probe,
         ids_path=ids_path,
         fields=fields,
+        results=results,
+        result_fields=result_fields,
         jurisdictions=codes(jurisdictions),
         ask=not yes,
     )

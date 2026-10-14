@@ -11,11 +11,14 @@ from casebench.corpus.cache import DEFAULT_CACHE, CachedConnector, corpus_key
 from casebench.corpus.ids import UnqualifiedId, qualify, split
 from casebench.corpus.interface import list_ids
 from casebench.corpus.record import DecisionRecord
+from casebench.corpus.results import SearchResult
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
 Holding = Literal["decisions", "statutes"]
 Charge = Literal["search", "fetch", "none"]
+# The kinds of citation the judge names (decision 0029).
+Cited = Literal["statute", "decision"]
 
 
 class CorpusConfig(Record):
@@ -23,7 +26,9 @@ class CorpusConfig(Record):
     empty; `holds` the kinds of documents it has, both when empty. `connector_source` names
     the distribution when two register the same connector; `profile` records which profile
     the options came from, and is never read again. `metered` is what the provider charges
-    for: a store that charges per search has each search kept, like each document."""
+    for: a store that charges per search has each search kept, like each document.
+    `search_filters` are what a search for each kind of citation adds, so a statute is
+    searched only among statutes (decision 0037)."""
 
     connector: str
     jurisdictions: list[Jurisdiction] = Field(default_factory=list)
@@ -32,6 +37,7 @@ class CorpusConfig(Record):
     connector_source: str | None = None
     profile: str | None = None
     metered: Charge = "none"
+    search_filters: dict[Cited, dict[str, Any]] = Field(default_factory=dict)
 
 
 def _code_or_none(value: str) -> str | None:
@@ -57,6 +63,7 @@ class Corpus:
         )
         self.name = name
         self.jurisdictions = list(config.jurisdictions)
+        self.search_filters = config.search_filters
 
     def own(self, qualified: str) -> str:
         """The provider's id for one of this corpus's qualified ids."""
@@ -83,6 +90,12 @@ class Corpus:
 
     def search(self, text: str, limit: int) -> list[str]:
         return [qualify(self.name, found) for found in self.connector.search(text, limit)]
+
+    def search_results(self, text: str, limit: int, kind: str | None = None) -> list[SearchResult]:
+        """Searched with the filters for `kind`, the kind of citation the judge named."""
+        filters = self.search_filters.get(kind, {}) if kind in ("statute", "decision") else {}
+        found = self.connector.search_results(text, limit, filters)
+        return [r.model_copy(update={"id": qualify(self.name, r.id)}) for r in found]
 
     def decision_ids(self) -> list[str]:
         """Every id in the store, or only those in the jurisdictions the corpus lists."""

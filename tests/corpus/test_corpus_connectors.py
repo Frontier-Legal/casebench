@@ -52,7 +52,8 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
     assert "$.expressions[0].text  text," in added.output
     corpus = yaml.safe_load(config.read_text(encoding="utf-8"))["corpora"]["127-0-0-1"]
     assert corpus["connector"] == "http"
-    assert corpus["options"]["search_ids"] == "$.results[*].work.work_id"
+    assert corpus["options"]["search_results"] == "$.results[*]"
+    assert corpus["options"]["result_fields"]["id"] == "$.work.work_id"
     assert corpus["options"]["fields"]["id"] == "$.work_id"
     assert corpus["options"]["fields"]["text"] == "$.expressions[0].text"
     assert corpus["options"]["fields"]["court"] == "$.issuers[0].name"
@@ -98,7 +99,8 @@ def test_add_a_connector_from_the_command_line(api: str, tmp_path: Path):
     mcp_corpus = yaml.safe_load(mcp_config.read_text(encoding="utf-8"))["corpora"][
         "tests-corpus-mcp-documents"
     ]
-    assert mcp_corpus["options"]["search_ids"] == "$.hits[*].document_id"
+    assert mcp_corpus["options"]["search_results"] == "$.hits[*]"
+    assert mcp_corpus["options"]["result_fields"]["id"] == "$.document_id"
 
 
 def test_connector_validated_on_a_sample(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

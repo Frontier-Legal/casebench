@@ -2,6 +2,7 @@
 
 import json
 import re
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -47,6 +48,8 @@ class Judge:
         self.calls = 0
         self.input_tokens = 0
         self.output_tokens = 0
+        # Cases are scored in parallel (decision 0037); the counts stay exact.
+        self.counting = threading.Lock()
 
     @property
     def family(self) -> str:
@@ -57,11 +60,13 @@ class Judge:
         key = memo_key(self.config.provider, self.config.model, system, user)
         if self.memo is not None and (kept := self.memo.get(key)) is not None:
             return kept
-        self.calls += 1
+        with self.counting:
+            self.calls += 1
         messages = [Message(role="system", content=system), Message(role="user", content=user)]
         completion = complete(self.provider, messages, self.config.model, self.send)
-        self.input_tokens += completion.input_tokens or 0
-        self.output_tokens += completion.output_tokens or 0
+        with self.counting:
+            self.input_tokens += completion.input_tokens or 0
+            self.output_tokens += completion.output_tokens or 0
         reply = read_json(completion.text)
         if self.memo is not None:
             self.memo.put(key, reply)

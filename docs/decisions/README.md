@@ -50,3 +50,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0034](0034-versioned-formats.md) | Casebench formats are versioned JSON Schemas generated from the models | accepted |
 | [0035](0035-comparable-and-strict-scores.md) | Every score set says what produced it; a strict pass rate and a second judge are reported beside the scores, never blended | accepted |
 | [0036](0036-several-corpora.md) | A setup connects several corpora by name; citations go to the corpus that covers their jurisdiction | accepted |
+| [0037](0037-match-by-the-corpus-description.md) | The judge matches citations by what the corpus says about each result, one call per answer; scoring runs in parallel and survives a dropped call | accepted |

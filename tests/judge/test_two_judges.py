@@ -142,7 +142,7 @@ def test_the_dry_run_counts_the_second_judges_calls(port: int):
 
     printed = "\n".join(estimate([case(["citation_integrity"])], set(), two).lines())
 
-    assert "then up to two per citation for each of the 2 judges" in printed
+    assert "one per citation to weigh it for each of the 2 judges" in printed
 
 
 def test_a_criterion_passes_only_when_both_judges_pass_it(port: int):

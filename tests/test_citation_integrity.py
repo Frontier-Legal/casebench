@@ -88,7 +88,7 @@ def test_fabricated_and_misstated_citations(tmp_path: Path, monkeypatch: pytest.
     assert rates[CitationLabel.FABRICATED] == (1, pytest.approx(1 / 3))
     assert rates[CitationLabel.MISGROUNDED] == (1, pytest.approx(1 / 3))
     assert rates[CitationLabel.VERIFIED] == (1, pytest.approx(1 / 3))
-    assert len(FakeJudge.calls) == 1 + 3 + 2  # list, match each, weigh each found one
+    assert len(FakeJudge.calls) == 1 + 1 + 2  # list, match all three at once, weigh each found
 
 
 def test_a_judge_reply_in_a_fenced_block_is_read():

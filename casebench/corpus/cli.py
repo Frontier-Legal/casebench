@@ -7,7 +7,7 @@ import click
 from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.corpus import cache
 from casebench.corpus.add_cli import add
-from casebench.corpus.check import SAMPLE_SIZE, check
+from casebench.corpus.check import SAMPLE_SIZE, CheckReport, check
 from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
 
@@ -70,6 +70,25 @@ def check_command(
         click.echo(f"  failed: {failure}")
     if report.missing:
         click.echo(f"missing in some documents: {', '.join(report.missing)}")
+    for line in _description_lines(report, bool(queries)):
+        click.echo(line)
+
+
+def _description_lines(report: CheckReport, searched: bool) -> list[str]:
+    """What the judge sees of each search result to match a citation (decision 0037)."""
+    if not searched:
+        return ["pass --query to see what search results say about their documents"]
+    lines = ["search results, as the judge sees them to match a citation:"]
+    lines += [
+        f"  {name:<13} {count}/{report.results} results" for name, count in report.described.items()
+    ]
+    if report.undescribed:
+        lines.append(
+            f"missing in some results: {', '.join(report.undescribed)}; Casebench describes "
+            "those results from each document instead, which costs a fetch; map them with "
+            "search_results and result_fields"
+        )
+    return lines
 
 
 @corpus.group(name="cache")

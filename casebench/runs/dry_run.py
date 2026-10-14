@@ -8,9 +8,8 @@ from casebench.core.case import Case
 from casebench.corpus.cache import DEFAULT_CACHE, cached_documents, cached_searches
 from casebench.corpus.routing import route
 from casebench.judge import prompts
+from casebench.judge.budget import CHARACTERS_PER_TOKEN, tokens
 
-# OpenAI's published rule of thumb for English text; other languages differ (decision 0028).
-CHARACTERS_PER_TOKEN = 4
 JUDGED = ("citation_integrity", "statute", "precedent")
 GRADED = "criteria"
 
@@ -43,8 +42,8 @@ class DryRun:
             out.append(
                 f"judge: at least {self.judge_calls_at_least} calls and "
                 f"{self.judge_input_tokens_at_least} input tokens (one call per answer to list "
-                f"its citations, then up to two per citation{self._each}, known only once the "
-                "answers exist)"
+                f"its citations, then one to match them all and one per citation to weigh it"
+                f"{self._each}, known only once the answers exist)"
             )
         if self.grading_calls:
             out.append(
@@ -71,10 +70,6 @@ class DryRun:
         return out
 
 
-def _tokens(characters: int) -> int:
-    return characters // CHARACTERS_PER_TOKEN
-
-
 def estimate(
     cases: list[Case], stored: set[str], config: CasebenchConfig, cache_root=DEFAULT_CACHE
 ) -> DryRun:
@@ -92,13 +87,13 @@ def estimate(
     )
     return DryRun(
         target_calls=len(pending),
-        target_input_tokens=_tokens(characters),
+        target_input_tokens=tokens(characters),
         stored=len(cases) - len(pending),
         judge_calls_at_least=checked,
-        judge_input_tokens_at_least=checked * _tokens(len(prompts.LIST_CITATIONS)),
+        judge_input_tokens_at_least=checked * tokens(len(prompts.LIST_CITATIONS)),
         judges=judges,
         grading_calls=len(graded) * judges,
-        grading_input_tokens_at_least=_tokens(grading) * judges,
+        grading_input_tokens_at_least=tokens(grading) * judges,
         candidates=config.judge.candidates if config.judge and corpora else None,
         cached=(
             sum(cached_documents(c.connector, c.options, cache_root) for c in corpora)

@@ -215,7 +215,7 @@ def test_a_corpus_that_refuses_says_why(checkout: Path, monkeypatch: pytest.Monk
         refused = CliRunner().invoke(main, flags, input=asked)
         (checkout / "casebench.yaml").unlink()
         monkeypatch.setenv("DOC_KEY", KEY)
-        added = CliRunner().invoke(main, flags, input=asked + "\n" * 8)
+        added = CliRunner().invoke(main, flags, input=asked + "\n" * 13)
     finally:
         api.shutdown()
 

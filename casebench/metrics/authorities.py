@@ -30,7 +30,7 @@ class AuthorityMetric:
 
     name: ClassVar[str]
     listed_kind: ClassVar[str]
-    version = "1"
+    version = "2"
     kind = ScoreKind.LLM
     direction = Direction.HIGHER
 
@@ -46,11 +46,11 @@ class AuthorityMetric:
         if second_judge is not None:
             self.resolvers.append(Resolver(second_judge, corpus, second_judge.config.candidates))
 
-    def resolve(
-        self, item: dict[str, Any], place: str | None
+    @staticmethod
+    def decide(
+        item: dict[str, Any], each: list[Resolution]
     ) -> tuple[Resolution, Disagreement | None]:
         """With two judges, a citation is the document both name, and none when they differ."""
-        each = [resolver.resolve_listed(item, place) for resolver in self.resolvers]
         named = [r.document_id for r in each]
         if len(set(named)) == 1:
             return each[0], None
@@ -69,12 +69,15 @@ class AuthorityMetric:
         if result.output is None:
             return Verdict(value=0.0, label="no output")
         place = case.provenance.jurisdiction if case.provenance else None
-        wanted = [
-            item
-            for item in self.resolvers[0].list_citations(result.output)
+        # Every citation is matched, as the other metrics match them, so the judge's memo
+        # answers all of them from one call (decision 0037); only this kind is counted.
+        items = self.resolvers[0].list_citations(result.output)
+        matched = [resolver.resolve_all(items, place) for resolver in self.resolvers]
+        decided = [
+            self.decide(item, [resolved[position] for resolved in matched])
+            for position, item in enumerate(items)
             if item.get("kind", self.listed_kind) == self.listed_kind
         ]
-        decided = [self.resolve(item, place) for item in wanted]
         resolved = [resolution for resolution, _ in decided]
         disagreements = [differ for _, differ in decided if differ is not None]
         twice = sum(1 for r in resolved if not r.unchecked) if len(self.resolvers) > 1 else 0

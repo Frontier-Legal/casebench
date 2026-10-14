@@ -11,7 +11,8 @@ API_VERSION = "2023-06-01"
 class Provider:
     """`max_tokens` is required by the API and has no default here: set it in the options,
     or let `casebench init` take the model's output limit from the catalog, so the budget is
-    never a number Casebench made up."""
+    never a number Casebench made up. A server's `retry-after` is honoured however long it is,
+    as the anthropic 1.13.0 SDK honours it (decision 0037)."""
 
     speaks = ("@ai-sdk/anthropic",)
 

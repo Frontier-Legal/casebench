@@ -1,6 +1,6 @@
 """Score a finished run with the metrics its cases name, and write its report."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,7 @@ from casebench.metrics.loading import metrics_for
 from casebench.report import render
 from casebench.report.funnel import CaseFunnel, FunnelSummary, case_funnel, gold, summarise
 from casebench.report.tables import Table, build_tables
-from casebench.runs.log import RunLog
+from casebench.runs.log import RunLog, ScoringError
 from casebench.runs.producer import JudgeUsed, Producer, producer_for
 from casebench.runs.rescore import rescore
 
@@ -30,6 +30,7 @@ class Scored:
     tables: list[Table]
     funnel: FunnelSummary
     report: Path
+    errors: list[ScoringError] = field(default_factory=list)
 
 
 def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, Any]:
@@ -50,25 +51,40 @@ def prepare(cases: list[Case], config: CasebenchConfig) -> list[Metric]:
     return metrics_for(cases, context_for(config))
 
 
-def funnels(log: RunLog, cases: list[Case], context: dict[str, Any]) -> list[CaseFunnel]:
+FUNNEL = "authority funnel"
+
+
+def funnels(
+    log: RunLog, cases: list[Case], context: dict[str, Any], errors: list[ScoringError]
+) -> tuple[list[CaseFunnel], list[ScoringError]]:
     """Cases whose court authorities resolved to corpus documents; the answer's citations
-    are resolved with the run's judge, whose replies the metrics may have kept already."""
+    are resolved with the run's judge, whose replies the metrics may have kept already. A
+    case a metric could not score is left out, and so is one whose citations cannot be
+    resolved now, with its error (decision 0037)."""
     by_id = {case.id: case for case in cases if gold(case)}
+    unscored = {(e.case_id, e.repeat) for e in errors}
     judge: Judge | None = context.get("judge")
     corpus: Corpora | None = context.get("corpus")
-    traced = []
+    traced, failed = [], []
     for result in log.results():
         case = by_id.get(result.case_id)
-        if case is None:
+        if case is None or (result.case_id, result.repeat) in unscored:
             continue
         cited = None
         if judge is not None and corpus is not None:
             resolver = Resolver(judge, corpus, context["candidates"])
             output = result.output or ""
             place = case.provenance.jurisdiction if case.provenance else None
-            cited = cited_documents(resolver, output, place) if output else {}
+            try:
+                cited = cited_documents(resolver, output, place) if output else {}
+            except Exception as failure:
+                error = f"{type(failure).__name__}: {failure}"
+                failed.append(
+                    ScoringError(case_id=case.id, repeat=result.repeat, metric=FUNNEL, error=error)
+                )
+                continue
         traced.append(case_funnel(case, result, cited))
-    return traced
+    return traced, failed
 
 
 def producer(
@@ -89,15 +105,19 @@ def producer(
     return producer_for(metrics, cases, judges, corpora)
 
 
-def score(log: RunLog, cases: list[Case], config: CasebenchConfig, suite_id: str) -> Scored:
-    """The judge's replies are kept in the run folder; scoring again reads them back."""
+def score(
+    log: RunLog, cases: list[Case], config: CasebenchConfig, suite_id: str, concurrency: int = 1
+) -> Scored:
+    """The judge's replies are kept in the run folder; scoring again reads them back, so it
+    asks only what failed before. Up to `concurrency` cases are scored at once (0037)."""
     context = context_for(config, Memo(log.folder / MEMO_FILE))
     metrics = metrics_for(cases, context)
     produced_by = producer(metrics, cases, config, context)
-    path = rescore(log, cases, metrics, produced_by)
-    scores = RunLog.read_scores(path)
+    path = rescore(log, cases, metrics, produced_by, concurrency)
+    scores, errors = RunLog.read_scores(path), RunLog.read_errors(path)
     tables = build_tables(scores, cases, suite_id)
-    traced = funnels(log, cases, context)
+    traced, unfunnelled = funnels(log, cases, context, errors)
+    errors += unfunnelled
     summary = summarise(traced)
-    report = render.write(log.folder, produced_by, tables, scores, path, traced, summary)
-    return Scored(path, scores, tables, summary, report)
+    report = render.write(log.folder, produced_by, tables, scores, path, traced, summary, errors)
+    return Scored(path, scores, tables, summary, report, errors)

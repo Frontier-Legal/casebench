@@ -10,6 +10,7 @@ from casebench.report.agreement import JudgeAgreement
 from casebench.report.citations import CitationRate
 from casebench.report.funnel import CaseFunnel, FunnelSummary
 from casebench.report.tables import Table
+from casebench.runs.log import ScoringError
 from casebench.runs.producer import Producer
 
 FORMAT = FormatVersion("report", 1, 0)
@@ -35,4 +36,9 @@ class Report(FrozenRecord):
     )
     funnel: Funnel
     scores: list[Score]
+    scoring_errors: list[ScoringError] = Field(
+        default_factory=list,
+        description="Results a metric could not score; scoring the run again finishes them "
+        "(decision 0037).",
+    )
     extensions: Extensions = Field(default_factory=dict)

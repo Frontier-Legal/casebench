@@ -10,6 +10,7 @@ from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
+from casebench.runs.log import ScoringError
 from casebench.runs.producer import Producer
 
 REPORT_FILE = "report.json"
@@ -83,6 +84,18 @@ def _judges(scores: list[Score]) -> list[str]:
     return out
 
 
+def error_lines(errors: list[ScoringError], run_id: str) -> list[str]:
+    """Each result a metric could not score, and how to finish them (decision 0037)."""
+    if not errors:
+        return []
+    out = [
+        f"scoring errors: {len(errors)} results have no score yet; run again with "
+        f"--run-id {run_id} to score only what is missing"
+    ]
+    out += [f"  {e.case_id} · {e.metric}: {e.error}" for e in errors]
+    return out
+
+
 def write(
     folder: Path,
     produced_by: Producer,
@@ -91,6 +104,7 @@ def write(
     score_set: Path,
     funnels: list[CaseFunnel],
     summary: FunnelSummary,
+    errors: list[ScoringError] | None = None,
 ) -> Path:
     path = folder / REPORT_FILE
     report = Report(
@@ -102,6 +116,7 @@ def write(
         agreement=agreement(scores),
         funnel=Funnel(summary=summary, cases=funnels),
         scores=scores,
+        scoring_errors=errors or [],
     )
     path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return path

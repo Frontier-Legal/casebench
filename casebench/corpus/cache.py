@@ -3,13 +3,24 @@
 import hashlib
 import json
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any
 
-from casebench.corpus.interface import list_ids
+from casebench.corpus.interface import list_ids, search_results
+from casebench.corpus.results import SearchResult, as_result
 
 DEFAULT_CACHE = Path(".casebench") / "corpus-cache"
 SEARCHES = "searches"
+
+
+def _write(path: Path, value: Any) -> None:
+    """Written whole and then moved into place, so a case scored in parallel never reads half
+    a file (decision 0037)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(f"{path.name}.{uuid.uuid4().hex}.partial")
+    partial.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    partial.replace(path)
 
 
 def corpus_key(connector: str, options: dict[str, Any]) -> str:
@@ -42,28 +53,32 @@ class CachedConnector:
             return json.loads(path.read_text(encoding="utf-8"))
         document = self.connector.fetch(decision_id)
         self.fetched += 1
-        self.folder.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+        _write(path, document)
         return document
 
-    def _search_path(self, text: str, limit: int) -> Path:
-        asked = json.dumps([text, limit], ensure_ascii=False)
+    def _search_path(self, text: str, limit: int, filters: dict[str, Any] | None = None) -> Path:
+        """A search with no filters keeps the key it always had, so kept searches still count."""
+        asked = json.dumps([text, limit, filters] if filters else [text, limit], ensure_ascii=False)
         return self.folder / SEARCHES / f"{hashlib.sha256(asked.encode()).hexdigest()}.json"
 
     def search_cached(self, text: str, limit: int) -> bool:
         return self.keep_searches and self._search_path(text, limit).is_file()
 
-    def search(self, text: str, limit: int) -> list[str]:
+    def search_results(
+        self, text: str, limit: int, filters: dict[str, Any] | None = None
+    ) -> list[SearchResult]:
         """The same query, asked again of a metered store, is answered from disk."""
-        path = self._search_path(text, limit)
+        path = self._search_path(text, limit, filters)
         if self.keep_searches and path.is_file():
-            return json.loads(path.read_text(encoding="utf-8"))
-        found = self.connector.search(text, limit)
+            return [as_result(entry) for entry in json.loads(path.read_text(encoding="utf-8"))]
+        found = search_results(self.connector, text, limit, filters or {})
         self.searched += 1
         if self.keep_searches:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(found, ensure_ascii=False), encoding="utf-8")
+            _write(path, [result.model_dump(exclude_none=True) for result in found])
         return found
+
+    def search(self, text: str, limit: int) -> list[str]:
+        return [result.id for result in self.search_results(text, limit)]
 
     def list_ids(self) -> list[str]:
         return list(list_ids(self.connector))

@@ -24,10 +24,14 @@ class Message(FrozenRecord):
 
 
 class HttpRequest(FrozenRecord):
+    """`longest_retry_after_s` is the longest wait a server may ask for before a retry, as the
+    vendor's own SDK honours it; a longer one is not retried. None honours any wait."""
+
     method: str
     url: str
     headers: dict[str, str] = Field(default_factory=dict)
     body: Any = None
+    longest_retry_after_s: float | None = None
 
 
 class Completion(FrozenRecord):

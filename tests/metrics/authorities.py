@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from casebench.judge import prompts
+from tests.judge.matching import picks
 
 DOCUMENTS = {
     "law-4857-18": "4857 sayılı İş Kanunu madde 18. Feshin geçerli sebebe dayandırılması.",
@@ -38,6 +39,13 @@ def write_corpus(folder: Path) -> Path:
     return folder
 
 
+def by_alias(citation: str, candidates: list[dict]) -> str | None:
+    """The judge answers with a candidate's id as it was shown: qualified by its corpus."""
+    wanted = ALIASES.get(citation)
+    ids = sorted(candidate["id"] for candidate in candidates)
+    return next((c for c in ids if c.partition(":")[2] == wanted), None)
+
+
 def reply(system: str, user: str) -> object:
     if system == prompts.LIST_CITATIONS:
         written = [w for w in ALIASES if w in user]
@@ -47,12 +55,7 @@ def reply(system: str, user: str) -> object:
             for w in written
         ]
     if system == prompts.MATCH:
-        citation = user.split("\n", 1)[0].removeprefix("Citation: ")
-        candidates = {c["id"] for c in json.loads(user.split("Candidates:\n", 1)[1])}
-        wanted = ALIASES.get(citation)
-        # The judge answers with a candidate's id as it was shown: qualified by its corpus.
-        picked = next((c for c in sorted(candidates) if c.partition(":")[2] == wanted), None)
-        return {"document_id": picked, "reason": "alias"}
+        return picks(user, by_alias)
     raise AssertionError(f"unexpected judge prompt: {system[:40]}")
 
 
