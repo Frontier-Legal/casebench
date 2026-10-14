@@ -9,9 +9,15 @@ SKIPPED = {"node_modules", "__pycache__", "site-packages"}
 EXAMPLES = (".example", ".sample", ".template", ".dist")
 
 
+def is_env_file(name: str) -> bool:
+    """`.env`, `.env.<anything>` or `<anything>.env`, and not a file of placeholders."""
+    named = name == ".env" or name.startswith(".env.") or name.endswith(".env")
+    return named and not name.endswith(EXAMPLES)
+
+
 def env_files(root: Path) -> list[Path]:
-    """Every `.env` or `.env.*` file below the root, outside virtual environments,
-    `node_modules` and hidden folders, nearest the root first (decision 0043)."""
+    """Every .env file below the root, outside virtual environments, `node_modules` and
+    hidden folders, nearest the root first (decision 0043)."""
     found = []
     for folder, folders, files in os.walk(root):
         here = Path(folder)
@@ -23,7 +29,7 @@ def env_files(root: Path) -> list[Path]:
             and not (here / name / "pyvenv.cfg").is_file()
         )
         for name in sorted(files):
-            if (name == ".env" or name.startswith(".env.")) and not name.endswith(EXAMPLES):
+            if is_env_file(name):
                 found.append(here / name)
     return sorted(found, key=lambda path: (len(path.relative_to(root).parts), str(path)))
 

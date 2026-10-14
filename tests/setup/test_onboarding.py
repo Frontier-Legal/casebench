@@ -56,7 +56,9 @@ def env_file(path: Path, lines: dict[str, str]) -> None:
 
 def test_a_key_in_a_env_file_is_found(project: Path):
     env_file(project / ".env", {"DATABASE_URL": "postgres://local"})
-    env_file(project / "research" / ".env", {"OTHER": "1", "ANTHROPIC_API_KEY": SECRET})
+    env_file(project / "web" / ".env.local", {"OTHER": "1"})
+    env_file(project / "env" / "eval.env", {"OTHER": "1", "ANTHROPIC_API_KEY": SECRET})
+    env_file(project / "env" / "eval.env.example", {"ANTHROPIC_API_KEY": "your-key-here"})
     flags = ["--entry", "agent.py:answer", "--corpus", "none", "--no-extract", "--no-live"]
 
     made = init(*flags, *JUDGE, "--no-routes", "--yes")
@@ -65,12 +67,12 @@ def test_a_key_in_a_env_file_is_found(project: Path):
     read_later = os.environ.get("ANTHROPIC_API_KEY")
 
     assert made.exit_code == 0, made.output
-    assert "✓ key ANTHROPIC_API_KEY in research/.env" in made.output
+    assert "✓ key ANTHROPIC_API_KEY in env/eval.env" in made.output
     assert "which .env file" not in made.output  # found, so not asked
     written = (project / "casebench.yaml").read_text(encoding="utf-8")
     assert SECRET not in made.output
     assert SECRET not in written
-    assert config.keys == {"ANTHROPIC_API_KEY": "research/.env"}
+    assert config.keys == {"ANTHROPIC_API_KEY": "env/eval.env"}
     assert read_later == SECRET
 
 
