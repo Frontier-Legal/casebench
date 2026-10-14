@@ -459,6 +459,8 @@ import requests
 def answer(question):
     base, key = os.environ["DOCS_URL"], {"Authorization": f"Bearer {os.environ['DOC_KEY']}"}
     hits = requests.get(f"{base}/search", params={"q": question}, headers=key).json()["results"]
+    if not hits:
+        return "No decision speaks to that."
     found = hits[0]["work"]["work_id"]
     return requests.get(f"{base}/documents/{found}", headers=key).json()["work_id"]
 """
@@ -501,13 +503,13 @@ def test_an_agents_own_search_is_recorded(project: Path):
                 [case("c1", "feshi")], target_from_config(config.target or {}), log, capture=session
             )
         )
-        # The sample case asks the corpus's own search, in its language (decision 0044).
+        # check greets the agent, which searches for the greeting and finds nothing.
         checked = invoke("check")
     finally:
         api.shutdown()
 
     assert checked.exit_code == 0, checked.output
-    assert "target   passed: answered, 2 calls recorded" in checked.output  # a gap is no call
+    assert "target   passed: answered, 1 call recorded" in checked.output
     assert result.error is None, result.error
     assert result.output == "101"
     [searched] = [step for step in result.steps if step.kind is StepKind.RETRIEVAL]

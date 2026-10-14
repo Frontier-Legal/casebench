@@ -1,21 +1,14 @@
-"""Setup spends one search and one fetch, and ends with a one-case demo from the user's own
-corpus (decision 0045)."""
+"""Setup spends one search and one document, and greets the agent once (decision 0045)."""
 
-import json
 import os
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import ClassVar
 
 import pytest
 import yaml
 from click.testing import CliRunner
 
 from casebench import keys
-from casebench.cases.draft import DRAFT
 from casebench.cli import main
-from casebench.judge import prompts
 from tests.corpus.document_api import CITED_AS, KEY, DocumentApi, start_document_api
 
 FIELDS = {
@@ -25,16 +18,8 @@ FIELDS = {
     "date": "$.dates[1].date",
     "text": "$.expressions[0].text",
 }
-# What a drafting model reads in decision 101 of the test document API, quoting its text.
-DRAFTED = {
-    "question": "Is the worker's dismissal valid?",
-    "facts": "The employer dismissed the worker, who challenged the dismissal.",
-    "outcome": {"label": "reversed", "quote": "HÜKÜM: Bozulmasına."},
-    "statutes": [],
-    "precedents": [],
-}
 AGENT = f'''\
-"""An agent that answers, citing the decision, and counts the questions it is asked."""
+"""An agent that answers, and writes down each question it is asked."""
 
 from pathlib import Path
 
@@ -44,40 +29,6 @@ def answer(question):
     asked.write_text(asked.read_text() + question + "\\n" if asked.exists() else question + "\\n")
     return "The court reversed the judgment: the dismissal is invalid ({CITED_AS["101"]})."
 '''
-
-
-class Model(BaseHTTPRequestHandler):
-    """A model behind the Messages API that drafts decision 101's case and grades an answer
-    by whether it has each criterion's words; it counts what it is asked."""
-
-    asked: ClassVar[list[str]] = []
-
-    def do_POST(self) -> None:
-        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-        system, user = body["system"], body["messages"][0]["content"]
-        if system == DRAFT:
-            Model.asked.append("draft")
-            reply: object = DRAFTED
-        elif system == prompts.GRADE:
-            Model.asked.append("grade")
-            answer, criteria = user.split("Answer:\n", 1)[1].split("\n\nCriteria:\n", 1)
-            reply = [
-                {"id": c["id"], "met": True, "quote": answer.strip()} for c in json.loads(criteria)
-            ]
-        else:
-            raise AssertionError(f"unexpected prompt: {system[:40]}")
-        text = json.dumps(reply, ensure_ascii=False)
-        payload = json.dumps(
-            {"content": [{"type": "text", "text": text}], "usage": {"input_tokens": 1}}
-        ).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(payload)))
-        self.end_headers()
-        self.wfile.write(payload)
-
-    def log_message(self, format: str, *args: object) -> None:
-        return None
 
 
 def corpus(port: int, probe: str = "feshi") -> dict:
@@ -105,7 +56,6 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     os.environ["DOC_KEY"] = KEY
     os.environ["ANTHROPIC_API_KEY"] = "a-judge-key"
     DocumentApi.searches, DocumentApi.fetches = [], {}
-    Model.asked = []
     return tmp_path
 
 
@@ -130,56 +80,23 @@ def test_setup_spends_one_search_and_one_document(project: Path):
     assert sum(DocumentApi.fetches.values()) == 1  # one of the two it found
 
 
-def test_the_demo_shows_what_casebench_does(project: Path):
+def test_check_greets_the_agent_once(project: Path):
     api = start_document_api()
-    model = ThreadingHTTPServer(("127.0.0.1", 0), Model)
-    threading.Thread(target=model.serve_forever, daemon=True).start()
     (project / "agent.py").write_text(AGENT, encoding="utf-8")
-    judge = {
-        "provider": "anthropic",
-        "model": "judge-model",
-        "options": {"base_url": f"http://127.0.0.1:{model.server_port}", "max_tokens": 1024},
-    }
     config = {
         "target": {"type": "python", "entry": "agent.py:answer"},
-        "judge": judge,
         "corpus": corpus(api.server_port),
     }
     (project / "casebench.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
     try:
-        shown = invoke("demo")
+        checked = invoke("check")
     finally:
         api.shutdown()
-        model.shutdown()
 
-    assert shown.exit_code == 0, shown.output
-    spends = shown.output.split("This demo spends:\n", 1)[1].splitlines()[:5]
-    assert spends == [
-        "  1 search of corpus for 'feshi', for 1 result",
-        "  1 document fetched",
-        "  1 call to anthropic/judge-model to draft the case",
-        "  1 turn of your agent",
-        "  1 call to anthropic/judge-model to grade the answer",
-    ]
-    # And no more than it said.
-    assert DocumentApi.searches == ["feshi"]
-    assert sum(DocumentApi.fetches.values()) == 1
-    assert Model.asked == ["draft", "grade"]
-    assert (project / "asked.txt").read_text(
-        encoding="utf-8"
-    ) == "Is the worker's dismissal valid?\n"
-    for shown_part in (
-        "Is the worker's dismissal valid?",
-        "court's outcome",
-        "reversed",
-        "cites the decision",
-        CITED_AS["101"],
-        "✓ passed",
-        "score 1.00",
-    ):
-        assert shown_part in shown.output, shown_part
-    kept = json.loads((project / ".casebench" / "demo" / "case.json").read_text(encoding="utf-8"))
-    assert kept["approval"] == "draft"  # a lawyer approves it, or it is never a reference
+    assert checked.exit_code == 0, checked.output
+    assert "target   passed: answered" in checked.output
+    # One short message, which asks the agent for no research, and nothing else.
+    assert (project / "asked.txt").read_text(encoding="utf-8") == "Hi. How are you?\n"
 
 
 def test_a_corpus_name_is_one_casebench_yaml_accepts(project: Path):

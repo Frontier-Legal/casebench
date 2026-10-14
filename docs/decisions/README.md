@@ -58,4 +58,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0042](0042-upgrade-in-place.md) | An existing setup upgrades in place: init updates the config, old files are read as they are, caches carry over | accepted |
 | [0043](0043-guided-onboarding.md) | Onboarding detects first, asks last, and finds keys in the project's .env files; Rich draws it | accepted |
 | [0044](0044-onboarding-by-a-coding-agent.md) | A coding agent sets Casebench up from one prompt, and only casebench.yaml and .casebench/ change | accepted |
-| [0045](0045-setup-spends-little-and-ends-with-a-demo.md) | Setup spends one search and one document, and ends with a one-case demo | accepted |
+| [0045](0045-setup-spends-little.md) | Setup spends one search and one document, and greets the agent once | accepted |
