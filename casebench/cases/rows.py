@@ -1,6 +1,7 @@
-"""Turn a spreadsheet row a lawyer filled into an approved case (decision 0049)."""
+"""Turn what a lawyer wrote, a spreadsheet row or the workbench's form, into a case (0049, 0052)."""
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -29,46 +30,57 @@ def _lines(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
-def _named(text: str, row: Row, source: Path, column: str) -> list[tuple[str, str]]:
+def _named(text: str, where: str, column: str) -> list[tuple[str, str]]:
     """Lines such as `9.2: Uncapped indemnity` or `party_a: Acme`."""
     out = []
     for line in _lines(text):
         found = NAMED.match(line)
         if not found:
-            raise SheetError(f"{row.where(source)}: {column} wants name: value, not {line!r}")
+            raise SheetError(f"{where}: {column} wants name: value, not {line!r}")
         out.append((found.group(1).strip(), found.group(2).strip()))
     return out
 
 
-def _weighted(line: str, row: Row, source: Path) -> tuple[int, str]:
+def _weighted(line: str, where: str) -> tuple[int, str]:
     found = WEIGHTED.match(line)
     weight, text = (int(found.group(1)), found.group(2)) if found else (1, line)
     if weight == 0:
-        raise SheetError(f"{row.where(source)}: the key point {text!r} weighs 0, so never counts")
+        raise SheetError(f"{where}: the key point {text!r} weighs 0, so never counts")
     return weight, text.strip()
 
 
-def _inputs(row: Row, inputs: tuple[str, ...], source: Path) -> dict[str, Any]:
+def _inputs(
+    cells: dict[str, str], inputs: tuple[str, ...], where: str, read: Callable[[str], str]
+) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for name in inputs:
-        value = row.cells.get(name, "")
+        value = cells.get(name, "")
         if not value:
             continue
         if name == "document":
-            out[name] = read_document(source.parent / value)
+            out[name] = read(value)
         elif name == "fields":
-            out[name] = dict(_named(value, row, source, name))
+            out[name] = dict(_named(value, where, name))
         else:
             out[name] = value
     return out
 
 
-def row_case(row: Row, source: Path, author: str) -> Case:
-    """Each key point is a criterion in the lawyer's words, from a fact whose evidence is the
-    row; the reference answer is evidence for each, and alone makes no criterion."""
-    task = task_type(row.task)
-    cells = row.cells
-    written = Evidence(doc=source.name, anchor=f"row {row.number}", note=f"written by {author}")
+def written_case(
+    task_name: str,
+    cells: dict[str, str],
+    author: str,
+    *,
+    case_id: str,
+    written: Evidence,
+    where: str,
+    read: Callable[[str], str],
+    approval: Approval,
+) -> Case:
+    """Each key point is a criterion in the lawyer's words, from a fact whose evidence is
+    `written`; the reference answer is evidence for each, and alone makes no criterion. `read`
+    turns the document cell into the document's text."""
+    task = task_type(task_name)
     facts: list[Fact] = []
     criteria: list[Criterion] = []
     if cells.get("reference answer"):
@@ -79,7 +91,7 @@ def row_case(row: Row, source: Path, author: str) -> Case:
         facts.append(Fact(id="outcome-1", kind="outcome", value=cells["outcome"], evidence=written))
     answer = [ANSWER] if cells.get("reference answer") else []
     for n, line in enumerate(_lines(cells.get("key points", "")), start=1):
-        weight, text = _weighted(line, row, source)
+        weight, text = _weighted(line, where)
         facts.append(Fact(id=f"key-point-{n}", kind=KEY_POINT, value=text, evidence=written))
         criteria.append(
             Criterion(
@@ -91,11 +103,10 @@ def row_case(row: Row, source: Path, author: str) -> Case:
             Fact(id=f"{kind}-{n}", kind=kind, value=value, evidence=written)
             for n, value in enumerate(_lines(cells.get(column, "")), start=1)
         ]
-    document = cells.get("document") or source.name
-    for n, (clause, issue) in enumerate(_named(cells.get("issues", ""), row, source, "issues"), 1):
-        evidence = Evidence(doc=document, anchor=clause, note=f"written by {author}")
+    for n, (clause, issue) in enumerate(_named(cells.get("issues", ""), where, "issues"), 1):
+        evidence = written.model_copy(update={"anchor": clause})
         facts.append(Fact(id=f"issue-{n}", kind="issue", value=issue, evidence=evidence))
-    expected = _named(cells.get("expected", ""), row, source, "expected")
+    expected = _named(cells.get("expected", ""), where, "expected")
     facts += [
         Fact(id=name, kind="expected", value=value, evidence=written) for name, value in expected
     ]
@@ -107,13 +118,36 @@ def row_case(row: Row, source: Path, author: str) -> Case:
             source=ReferenceSource.LAWYER, facts=facts, criteria=criteria, author=author
         )
     except ValueError as failure:
-        raise SheetError(f"{row.where(source)}: {failure}") from None
-    inputs = _inputs(row, task.input_fields, source)
+        raise SheetError(f"{where}: {failure}") from None
+    inputs = _inputs(cells, task.input_fields, where, read)
     return Case(
-        id=cells.get(ID) or f"{source.stem}-{row.number}",
-        task=Task.model_validate({"type": row.task, **inputs}),
+        id=case_id,
+        task=Task.model_validate({"type": task_name, **inputs}),
         reference=reference,
         metrics=metrics,
         provenance=Provenance(builder="lawyer"),
+        approval=approval,
+    )
+
+
+def row_case(row: Row, source: Path, author: str) -> Case:
+    """A spreadsheet row, approved by the lawyer who wrote it (decision 0049). An issue's
+    evidence is its clause in the document the row names."""
+    case = written_case(
+        row.task,
+        row.cells,
+        author,
+        case_id=row.cells.get(ID) or f"{source.stem}-{row.number}",
+        written=Evidence(doc=source.name, anchor=f"row {row.number}", note=f"written by {author}"),
+        where=row.where(source),
+        read=lambda value: read_document(source.parent / value),
         approval=Approval.APPROVED,
     )
+    document = row.cells.get("document") or source.name
+    facts = [
+        f.model_copy(update={"evidence": f.evidence.model_copy(update={"doc": document})})
+        if f.kind == "issue"
+        else f
+        for f in case.reference.facts
+    ]
+    return case.model_copy(update={"reference": case.reference.model_copy(update={"facts": facts})})

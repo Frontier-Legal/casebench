@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tile } from "@/components/section"
-import type { AnswerItem, DraftItem, Item } from "@/lib/api"
+import type { AnswerItem, ChangeItem, DraftItem, Item } from "@/lib/api"
 import { plural, taskName } from "@/lib/words"
 
 function answerTiles(item: AnswerItem) {
@@ -62,6 +62,32 @@ function draftTiles(item: DraftItem) {
   )
 }
 
+function changeTiles(item: ChangeItem) {
+  const at = new Date(item.proposal.at)
+  return (
+    <>
+      <Tile label="Author" value={item.proposal.author} caption={item.proposal.kind === "new" ? "Wrote a new case" : "Proposed a change"} />
+      <Tile
+        label="Proposed"
+        value={at.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+        caption={at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+      />
+      <Tile
+        label="Fields"
+        className="max-sm:hidden"
+        value={plural(item.changes.length, "field")}
+        caption={item.where}
+      />
+    </>
+  )
+}
+
+const HEADLINES: Record<Item["kind"], string> = {
+  answer: "Answer to review",
+  draft: "Court draft to approve",
+  change: "Change to approve",
+}
+
 /** What the item is, where it comes from, and what it asks of the reader. */
 export function ItemHeader({ item }: { item: Item }) {
   const answer = item.kind === "answer"
@@ -69,14 +95,18 @@ export function ItemHeader({ item }: { item: Item }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{answer ? "Answer to review" : "Court draft to approve"}</Badge>
+          <Badge variant="secondary">
+            {item.kind === "change" && item.proposal.kind === "new"
+              ? "New case to approve"
+              : HEADLINES[item.kind]}
+          </Badge>
           <Badge variant="outline">{taskName(item.task)}</Badge>
         </div>
         <h1 className="text-xl font-semibold tracking-tight text-balance md:text-2xl">{item.title}</h1>
       </div>
       <Card className="py-3">
         <CardContent className="grid grid-cols-2 gap-2 px-3 sm:grid-cols-3">
-          {answer ? answerTiles(item) : draftTiles(item)}
+          {answer ? answerTiles(item) : item.kind === "change" ? changeTiles(item) : draftTiles(item)}
         </CardContent>
       </Card>
     </div>

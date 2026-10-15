@@ -2,7 +2,10 @@ import { useState } from "react"
 import {
   ChevronsUpDownIcon,
   CodeIcon,
+  DatabaseIcon,
   FileCheckIcon,
+  FilePenIcon,
+  InboxIcon,
   KeyboardIcon,
   LogOutIcon,
   MessageSquareTextIcon,
@@ -30,6 +33,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
@@ -38,11 +42,18 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Me, QueueItem, View } from "@/lib/api"
 
-type Filter = "all" | "answer" | "draft"
+type Filter = "all" | "answer" | "approve"
+export type Page = "queue" | "golden"
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase()
+}
+
+const KINDS: Record<QueueItem["kind"], string> = {
+  answer: "Answer",
+  draft: "Court draft",
+  change: "Change to approve",
 }
 
 function Flag({ flag }: { flag: string }) {
@@ -56,6 +67,8 @@ function Flag({ flag }: { flag: string }) {
 /** The queue down the side, the open item marked, and who is working. */
 export function AppSidebar({
   me,
+  page,
+  onPage,
   items,
   current,
   onPick,
@@ -64,6 +77,8 @@ export function AppSidebar({
   onLeave,
 }: {
   me: Me
+  page: Page
+  onPage: (page: Page) => void
   items: QueueItem[] | null
   current: string | null
   onPick: (key: string) => void
@@ -72,9 +87,10 @@ export function AppSidebar({
   onLeave: () => void
 }) {
   const [filter, setFilter] = useState<Filter>("all")
-  const shown = (items ?? []).filter((item) => filter === "all" || item.kind === filter)
-  const count = (kind: Filter) =>
-    (items ?? []).filter((item) => kind === "all" || item.kind === kind).length
+  const fits = (item: QueueItem, kind: Filter) =>
+    kind === "all" || (kind === "answer" ? item.kind === "answer" : item.kind !== "answer")
+  const shown = (items ?? []).filter((item) => fits(item, filter))
+  const count = (kind: Filter) => (items ?? []).filter((item) => fits(item, kind)).length
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -85,26 +101,44 @@ export function AppSidebar({
           </div>
           <div className="leading-tight">
             <div className="font-semibold tracking-tight">Casebench</div>
-            <div className="text-xs text-muted-foreground">Review queue</div>
+            <div className="text-xs text-muted-foreground">Workbench</div>
           </div>
         </div>
-        <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all" className="text-xs">
-              All <span className="text-muted-foreground tabular-nums">{count("all")}</span>
-            </TabsTrigger>
-            <TabsTrigger value="answer" className="text-xs">
-              Answers <span className="text-muted-foreground tabular-nums">{count("answer")}</span>
-            </TabsTrigger>
-            <TabsTrigger value="draft" className="text-xs">
-              Drafts <span className="text-muted-foreground tabular-nums">{count("draft")}</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu aria-label="Pages">
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "queue"} onClick={() => onPage("queue")}>
+                  <InboxIcon /> Review queue
+                </SidebarMenuButton>
+                <SidebarMenuBadge>{items?.length ?? ""}</SidebarMenuBadge>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "golden"} onClick={() => onPage("golden")}>
+                  <DatabaseIcon /> Golden data
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {page === "queue" && (
+        <SidebarGroup>
           <SidebarGroupLabel>To do</SidebarGroupLabel>
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)} className="mb-2 px-1">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all" className="text-xs">
+                All <span className="text-muted-foreground tabular-nums">{count("all")}</span>
+              </TabsTrigger>
+              <TabsTrigger value="answer" className="text-xs">
+                Answers <span className="text-muted-foreground tabular-nums">{count("answer")}</span>
+              </TabsTrigger>
+              <TabsTrigger value="approve" className="text-xs">
+                Approvals <span className="text-muted-foreground tabular-nums">{count("approve")}</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <SidebarGroupContent>
             <SidebarMenu aria-label="Queue">
               {items === null &&
@@ -125,15 +159,18 @@ export function AppSidebar({
                   >
                     {item.kind === "draft" ? (
                       <FileCheckIcon className="mt-0.5 text-muted-foreground" />
+                    ) : item.kind === "change" ? (
+                      <FilePenIcon className="mt-0.5 text-muted-foreground" />
                     ) : (
                       <MessageSquareTextIcon className="mt-0.5 text-muted-foreground" />
                     )}
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="line-clamp-2 leading-snug">{item.title}</span>
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        {item.kind === "draft" ? "Court draft" : "Answer"} · {item.where}
+                        {item.flags.includes("new case") ? "New case to approve" : KINDS[item.kind]} ·{" "}
+                        {item.where}
                         {item.flags
-                          .filter((flag) => flag !== "court draft")
+                          .filter((flag) => !["court draft", "change", "new case"].includes(flag))
                           .map((flag) => (
                             <Flag key={flag} flag={flag} />
                           ))}
@@ -145,6 +182,7 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

@@ -16,7 +16,7 @@ export interface Me {
 
 export interface QueueItem {
   key: string
-  kind: "answer" | "draft"
+  kind: "answer" | "draft" | "change"
   title: string
   where: string
   task: string
@@ -134,7 +134,75 @@ export interface DraftItem extends ItemBase {
   facts: FactView[]
 }
 
-export type Item = AnswerItem | DraftItem
+export interface Waiting {
+  id: number
+  kind: "new" | "change"
+  author: string
+  at: string
+  reason: string | null
+}
+
+export interface FieldChange {
+  field: string
+  before: string
+  after: string
+}
+
+export interface ChangeItem {
+  key: string
+  kind: "change"
+  title: string
+  where: string
+  task: string
+  proposal: Waiting
+  changes: FieldChange[]
+  draft: Record<string, unknown> | null
+  held_by: string | null
+  engineering: null
+}
+
+export type Item = AnswerItem | DraftItem | ChangeItem
+
+export interface CaseRow {
+  case_id: string
+  title: string
+  task: string
+  source: string
+  approval: "approved" | "draft"
+  editable: boolean
+  waiting: Waiting | null
+}
+
+export interface Golden {
+  suites: { suite_id: string; cases: CaseRow[] }[]
+  tasks: string[]
+}
+
+export interface FormField {
+  name: string
+  value: string
+  help: string
+}
+
+export interface CaseDetail {
+  suite_id: string
+  case_id: string
+  title: string
+  task: string
+  source: string
+  approval: "approved" | "draft"
+  author: string | null
+  editable: boolean
+  fields: FormField[]
+  waiting: Waiting | null
+}
+
+export interface Proposed {
+  suite_id: string
+  case_id: string
+  proposal: number
+  message: string
+}
 
 export interface GivenVerdict {
   criterion_id: string
@@ -220,6 +288,20 @@ export const api = {
     call<Finished>("POST", `${item(key)}/finish`, { verdicts }),
   finishDraft: (key: string, facts: GivenFact[]) =>
     call<Finished>("POST", `${item(key)}/finish`, { facts }),
+  finishChange: (key: string, decision: "approve" | "reject", note: string | null) =>
+    call<Finished>("POST", `${item(key)}/finish`, { decision, note }),
+  golden: () => call<Golden>("GET", "/api/golden"),
+  goldenCase: (suite: string, id: string) =>
+    call<CaseDetail>("GET", `/api/golden/${encodeURIComponent(suite)}/${encodeURIComponent(id)}`),
+  blankForm: (task: string) => call<FormField[]>("GET", `/api/golden/forms/${encodeURIComponent(task)}`),
+  proposeChange: (suite: string, id: string, fields: Record<string, string>, reason: string) =>
+    call<Proposed>(
+      "PUT",
+      `/api/golden/${encodeURIComponent(suite)}/${encodeURIComponent(id)}`,
+      { fields, reason },
+    ),
+  createCase: (suite: string, task: string, fields: Record<string, string>, reason: string | null) =>
+    call<Proposed>("POST", `/api/golden/${encodeURIComponent(suite)}`, { task, fields, reason }),
   document: (id: string, quote?: string | null) =>
     call<Document>(
       "GET",

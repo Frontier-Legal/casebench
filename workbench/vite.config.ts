@@ -10,6 +10,8 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "../casebench/workbench/static"),
     emptyOutDir: true,
+    // The app is served from this machine, so one bundle loads faster than many.
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     proxy: { "/api": "http://127.0.0.1:7462" },

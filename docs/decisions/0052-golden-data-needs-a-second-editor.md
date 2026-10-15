@@ -29,6 +29,7 @@ Chosen option 1, because a reference answer is evidence that every later score r
   - No one approves their own change.
 - **A new case** from the form enters its suite as a draft, with its author, and a proposal to approve it. The second editor's approval makes it approved.
   - Until then it can be run, with its scores in the report's unreviewed row.
+  - A rejected new case leaves its suite.
 - **The event log** keeps each proposal, approval and rejection, with who, when, before, after and why ([0050](0050-the-review-queue.md)).
 - **Who may edit.** Every person in the workbench may, except where `casebench ui --role reviewer` serves the review view only; a reviewer reviews answers and proposes no change. Roles with logins come with team mode.
 - **A court draft** is still approved by one lawyer with the decision's passages in view ([0050](0050-the-review-queue.md)). Its facts rest on the decision itself.

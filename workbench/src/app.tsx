@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CircleCheckBigIcon, CircleHelpIcon } from "lucide-react"
 
-import { AppSidebar } from "@/components/app-sidebar"
+import { AppSidebar, type Page } from "@/components/app-sidebar"
+import { ChangeReview } from "@/components/change-review"
+import { GoldenData, type Opened } from "@/components/golden-data"
 import { AnswerReview } from "@/components/answer-review"
 import { DraftReview } from "@/components/draft-review"
 import { ItemHeader } from "@/components/item-header"
@@ -63,12 +65,20 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+const CRUMBS: Record<Item["kind"], string> = {
+  answer: "Answer",
+  draft: "Court draft",
+  change: "Change to approve",
+}
+
 function TopBar({
+  page,
   item,
   done,
   left,
   onHelp,
 }: {
+  page: Page
   item: Item | null
   done: number
   left: number
@@ -81,14 +91,22 @@ function TopBar({
       <Separator orientation="vertical" className="mx-1 h-5" />
       <Breadcrumb className="min-w-0 flex-1">
         <BreadcrumbList className="flex-nowrap">
-          <BreadcrumbItem className="hidden sm:inline-flex">Review queue</BreadcrumbItem>
-          {item && <BreadcrumbSeparator className="hidden sm:inline-flex" />}
-          {item && (
-            <BreadcrumbItem className="min-w-0">
-              <BreadcrumbPage className="truncate">
-                {item.kind === "draft" ? "Court draft" : "Answer"} · {item.where}
-              </BreadcrumbPage>
+          {page === "golden" ? (
+            <BreadcrumbItem>
+              <BreadcrumbPage>Golden data</BreadcrumbPage>
             </BreadcrumbItem>
+          ) : (
+            <>
+              <BreadcrumbItem className="hidden sm:inline-flex">Review queue</BreadcrumbItem>
+              {item && <BreadcrumbSeparator className="hidden sm:inline-flex" />}
+              {item && (
+                <BreadcrumbItem className="min-w-0">
+                  <BreadcrumbPage className="truncate">
+                    {CRUMBS[item.kind]} · {item.where}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              )}
+            </>
           )}
         </BreadcrumbList>
       </Breadcrumb>
@@ -112,6 +130,8 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   const [busy, setBusy] = useState(false)
   const [help, setHelp] = useState(false)
   const [done, setDone] = useState(0)
+  const [page, setPage] = useState<Page>("queue")
+  const [opened, setOpened] = useState<Opened | null>(null)
   const skipped = useRef<Set<string>>(new Set())
   const { isMobile, setOpenMobile } = useSidebar()
   const mobile = useRef(isMobile)
@@ -120,6 +140,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   const open = useCallback(
     async (key: string) => {
       setLoading(true)
+      setPage("queue")
       if (mobile.current) setOpenMobile(false)
       try {
         await api.reserve(key)
@@ -161,7 +182,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
     return () => window.clearInterval(timer)
   }, [item])
 
-  useShortcuts({ help: () => setHelp(true) }, item === null)
+  useShortcuts({ help: () => setHelp(true) }, item === null || page === "golden")
 
   async function finish(send: () => Promise<{ message: string }>) {
     if (!item) return
@@ -193,7 +214,16 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
 
   const left = queue?.length ?? 0
   let body: React.ReactNode
-  if (queue === null || (loading && !item)) {
+  if (page === "golden") {
+    body = (
+      <GoldenData
+        locked={me.role_locked}
+        opened={opened}
+        onOpen={setOpened}
+        onChanged={() => api.queue().then(({ items }) => setQueue(items)).catch(() => {})}
+      />
+    )
+  } else if (queue === null || (loading && !item)) {
     body = (
       <div className="flex flex-col gap-6">
         <Skeleton className="h-8 w-2/3" />
@@ -244,6 +274,15 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
             onHelp={() => setHelp(true)}
             onFinish={(verdicts: GivenVerdict[]) => finish(() => api.finishAnswer(item.key, verdicts))}
           />
+        ) : item.kind === "change" ? (
+          <ChangeReview
+            item={item}
+            left={left}
+            busy={busy}
+            onDraft={saveDraft}
+            onHelp={() => setHelp(true)}
+            onFinish={(decision, note) => finish(() => api.finishChange(item.key, decision, note))}
+          />
         ) : (
           <DraftReview
             item={item}
@@ -262,6 +301,11 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
     <>
       <AppSidebar
         me={me}
+        page={page}
+        onPage={(chosen) => {
+          setPage(chosen)
+          if (mobile.current) setOpenMobile(false)
+        }}
         items={queue}
         current={item?.key ?? null}
         onPick={open}
@@ -270,7 +314,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
         onLeave={onLeave}
       />
       <SidebarInset className="min-w-0">
-        <TopBar item={item} done={done} left={left} onHelp={() => setHelp(true)} />
+        <TopBar page={page} item={item} done={done} left={left} onHelp={() => setHelp(true)} />
         <main className="mx-auto flex w-full max-w-[96rem] flex-1 flex-col px-4 pt-6 md:px-6">
           {body}
         </main>

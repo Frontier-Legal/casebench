@@ -48,7 +48,7 @@ class Refused(ValueError):
 
 class QueueItem(BaseModel):
     key: str
-    kind: Literal["answer", "draft"]
+    kind: Literal["answer", "draft", "change"]
     title: str
     where: str
     task: str
