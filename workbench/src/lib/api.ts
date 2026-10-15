@@ -378,6 +378,35 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return (await response.json()) as T
 }
 
+export type ExportKind = "pdf" | "docx" | "html"
+
+/** The report for partners as a file the browser saves (decision 0054). */
+export async function downloadReport(run: string, kind: ExportKind): Promise<string> {
+  const headers: Record<string, string> = {}
+  const name = storedName()
+  if (name) headers["X-Casebench-Person"] = encodeURIComponent(name)
+  const response = await fetch(`/api/runs/${encodeURIComponent(run)}/export/${kind}`, { headers })
+  if (!response.ok) {
+    let detail = response.statusText
+    try {
+      const parsed = (await response.json()) as { detail?: unknown }
+      if (typeof parsed.detail === "string") detail = parsed.detail
+    } catch {
+      // Not JSON: the status text says enough.
+    }
+    throw new ApiError(response.status, detail)
+  }
+  const disposition = response.headers.get("Content-Disposition") ?? ""
+  const file = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `casebench-${run}.${kind}`
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement("a")
+  link.href = url
+  link.download = file
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return file
+}
+
 const item = (key: string) => `/api/items/${encodeURIComponent(key)}`
 const pairPath = (first: string, second: string, caseId: string, repeat: number) =>
   `/api/compare/${[first, second, caseId, String(repeat)].map(encodeURIComponent).join("/")}`

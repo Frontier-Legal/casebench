@@ -220,6 +220,18 @@ def create_app(
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
 
+    @app.get("/api/runs/{run_id}/export/{kind}")
+    def export_report(run_id: str, kind: str, name: Person) -> Response:
+        """The report for partners as HTML, PDF or DOCX, to download (decision 0054)."""
+        try:
+            content, media, file = reports.export(workspace, run_id, kind)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+        disposition = f'attachment; filename="{file}"'
+        return Response(content, media_type=media, headers={"Content-Disposition": disposition})
+
     @app.get("/api/compare/{first}/{second}")
     def compare_runs(first: str, second: str, name: Person) -> comparing.Comparison:
         """Every pair of answers the two runs share, and the preferences so far (0054)."""

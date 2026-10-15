@@ -1,7 +1,7 @@
 // A run's error rates in the browser (decision 0054); the API is tested in
 // tests/workbench/test_partner_report.py.
 
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
@@ -75,6 +75,10 @@ function serve() {
       if (path === "/api/runs/r1/report") return reply(REPORT)
       if (path === `/api/items/${KEY}/reserve`) return reply({ held_by: "Ayşe" })
       if (path === `/api/items/${KEY}`) return reply(ANSWER)
+      if (path === "/api/runs/r1/export/pdf")
+        return new Response("%PDF-", {
+          headers: { "Content-Disposition": 'attachment; filename="casebench-labour-r1.pdf"' },
+        })
       return reply({ detail: "not found" }, 404)
     }),
   )
@@ -115,5 +119,25 @@ describe("reports", () => {
     await user.click(screen.getByRole("button", { name: /Reports/ }))
     await user.click(within(await screen.findByLabelText("Error rates")).getAllByRole("button")[1])
     expect(screen.getByText("None of the 4 answers has this error.")).toBeInTheDocument()
+  })
+
+  test("export for partners", async () => {
+    const user = userEvent.setup()
+    const sent = serve()
+    const saved: string[] = []
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:report", revokeObjectURL: () => {} }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download)
+    })
+    render(<App />)
+    await user.click(await screen.findByRole("button", { name: /Reports/ }))
+    await screen.findByLabelText("Error rates")
+
+    await user.click(screen.getByRole("button", { name: /Export for partners/ }))
+    await user.click(await screen.findByRole("menuitem", { name: /PDF/ }))
+
+    await waitFor(() => expect(saved).toEqual(["casebench-labour-r1.pdf"]), { timeout: 5000 })
+    expect(sent).toContain("GET /api/runs/r1/export/pdf")
+    click.mockRestore()
   })
 })

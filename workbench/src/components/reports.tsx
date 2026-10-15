@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { ChartColumnIcon, ChevronRightIcon } from "lucide-react"
+import { ChartColumnIcon, ChevronRightIcon, DownloadIcon, FileCodeIcon, FileIcon, FileTextIcon } from "lucide-react"
 
 import { Section } from "@/components/section"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Empty,
   EmptyDescription,
@@ -28,13 +36,20 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { api, type RateView, type RunReport, type RunRow } from "@/lib/api"
+import { Spinner } from "@/components/ui/spinner"
+import { api, downloadReport, type ExportKind, type RateView, type RunReport, type RunRow } from "@/lib/api"
 import { plural } from "@/lib/words"
 import { cn } from "@/lib/utils"
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
+
+const EXPORTS: { kind: ExportKind; label: string; hint: string; icon: typeof FileIcon }[] = [
+  { kind: "pdf", label: "PDF", hint: "To read and to send", icon: FileIcon },
+  { kind: "docx", label: "Word", hint: "To edit before sending", icon: FileTextIcon },
+  { kind: "html", label: "Web page, one file", hint: "Opens in any browser, offline", icon: FileCodeIcon },
+]
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`
@@ -84,6 +99,19 @@ export function Reports({ onOpen }: { onOpen: (key: string) => void }) {
   const [runId, setRunId] = useState<string | null>(null)
   const [report, setReport] = useState<RunReport | null>(null)
   const [chosen, setChosen] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  async function save(kind: ExportKind) {
+    if (!runId) return
+    setExporting(true)
+    try {
+      toast.success(`Saved ${await downloadReport(runId, kind)}`)
+    } catch (error) {
+      toast.error(message(error))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     api
@@ -133,7 +161,8 @@ export function Reports({ onOpen }: { onOpen: (key: string) => void }) {
           </p>
         </div>
         {scored.length > 0 && (
-          <div className="flex flex-col gap-1.5 md:w-72">
+          <div className="flex items-end gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 md:w-72 md:flex-none">
             <Label htmlFor="report-run">Run</Label>
             <Select value={runId ?? undefined} onValueChange={setRunId}>
               <SelectTrigger id="report-run" className="w-full">
@@ -147,6 +176,26 @@ export function Reports({ onOpen }: { onOpen: (key: string) => void }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={!runId || exporting}>
+                  {exporting ? <Spinner /> : <DownloadIcon />} Export for partners
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>The report for partners</DropdownMenuLabel>
+                {EXPORTS.map((e) => (
+                  <DropdownMenuItem key={e.kind} onSelect={() => save(e.kind)}>
+                    <e.icon />
+                    <div className="flex flex-col">
+                      <span>{e.label}</span>
+                      <span className="text-xs text-muted-foreground">{e.hint}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>

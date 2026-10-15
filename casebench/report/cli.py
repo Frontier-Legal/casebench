@@ -12,6 +12,7 @@ from casebench.report.calibration import calibration, lawyers_win, read_reviews
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.errors import error_rates
+from casebench.report.export import CannotExport, exported, kind_of
 from casebench.report.preferences import by_area, latest, read_preferences
 from casebench.report.record import FORMAT, Report
 from casebench.report.render import (
@@ -28,6 +29,7 @@ from casebench.report.render import (
     warning_lines,
 )
 from casebench.runs.log import RunLog
+from casebench.workbench.sources import Workspace
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
 
@@ -39,10 +41,45 @@ def latest_set(folder: Path) -> Path:
     return sets[-1]
 
 
+def _export(run_dir: Path, target: Path, suite_dirs: tuple[Path, ...]) -> None:
+    """The partner report, from the suite the run ran, found under `suite_dirs` (0054)."""
+    log = RunLog(run_dir)
+    suite = (
+        Workspace(run_dir.parent, list(suite_dirs) or [Path(".")]).suites().get(log.info.suite_id)
+    )
+    if suite is None:
+        raise click.ClickException(
+            f"no suite {log.info.suite_id} under {', '.join(map(str, suite_dirs or ['.']))}; "
+            "say where it is with --suites"
+        )
+    try:
+        written, _ = exported(log, suite.cases, suite.manifest.content_hash, kind_of(target))
+    except (CannotExport, ValueError) as refused:
+        raise click.ClickException(str(refused)) from None
+    target.write_bytes(written)
+    click.echo(f"wrote the report for partners to {target}")
+
+
 @click.command(name="report")
 @click.argument("run_dir", type=RUN)
-def report_command(run_dir: Path) -> None:
-    """Print a scored run's report again."""
+@click.option(
+    "--export",
+    "target",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write the report for partners to this .html, .pdf or .docx file.",
+)
+@click.option(
+    "--suites",
+    "suite_dirs",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    multiple=True,
+    help="Where to look for the run's suite when exporting; the current folder by default.",
+)
+def report_command(run_dir: Path, target: Path | None, suite_dirs: tuple[Path, ...]) -> None:
+    """Print a scored run's report again, or export it for partners."""
+    if target is not None:
+        _export(run_dir, target, suite_dirs)
+        return
     path = run_dir / REPORT_FILE
     if not path.is_file():
         raise click.ClickException(f"{run_dir} has no {REPORT_FILE}; score it first")

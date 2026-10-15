@@ -1,11 +1,13 @@
 """A run's report for partners: its error rates with their failing answers (decision 0054)."""
 
 import csv
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from docx import Document
 from fastapi.testclient import TestClient
 
 from casebench.cli import main
@@ -27,6 +29,7 @@ from casebench.core.score import (
     ScoreKind,
 )
 from casebench.report.calibration import record_verdict
+from casebench.report.partner import partner_report
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.producer import Producer
 from casebench.suites.freeze import freeze, load
@@ -134,7 +137,10 @@ def scores_for(case_id: str) -> list[Score]:
 @pytest.fixture
 def project(tmp_path: Path) -> dict[str, Any]:
     cases = [case(c) for c in AREAS]
-    suite = freeze("suite", cases, tmp_path / "suites" / "suite")
+    # Can approved c4; c5 waits for a lawyer and the run did not answer it.
+    cases[3] = cases[3].model_copy(update={"approved_by": "Can"})
+    draft = case("c1").model_copy(update={"id": "c5", "approval": Approval.DRAFT})
+    suite = freeze("suite", [*cases, draft], tmp_path / "suites" / "suite")
     log = RunLog.create(
         tmp_path / "runs" / "r1",
         RunInfo(run_id="r1", suite_id="suite", suite_hash=suite.content_hash, target="agent"),
@@ -224,3 +230,111 @@ def test_a_case_names_its_practice_area_and_approver(tmp_path: Path):
     assert older.approved_by is None and older.approver == "Ayşe"
     assert "practice_area" not in older.model_dump(mode="json")
     assert again.content_hash == first.content_hash
+
+
+def test_export_for_partners(project: dict[str, Any]):
+    """Each metric by task and practice area with its interval, worked examples beside their
+    evidence, and who approved the golden data, as PDF, DOCX and HTML."""
+    run_dir = project["tmp"] / "runs" / "r1"
+    suites = str(project["tmp"] / "suites")
+    made = {
+        kind: CliRunner().invoke(
+            main,
+            [
+                "report",
+                str(run_dir),
+                "--export",
+                str(project["tmp"] / f"report.{kind}"),
+                "--suites",
+                suites,
+            ],
+        )
+        for kind in ("pdf", "docx", "html")
+    }
+    report = partner_report(project["log"], load(project["tmp"] / "suites" / "suite")[1])
+    words = "\n".join(
+        p.text for p in Document(str(project["tmp"] / "report.docx")).paragraphs
+    ) + "\n".join(
+        cell.text
+        for table in Document(str(project["tmp"] / "report.docx")).tables
+        for row in table.rows
+        for cell in row.cells
+    )
+    pdf = (project["tmp"] / "report.pdf").read_bytes()
+    downloaded = client(project).get("/api/runs/r1/export/docx", headers=as_("Ayşe"))
+    unknown = client(project).get("/api/runs/r1/export/xlsx", headers=as_("Ayşe"))
+
+    assert all(ran.exit_code == 0 for ran in made.values()), {k: r.output for k, r in made.items()}
+    rows = {(r.task_type, r.name, r.practice_area): (r.n, r.mean) for r in report.metrics}
+    assert rows[("qa", "Ruling correct", "labour")] == (2, 1.0)
+    assert rows[("qa", "Ruling correct", "tax")] == (2, 0.5)
+    assert all(r.low <= r.mean <= r.high for r in report.metrics)
+    assert [a.model_dump() for a in report.approvers] == [
+        {"name": "Ayşe", "cases": 3},
+        {"name": "Can", "cases": 1},
+    ]
+    assert (report.cases, report.approved, report.unreviewed) == (5, 4, 1)
+    fabricated = next(e for e in report.examples if e.error == "fabricated citation")
+    assert fabricated.question == "Was dismissal c1 valid?"
+    assert fabricated.answer == "The court upheld it in c1."
+    assert fabricated.evidence[0].text.startswith("Yargıtay 3. HD, E. 2021/999. The corpus:")
+    statute = next(e for e in report.examples if e.error == "wrong statute")
+    assert statute.evidence[0].text == "4857 sayılı İş Kanunu m. 18: “4857 sayılı İş Kanunu m. 18”"
+    for text in (
+        "Ruling correct",
+        "labour",
+        "tax",
+        "Ayşe approved 3 cases.",
+        "Can approved 1 case.",
+        "Was dismissal c1 valid?",
+        "The court upheld it in c1.",
+        "Fabricated citation",
+    ):
+        assert text in words, text
+    assert pdf.startswith(b"%PDF-") and b"NotoSans" in pdf
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-disposition"] == (
+        'attachment; filename="casebench-suite-r1.docx"'
+    )
+    assert unknown.status_code == 422
+
+
+def test_a_static_copy_for_people_with_no_access(project: dict[str, Any], tmp_path: Path):
+    """One HTML file that loads nothing from elsewhere: no script, stylesheet, font or image."""
+    target = tmp_path / "partners.html"
+    ran = CliRunner().invoke(
+        main,
+        ["report", str(project["tmp"] / "runs" / "r1"), "--export", str(target), "--suites",
+         str(project["tmp"] / "suites")],
+    )  # fmt: skip
+    page = target.read_text(encoding="utf-8")
+    tags: list[tuple[str, dict[str, str | None]]] = []
+
+    class Tags(HTMLParser):
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            tags.append((tag, dict(attrs)))
+
+    Tags().feed(page)
+
+    assert ran.exit_code == 0, ran.output
+    assert page.startswith("<!doctype html>") and '<meta charset="utf-8">' in page
+    names = {tag for tag, _ in tags}
+    assert not names & {"script", "link", "img", "iframe", "object", "embed"}
+    assert not any(value and "://" in value for _, attrs in tags for key, value in attrs.items())
+    assert "@import" not in page and "url(" not in page
+    assert "Who approved the answer key" in page and "Ayşe approved 3 cases." in page
+
+
+def test_an_export_refuses_a_suite_that_changed(project: dict[str, Any]):
+    """The approvers named must be those of the answer key the run was scored against."""
+    folder = project["tmp"] / "suites" / "suite"
+    _, cases = load(folder)
+    freeze("suite", [c.model_copy(update={"practice_area": "tax"}) for c in cases], folder)
+
+    ran = CliRunner().invoke(
+        main,
+        ["report", str(project["tmp"] / "runs" / "r1"), "--export",
+         str(project["tmp"] / "x.pdf"), "--suites", str(project["tmp"] / "suites")],
+    )  # fmt: skip
+
+    assert ran.exit_code != 0 and "changed since run r1 ran it" in ran.output

@@ -35,6 +35,12 @@ workbench:
 
 Every run reports what it spent, per model, the agent's calls apart from the judge's, at the prices `casebench.yaml` gives each model. It also reports how often the agent cited a decision the corpus does not hold, cited one for something it does not say, missed the ruling, or relied on a statute the court did not apply. In the workbench each of these rates opens the answers behind it. A case can name its practice area, in a spreadsheet column or in the workbench.
 
+For partners, the report exports as PDF, Word or one HTML file that opens with no server. It gives each measure by task and practice area with its interval, worked examples beside their evidence, and who approved the answer key:
+
+```bash
+casebench report runs/2026-10-15-nightly --export report.pdf
+```
+
 To see whether a new version of the agent is better, lawyers compare two runs of one suite in the workbench. They read the two answers to each case as A and B, not knowing which run wrote which, and choose one or call them equal, with a reason. The later run's wins, losses and ties are summed per practice area and marked significant or not; `casebench compare` prints them too.
 
 ## Jurisdictions

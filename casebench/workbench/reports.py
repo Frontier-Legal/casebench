@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 
 from casebench.report.calibration import lawyers_win, read_reviews
 from casebench.report.errors import error_rates
-from casebench.workbench.items import NotFound, answer_key, latest_scores, title_of
+from casebench.report.export import CannotExport, exported, file_name
+from casebench.workbench.items import NotFound, Refused, answer_key, latest_scores, title_of
 from casebench.workbench.sources import Workspace
 
 
@@ -78,3 +79,18 @@ def run_report(workspace: Workspace, run_id: str) -> RunReport:
         for rate in error_rates(scores, info.suite_id)
     ]
     return RunReport(run_id=info.run_id, suite_id=info.suite_id, target=info.target, rates=rates)
+
+
+def export(workspace: Workspace, run_id: str, kind: str) -> tuple[bytes, str, str]:
+    """The report for partners as a file: its bytes, media type and name (decision 0054)."""
+    log = workspace.run(run_id)
+    if log is None:
+        raise NotFound(f"no run {run_id}")
+    suite = workspace.suites().get(log.info.suite_id)
+    if suite is None:
+        raise NotFound(f"no suite {log.info.suite_id} where the workbench looks for suites")
+    try:
+        content, media = exported(log, suite.cases, suite.manifest.content_hash, kind)
+    except (CannotExport, ValueError) as refused:
+        raise Refused(str(refused)) from None
+    return content, media, file_name(log, kind)
