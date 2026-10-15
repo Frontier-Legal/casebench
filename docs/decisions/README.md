@@ -67,3 +67,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0051](0051-what-a-run-spends.md) | A run reports what it spent, per model, for the agent and for the judge | accepted |
 | [0052](0052-golden-data-needs-a-second-editor.md) | Golden data changes only when a second editor approves, and a question can be tried within a daily dollar limit | second approval made opt-in by [0053](0053-second-approval-is-opt-in.md) |
 | [0053](0053-second-approval-is-opt-in.md) | Until people log in, a lawyer's change to golden data takes effect at once, and a second editor's approval is opt-in | accepted |
+| [0054](0054-compare-blind-and-a-report-for-partners.md) | Lawyers compare two runs blind, and a run's report, with its error rates, is exported for partners by practice area | accepted |
