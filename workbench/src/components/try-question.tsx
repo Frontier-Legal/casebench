@@ -47,6 +47,7 @@ export function TryQuestion({ locked }: { locked: boolean }) {
   const [opened, setOpened] = useState<CitationView | null>(null)
   const [suites, setSuites] = useState<string[]>([])
   const [tasks, setTasks] = useState<string[]>([])
+  const [second, setSecond] = useState(false)
   const [saving, setSaving] = useState<Opened | null>(null)
 
   const load = useCallback(async () => {
@@ -54,6 +55,7 @@ export function TryQuestion({ locked }: { locked: boolean }) {
     setBudget(found)
     setSuites(golden.suites.map((s) => s.suite_id))
     setTasks(golden.tasks)
+    setSecond(golden.second_approval)
   }, [])
 
   useEffect(() => {
@@ -248,6 +250,7 @@ export function TryQuestion({ locked }: { locked: boolean }) {
         opened={saving}
         tasks={tasks}
         locked={locked}
+        second={second}
         onClose={() => setSaving(null)}
         onSaved={() => setSaving(null)}
       />

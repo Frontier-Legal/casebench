@@ -150,6 +150,8 @@ def create_app(
     app = FastAPI(title="Casebench workbench", docs_url=None, redoc_url=None)
     app.add_middleware(Loopback, hosts=hosts)
     locked = role == REVIEWER
+    # Whether a change to golden data waits for a second editor (decision 0053).
+    second = bool(config and config.workbench and config.workbench.second_approval)
 
     def engineering(name: str) -> bool:
         found = store.person(name)
@@ -221,7 +223,7 @@ def create_app(
 
     @app.get("/api/golden")
     def golden_data(name: Person) -> Golden:
-        return golden.golden(workspace, store)
+        return golden.golden(workspace, store, second)
 
     @app.get("/api/golden/forms/{task}")
     def blank_form(task: str, name: Person) -> list[Form]:
@@ -242,7 +244,7 @@ def create_app(
         editor()
         try:
             return golden.propose_change(
-                workspace, store, suite_id, case_id, body.fields, body.reason, name
+                workspace, store, suite_id, case_id, body.fields, body.reason, name, second
             )
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
@@ -254,7 +256,7 @@ def create_app(
         editor()
         try:
             return golden.create_case(
-                workspace, store, suite_id, body.task, body.fields, name, body.reason
+                workspace, store, suite_id, body.task, body.fields, name, body.reason, second
             )
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None

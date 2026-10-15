@@ -48,7 +48,7 @@ function serve(budget: Budget) {
       if (path === "/api/session") return reply({ role_locked: false })
       if (path === "/api/me") return reply({ name: "Ayşe", view: "review", role_locked: false })
       if (path === "/api/queue") return reply({ items: [] })
-      if (path === "/api/golden") return reply({ suites: [{ suite_id: "labour", cases: [] }], tasks: ["qa"] })
+      if (path === "/api/golden") return reply({ suites: [{ suite_id: "labour", cases: [] }], tasks: ["qa"], second_approval: false })
       if (path === "/api/golden/forms/qa")
         return reply(["question", "reference answer", "key points"].map((name) => ({ name, value: "", help: "" })))
       if (path === "/api/try" && method === "GET") return reply(budget)

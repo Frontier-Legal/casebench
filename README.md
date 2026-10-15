@@ -25,11 +25,12 @@ The guide has the coding agent read your project and write two things: `casebenc
 
 `casebench ui` opens the review queue on this machine. Lawyers confirm or overrule the judge on each criterion of an answer, read every citation's source passage, and approve, edit or reject the facts of cases drawn from court decisions. Their verdicts replace the judge's in the report and in the gate. `casebench ui --role reviewer` shows only legal text, citations and passages.
 
-Lawyers also keep the answer key there. A change to a case, or a new case, takes effect only when a second editor approves it. A lawyer can try a question on the team's agent, read the answer with its citations checked, and keep it as a case. What trying questions may spend each day is set in `casebench.yaml`, and nothing is sent without it:
+Lawyers also keep the answer key there. Every change to a case carries its author, the time and the reason, and a team that wants two eyes on each change can have it wait for a second editor's approval. A lawyer can try a question on the team's agent, read the answer with its citations checked, and keep it as a case. What trying questions may spend each day is set in `casebench.yaml`, and nothing is sent without it:
 
 ```yaml
 workbench:
   try_daily_limit_usd: 5
+  second_approval: true   # off unless set
 ```
 
 Every run reports what it spent, per model, the agent's calls apart from the judge's, at the prices `casebench.yaml` gives each model.

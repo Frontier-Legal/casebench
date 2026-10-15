@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from casebench.cases.build import Written, lawyer_case
+from casebench.config import CasebenchConfig, WorkbenchConfig
 from casebench.core.case import Approval
 from casebench.suites.freeze import freeze, load
 from casebench.workbench.app import PERSON_HEADER, create_app
@@ -36,8 +37,14 @@ def project(tmp_path: Path) -> dict[str, Any]:
     return {"folder": folder, "store": store, "workspace": workspace}
 
 
-def client(project: dict[str, Any], role: str | None = None) -> TestClient:
-    app = create_app(project["workspace"], project["store"], [HOST], role)
+# A second editor's approval is opt-in (decision 0053); these tests turn it on.
+SECOND = CasebenchConfig(workbench=WorkbenchConfig(second_approval=True))
+
+
+def client(
+    project: dict[str, Any], role: str | None = None, config: CasebenchConfig | None = SECOND
+) -> TestClient:
+    app = create_app(project["workspace"], project["store"], [HOST], role, config=config)
     return TestClient(app, base_url=f"http://{HOST}")
 
 
@@ -167,3 +174,52 @@ def test_a_rejected_new_case_leaves_its_suite(project: dict[str, Any]):
     assert silent.status_code == 422
     assert rejected.status_code == 200, rejected.text
     assert [c.id for c in load(project["folder"])[1]] == ["labour-1"]
+
+
+def test_one_lawyer_changes_a_case_at_once(project: dict[str, Any]):
+    """Without a second editor's approval, which is the default until people log in (0053), a
+    change takes effect when it is saved and a new case is approved by its author; each keeps
+    its author and reason in the event log."""
+    app = client(project, config=None)
+    before = load(project["folder"])[0].content_hash
+    fields = {
+        f["name"]: f["value"]
+        for f in app.get("/api/golden/labour/labour-1", headers=as_("Ayşe")).json()["fields"]
+    }
+    amended = "Yes, but the 2025 amendment shortens the notice periods."
+
+    unexplained = app.put(
+        "/api/golden/labour/labour-1",
+        json={"fields": {**fields, "reference answer": amended}, "reason": ""},
+        headers=as_("Ayşe"),
+    )
+    changed = app.put(
+        "/api/golden/labour/labour-1",
+        json={
+            "fields": {**fields, "reference answer": amended},
+            "reason": "statute amended in 2025",
+        },
+        headers=as_("Ayşe"),
+    )
+    created = app.post(
+        "/api/golden/labour",
+        json={"fields": {"question": "Q?", "key points": "+1 Says yes"}},
+        headers=as_("Ayşe"),
+    )
+    manifest, cases = load(project["folder"])
+    queued = app.get("/api/queue", headers=as_("Can")).json()["items"]
+    listed = app.get("/api/golden", headers=as_("Ayşe")).json()
+
+    assert unexplained.status_code == 422
+    assert changed.status_code == 200 and changed.json()["proposal"] is None
+    assert manifest.content_hash != before
+    first = next(c for c in cases if c.id == "labour-1")
+    [answer] = [f for f in first.reference.facts if f.kind == "answer"]
+    assert answer.value == amended and first.approval is Approval.APPROVED
+    new = next(c for c in cases if c.id == created.json()["case_id"])
+    assert new.approval is Approval.APPROVED and new.reference.author == "Ayşe"
+    assert not [i for i in queued if i["kind"] == "change"]
+    assert listed["second_approval"] is False
+    logged = [(e.action, e.by, e.reason) for e in project["store"].events()]
+    assert ("changed", "Ayşe", "statute amended in 2025") in logged
+    assert ("created", "Ayşe", None) in logged

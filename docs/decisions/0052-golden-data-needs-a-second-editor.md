@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: second approval made opt-in by 0053
 date: 2026-10-15
 decision-makers: Casebench maintainers
 ---
 
 # Golden data changes only when a second editor approves, and a question can be tried within a daily dollar limit
+
+[0053](0053-second-approval-is-opt-in.md) makes the second editor's approval opt-in until team mode; the rest of this decision stands.
 
 Adds to [0049](0049-lawyers-write-cases-in-a-spreadsheet.md) (cases in a spreadsheet), [0050](0050-the-review-queue.md) (the review queue) and [0051](0051-what-a-run-spends.md) (what a run spends). Follows the workbench design ([workbench.md](../design/workbench.md)).
 
