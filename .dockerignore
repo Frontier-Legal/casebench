@@ -1,0 +1,10 @@
+# What the team server's image does not need from the repository (ee/Dockerfile).
+.git
+.venv
+**/node_modules
+**/__pycache__
+.casebench
+.claude
+dist
+casebench/workbench/static
+ee/casebench_ee/static

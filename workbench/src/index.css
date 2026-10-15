@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/source-serif-4";
+/* The team build's screens live in ee/web; Tailwind generates their utility classes too. */
+@source "../../ee/web";
 
 @custom-variant dark (&:is(.dark *));
 

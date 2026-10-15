@@ -13,7 +13,7 @@ from tests.repository.files import ROOT, load_yaml, run_lines, text, uses, workf
 EE_HEADER = "SPDX-License-Identifier: Elastic-2.0"
 # Files under ee/ that are not source code carry no header.
 UNMARKED = {"LICENSE", "README.md"}
-SKIPPED = {"node_modules", "__pycache__", ".venv", "dist"}
+SKIPPED = {"node_modules", "__pycache__", ".venv", "dist", "static"}
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv to build the wheel")

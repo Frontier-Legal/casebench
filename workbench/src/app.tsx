@@ -410,6 +410,10 @@ export function App() {
             me={me}
             onMe={setMe}
             onLeave={() => {
+              if (extension.signOut) {
+                extension.signOut().then(() => window.location.reload())
+                return
+              }
               storeName(null)
               setMe(null)
             }}

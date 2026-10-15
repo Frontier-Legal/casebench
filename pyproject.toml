@@ -102,8 +102,15 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-root = ""
 
+# The team server under ee/ is its own package, under the Elastic License 2.0 (decision 0057).
+[tool.uv.workspace]
+members = ["ee"]
+
+[tool.uv.sources]
+casebench-ee = { workspace = true }
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "ee/team_tests"]
 addopts = ["--strict-markers"]
 
 [tool.ruff]
@@ -115,8 +122,12 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 # Turkish dotless and dotted i are letters in court names and fixtures, not look-alikes.
 allowed-confusables = ["ı", "İ"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["casebench", "casebench_ee", "tests", "team_tests"]
+
 [tool.pyright]
-include = ["casebench", "tests"]
+include = ["casebench", "tests", "ee"]
+extraPaths = ["ee"]
 pythonVersion = "3.11"
 typeCheckingMode = "standard"
 
@@ -126,6 +137,7 @@ name = "cz_conventional_commits"
 [dependency-groups]
 dev = [
     "anthropic>=1.13.0",
+    "casebench-ee",
     "commitizen>=4.19.2",
     "httpx>=0.28.1",
     "jsonschema>=4.26.0",
