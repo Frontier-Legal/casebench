@@ -1,0 +1,23 @@
+{
+  "format": "casebench.suite/1.0",
+  "case_format": "casebench.case/1.1",
+  "suite_id": "demo",
+  "content_hash": "sha256:9e8b1acb7eec9df61792f38c07d11222baf79e1aadc0eb027d49d4803f3ff754",
+  "casebench_version": "0.2.0",
+  "case_count": 6,
+  "task_types": {
+    "qa": 6
+  },
+  "reference_sources": {
+    "lawyer": 6
+  },
+  "approvals": {
+    "approved": 6
+  },
+  "generation": {
+    "written_for": "the casebench demo"
+  },
+  "corpora": {},
+  "jurisdictions": {},
+  "extensions": {}
+}
