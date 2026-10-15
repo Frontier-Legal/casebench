@@ -16,6 +16,7 @@ from casebench.capture.proxy.routes import Route, default_routes, environment
 from casebench.capture.proxy.server import ProxyServer
 from casebench.capture.recorder import Recorder
 from casebench.capture.redirect import FOLLOW
+from casebench.capture.searches import search_step
 from casebench.capture.step import HttpExchange, Step
 from casebench.corpus.binding import CorpusConfig
 from casebench.plugins import registry
@@ -121,7 +122,8 @@ class CaptureSession:
     def parse(self, exchange: HttpExchange) -> list[Step]:
         """A call through a route is read by the route's parser or as a backend step. A call
         a Python agent made to a host of its choosing is read by the route for that host, or
-        by the first parser whose API it is: each parser reads only its API's own paths."""
+        by the first parser whose API it is: each parser reads only its API's own paths, or as
+        a search of a store whose API is known."""
         route = self.routes.get(exchange.route or "") or self._route_at(exchange.url)
         if route is not None:
             parser = self.parsers.get(route.name)
@@ -135,7 +137,9 @@ class CaptureSession:
                 continue
             if steps:
                 return steps
-        return []
+        # A search of a store whose API Casebench knows, by its path (decision 0061).
+        searched = search_step(exchange)
+        return [searched] if searched is not None else []
 
     def _route_at(self, url: str) -> Route | None:
         host = urlsplit(url).netloc

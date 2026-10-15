@@ -509,7 +509,10 @@ def test_an_agents_own_search_is_recorded(project: Path):
         api.shutdown()
 
     assert checked.exit_code == 0, checked.output
-    assert "target   passed: answered, 1 call recorded" in checked.output
+    assert (
+        'target   passed: answered "No decision speaks to that.", 1 call recorded (1 retrieval)'
+        in checked.output
+    )
     assert result.error is None, result.error
     assert result.output == "101"
     [searched] = [step for step in result.steps if step.kind is StepKind.RETRIEVAL]
