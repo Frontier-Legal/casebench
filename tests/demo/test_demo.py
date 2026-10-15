@@ -22,6 +22,7 @@ from tests.perimeter.test_nothing_leaves_the_perimeter import recording
 
 def test_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)  # a new folder, with no corpus cache, as a first run has
     connected: list[tuple[str, int]] = []
     for owner in (socket.socket, SelectorLoop, ProactorLoop):
         name = "connect" if owner is socket.socket else "sock_connect"
@@ -45,6 +46,7 @@ def test_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     # A bundled suite ran against the echo agent, and every judge reply came from the memo.
     assert len(log.results()) == 6
     assert asked == (PROJECT / MEMO_FILE).read_text("utf-8").count("\n")
+    assert RunLog.read_errors(log.score_sets()[-1]) == []
     assert {s.case_id for s in scores if s.metric == "criteria"} == {
         r.case_id for r in log.results()
     }
@@ -54,5 +56,6 @@ def test_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     assert "failed" in queue[0]["flags"]
     assert first.status_code == 200
     assert all(c["quote"] for c in first.json()["citations"])
-    # Nothing left this machine.
+    # It wrote nothing outside its own folder, and nothing left this machine.
+    assert not (tmp_path / ".casebench").exists()
     assert {host for host, _ in connected} <= {"127.0.0.1"}
