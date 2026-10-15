@@ -14,6 +14,7 @@ from casebench.corpus.guard import refuse_self_check
 from casebench.corpus.ids import NAME
 from casebench.extract.config import ExtractConfig
 from casebench.judge.config import JudgeConfig
+from casebench.network import NetworkConfig
 
 DEFAULT_CONFIG = Path("casebench.yaml")
 
@@ -43,6 +44,7 @@ class CasebenchConfig(Record):
         description="Each key's variable name and the .env file it is read from, relative to "
         "this file, when the environment does not set it; never a value (decision 0043).",
     )
+    network: NetworkConfig | None = None
 
     @property
     def judge(self) -> JudgeConfig | None:

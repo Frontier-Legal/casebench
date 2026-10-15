@@ -11,6 +11,7 @@ from casebench.extract.cli import DEFAULT_KEYS
 from casebench.extract.run import read_keys
 from casebench.judge.client import Judge
 from casebench.judge.resolve import Resolver
+from casebench.perimeter import enforce
 from casebench.suites.court import (
     FACT_KINDS,
     NoKeysFrom,
@@ -26,6 +27,7 @@ from casebench.suites.resolve import RESOLVED_KINDS, CaseResolver
 def _resolver(config_path: Path) -> CaseResolver:
     """The court names authorities as written; the judge and the corpus find their documents."""
     config = load_config(config_path) if config_path.is_file() else CasebenchConfig()
+    enforce(config)
     if config.judge is None or not config.corpora:
         raise click.ClickException(
             "statute and precedent cases need `judge:` and `corpus:` in the config, "

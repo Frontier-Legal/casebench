@@ -90,7 +90,7 @@ target:
   citations: $.sources[*].ref     # optional; else parsed from the answer text
 corpus: {type: s3, uri: s3://firm-decisions/tr/}
 judge: {model: "<user's own provider and key>"}
-network_allowlist: [ai.firm.internal, api.provider.example]
+network: {allow: [api.provider.example]}   # besides the hosts named above (decision 0046)
 ```
 
 Result record, one per test per repeat:

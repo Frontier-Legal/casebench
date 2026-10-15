@@ -53,6 +53,15 @@ def fill_args(run: str, inputs: Mapping[str, Any]) -> list[str]:
     ]
 
 
+def expand_headers(headers: Mapping[str, str]) -> dict[str, str]:
+    """Headers with their `${VAR}`s read, each of which is then treated as a key, so nothing
+    a run writes holds its value (decision 0046)."""
+    for value in headers.values():
+        for name in VARIABLE.findall(value):
+            keys.name(name)
+    return expand_env(headers)
+
+
 def expand_env(values: Mapping[str, str]) -> dict[str, str]:
     """`${VAR}` reads the shell, then the keys read from .env files; a variable that is
     set in neither is an error."""

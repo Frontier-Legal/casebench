@@ -29,6 +29,8 @@ class Recorder:
         self._spans: dict[str, list[RawSpan]] = {}
         self.unattributed: list[HttpExchange] = []
         self.unattributed_spans: list[RawSpan] = []
+        # Calls the proxy refused, whichever case made them: each stops the run (0046).
+        self.refusals: list[str] = []
 
     def begin(self, case_id: str) -> str:
         """Start a case and return the `traceparent` to send the agent."""
@@ -49,6 +51,10 @@ class Recorder:
             if worker is not None:
                 found += self._by_worker.pop(worker, [])
         return sorted(found, key=lambda exchange: exchange.started or 0.0)
+
+    def refuse(self, reason: str) -> None:
+        with self._lock:
+            self.refusals.append(reason)
 
     def add(
         self, exchange: HttpExchange, traceparent: str | None, worker: str | None = None

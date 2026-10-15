@@ -7,8 +7,7 @@ from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import Any
 
-import httpx2
-
+from casebench import network
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 
@@ -16,10 +15,12 @@ CATALOG_URL = "https://models.dev/api.json"
 
 
 def load(path: Path | None = None) -> dict[str, Any]:
-    """A saved copy when given; otherwise fetched for this run and kept in memory only."""
+    """A saved copy when given; otherwise fetched for this run and kept in memory only. A
+    redirect is followed within the catalog's own host only (decision 0046)."""
     if path is not None:
         return json.loads(path.read_text(encoding="utf-8"))
-    response = httpx2.get(CATALOG_URL, follow_redirects=True)
+    with network.client(follow_redirects=True) as client:
+        response = client.get(CATALOG_URL)
     response.raise_for_status()
     return response.json()
 

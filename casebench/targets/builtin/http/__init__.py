@@ -9,11 +9,12 @@ import httpx2
 from jsonpath_ng.ext.parser import parse as jsonpath
 from pydantic import Field
 
+from casebench import network
 from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, to_answer
 from casebench.targets.interface import TargetDidNotStart
-from casebench.targets.placeholders import expand_env, fill_json, split_command
+from casebench.targets.placeholders import expand_headers, fill_json, split_command
 
 # Decision 0017: a start that completes between polls is seen at most this late.
 READY_POLL_SECONDS = 0.1
@@ -59,7 +60,7 @@ class Target:
     def __init__(self, **config: Any) -> None:
         self.config = HttpConfig.model_validate(config)
         self.process: subprocess.Popen[bytes] | None = None
-        self.client = httpx2.AsyncClient(timeout=self.config.timeout_s)
+        self.client = network.async_client(timeout=self.config.timeout_s)
 
     async def start(self, slots: int = 1) -> None:
         if self.config.start is None:
@@ -85,7 +86,7 @@ class Target:
         response = await self.client.request(
             self.config.method,
             self.config.url,
-            headers=_with_trace_context(expand_env(self.config.headers)),
+            headers=_with_trace_context(expand_headers(self.config.headers)),
             json=fill_json(self.config.body, inputs),
         )
         response.raise_for_status()

@@ -6,12 +6,12 @@ import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-import httpx2
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response, StreamingResponse
 from starlette.routing import Route as StarletteRoute
 
+from casebench import network
 from casebench.capture.otlp.decode import decode
 from casebench.capture.proxy.redact import redact_url
 from casebench.capture.proxy.routes import Route
@@ -45,9 +45,11 @@ def _json(raw: bytes) -> Any:
 
 
 def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare]) -> Starlette:
-    """`prepare` maps a route name to its parser's request hook, such as asking for usage."""
+    """`prepare` maps a route name to its parser's request hook, such as asking for usage. A
+    call outside the perimeter, or a redirect to another host, is answered with 403 and kept
+    on the recorder, which stops the run (decision 0046)."""
     by_name = {route.name: route for route in routes}
-    client = httpx2.AsyncClient(timeout=None)
+    client = network.async_client(timeout=None)
 
     async def forward(request: Request) -> Response:
         if "netloc" in request.path_params:
@@ -76,9 +78,14 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
         # Wall-clock times order the steps; the duration comes from the monotonic clock, which
         # on Windows is fine enough to time a fast local call, as the wall clock is not.
         started, begun = time.time(), time.perf_counter()
-        upstream = await client.send(
-            client.build_request(request.method, url, headers=headers, content=raw), stream=True
-        )
+        try:
+            upstream = await client.send(
+                client.build_request(request.method, url, headers=headers, content=raw),
+                stream=True,
+            )
+        except network.HostRefused as refused:
+            recorder.refuse(str(refused))
+            return PlainTextResponse(str(refused), status_code=403)
         chunks: list[bytes] = []
 
         async def relay() -> AsyncIterator[bytes]:

@@ -13,6 +13,7 @@ from casebench.capture.session import session_for
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, target_of
 from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
+from casebench.perimeter import enforce
 from casebench.report import render
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
@@ -41,6 +42,7 @@ def _config(path: Path, python: str | None) -> CasebenchConfig:
         raise click.ClickException(f"{path} does not exist; pass --config or --python")
     if python is not None:
         config = config.model_copy(update={"target": {"type": "python", "entry": python}})
+    enforce(config)
     return config
 
 

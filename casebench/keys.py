@@ -12,8 +12,14 @@ from collections.abc import Iterable, Mapping
 
 # 8 hex characters of SHA-256: two different keys share them once in about four billion pairs.
 FINGERPRINT_LENGTH = 8
+# What a credential seen only in a header becomes in what a run writes (decision 0046).
+HIDDEN = "[credential]"
+# Shorter values are not hidden: replacing them would rewrite ordinary text.
+SHORTEST_HIDDEN = 8
 
 _held: dict[str, str] = {}
+_named: set[str] = set()
+_seen: set[str] = set()
 
 
 def hold(name: str, value: str) -> None:
@@ -32,13 +38,28 @@ def lookup() -> Mapping[str, str]:
     return ChainMap(dict(os.environ), _held)
 
 
+def name(variable: str) -> None:
+    """Treat a variable as a key: the config names it in a header or as a provider's key."""
+    _named.add(variable)
+
+
+def hide(value: str) -> None:
+    """Keep out of what a run writes a credential a call carried, whatever variable it came
+    from (decision 0046)."""
+    if len(value) >= SHORTEST_HIDDEN:
+        _seen.add(value)
+
+
 def scrub(text: str, names: Iterable[str] = ()) -> str:
-    """Text with the value of every held key, and of each variable named, replaced by
-    `${NAME}`, so an error that echoes a request never shows the key."""
-    for name in {*_held, *names}:
-        value = get(name)
+    """Text with the value of every held key, of each variable named here or before, replaced
+    by `${NAME}`, and each credential a call carried by `[credential]`, so nothing written or
+    shown holds a key."""
+    for variable in {*_held, *_named, *names}:
+        value = get(variable)
         if value:
-            text = text.replace(value, f"${{{name}}}")
+            text = text.replace(value, f"${{{variable}}}")
+    for value in sorted(_seen, key=len, reverse=True):
+        text = text.replace(value, HIDDEN)
     return text
 
 

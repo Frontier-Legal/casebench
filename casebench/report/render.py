@@ -3,6 +3,7 @@
 from collections import Counter
 from pathlib import Path
 
+from casebench import keys
 from casebench.core.score import Score
 from casebench.corpus.routing import Route
 from casebench.report.agreement import agreement
@@ -138,5 +139,6 @@ def write(
         scores=scores,
         scoring_errors=errors or [],
     )
-    path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    # Scrubbed of keys like every file a run writes (decision 0046).
+    path.write_text(keys.scrub(report.model_dump_json(indent=2)) + "\n", encoding="utf-8")
     return path

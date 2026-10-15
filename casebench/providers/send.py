@@ -1,4 +1,7 @@
-"""Send a provider's request over HTTP; the only place Casebench's own model calls leave."""
+"""Send a provider's request over HTTP; the only place Casebench's own model calls leave.
+
+So the perimeter applies here (decision 0046).
+"""
 
 import email.utils
 import math
@@ -9,6 +12,7 @@ from typing import Any
 
 import httpx2
 
+from casebench import network
 from casebench.providers.interface import HttpRequest
 
 # What the openai 3.29.0 and anthropic 1.13.0 Python SDKs both do by default, read on
@@ -66,7 +70,7 @@ def send(request: HttpRequest, sleep: Callable[[float], None] = time.sleep) -> t
     retry = 0
     while True:
         try:
-            with httpx2.Client(timeout=TIMEOUT) as client:
+            with network.client(timeout=TIMEOUT) as client:
                 response = client.request(
                     request.method, request.url, headers=request.headers, json=request.body
                 )
