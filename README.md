@@ -47,6 +47,10 @@ Engineers open any answer in the engineering view to see its harness. Each model
 
 To see whether a new version of the agent is better, lawyers compare two runs of one suite in the workbench. They read the two answers to each case as A and B, not knowing which run wrote which, and choose one or call them equal, with a reason. The later run's wins, losses and ties are summed per practice area and marked significant or not; `casebench compare` prints them too.
 
+## Team server
+
+A team can run the workbench on one server, so several lawyers and engineers work on the same runs and suites. The first admin sets the server up with a one-time code from its log, then invites each person by email with a role: viewer, reviewer, editor, engineer or admin. People sign in with the emailed link, or with Google or Microsoft, with no password to remember. Every verdict, change to golden data and team event is in an audit log no one can change. It lives in `ee/` and ships as one Docker image; [ee/README.md](ee/README.md) says how to run it.
+
 ## Jurisdictions
 
 Casebench works in any country with no country-specific code. Models read the decisions and the answers, and your corpus resolves every citation, whatever its format. A data provider that serves several countries needs one connector. [PLUGINS.md](PLUGINS.md) explains how to add a data provider or a model API.

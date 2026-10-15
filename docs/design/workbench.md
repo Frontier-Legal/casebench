@@ -73,7 +73,7 @@
 | Files | cases, runs and reviews export to and import from JSONL, so a suite can live in Git and be diffed |
 | Traces | OTLP receiver and SDK spans stored per run in the same database; kept only for eval runs |
 | Local mode | `casebench ui` binds 127.0.0.1, no login, opens the browser |
-| Team mode | Docker image; password login with no default password (first admin set at setup), OIDC for Entra ID or Google, API keys for CI, roles above |
+| Team mode | `casebench-ee` from `ee/`, in one Docker image on Postgres; the first admin set up with a one-time code from the server's log and a password that is no default; everyone else signs in with an emailed link or with Google or Microsoft; the five roles above; an audit log that cannot be changed; API keys for CI; spend limits ([decision 0058](../decisions/0058-the-team-server.md)) |
 | Cloud | the same `ee/` app as a hosted service, one tenant per organisation; magic-link email, Microsoft and Google login; `casebench invite <email> --role` from the CLI; retention, SSO and scheduled runs |
 | Sync | `casebench push` and `casebench pull` between the local store and the cloud or team server; the table above says what crosses |
 | Spreadsheet review | `casebench export --review` writes an XLSX with one row per criterion: the answer, the judge's verdict, the evidence as links (a corpus's `link:` names the provider's page) and verdict, note and reviewer columns; lawyers fill it; `casebench import` checks every row, then merges the verdicts as reviews, exactly as the workbench would. The lawyer path when there is no server and no cloud ([decision 0055](../decisions/0055-review-in-a-spreadsheet.md)) |

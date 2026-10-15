@@ -31,3 +31,4 @@ node_modules/
 
 # Workbench build, made by npm run build in workbench/ and shipped in the wheel
 casebench/workbench/static/
+ee/casebench_ee/static/

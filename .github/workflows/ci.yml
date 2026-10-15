@@ -63,6 +63,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # The team server's build of the web app, with its screens from ee/web (decision 0058).
+      - run: npm run build:team
 
   test:
     name: test (${{ matrix.os }}, ${{ matrix.python }})
@@ -94,10 +96,47 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest
 
+  team:
+    name: team server on Postgres
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        env:
+          POSTGRES_PASSWORD: casebench
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: false
+      - run: uv sync --locked
+      - run: uv run pytest ee/team_tests tests/workbench/test_team_hooks.py
+        env:
+          CASEBENCH_TEST_POSTGRES: postgresql://postgres:casebench@localhost:5432/postgres
+
+  image:
+    name: team server image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build -f ee/Dockerfile -t casebench-team:ci .
+
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint, workflows, workbench, test]
+    needs: [lint, workflows, workbench, test, team, image]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
