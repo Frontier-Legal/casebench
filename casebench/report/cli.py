@@ -12,6 +12,7 @@ from casebench.report.calibration import calibration, lawyers_win, read_reviews
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.errors import error_rates
+from casebench.report.preferences import by_area, latest, read_preferences
 from casebench.report.record import FORMAT, Report
 from casebench.report.render import (
     REPORT_FILE,
@@ -20,6 +21,7 @@ from casebench.report.render import (
     error_lines,
     error_rate_lines,
     lines,
+    preference_lines,
     spend_lines,
     suite_line,
     unevidenced_lines,
@@ -98,6 +100,11 @@ def compare_command(first: Path, second: Path) -> None:
     for change in found:
         click.echo(f"  {change.setting}: {change.first} -> {change.second}")
     scores = [RunLog.read_scores(path) for path in sets]
+    # Lawyers' blind preferences, kept in the second run's folder (decision 0054).
+    given = latest(read_preferences(second), info.run_id)
+    areas = {s.case_id: s.practice_area for s in scores[1]}
+    for line in preference_lines(by_area(given, areas, info.suite_id)):
+        click.echo(line)
     for d in compare(scores[0], scores[1], info.suite_id):
         verdict = "significant" if d.significant else "not significant"
         moved = [c.setting for c in found if d.metric in c.moves]

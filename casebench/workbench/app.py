@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from casebench.config import CasebenchConfig
-from casebench.workbench import golden, items, reports, trying
+from casebench.workbench import comparing, golden, items, reports, trying
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -121,6 +121,11 @@ class NewCase(BaseModel):
     reason: str | None = None
 
 
+class Prefer(BaseModel):
+    choice: Literal["a", "b", "equal"]
+    reason: str = Field(default="", max_length=4000)
+
+
 class Document(DecisionView):
     highlight: Highlight | None = None
 
@@ -214,6 +219,40 @@ def create_app(
             return reports.run_report(workspace, run_id)
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
+
+    @app.get("/api/compare/{first}/{second}")
+    def compare_runs(first: str, second: str, name: Person) -> comparing.Comparison:
+        """Every pair of answers the two runs share, and the preferences so far (0054)."""
+        try:
+            return comparing.comparison(workspace, first, second)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+
+    @app.get("/api/compare/{first}/{second}/{case_id}/{repeat}")
+    def compare_pair(
+        first: str, second: str, case_id: str, repeat: int, name: Person
+    ) -> comparing.Pair:
+        try:
+            return comparing.pair(workspace, first, second, case_id, repeat)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+
+    @app.post("/api/compare/{first}/{second}/{case_id}/{repeat}")
+    def prefer(
+        first: str, second: str, case_id: str, repeat: int, body: Prefer, name: Person
+    ) -> comparing.Pair:
+        try:
+            return comparing.prefer(
+                workspace, store, first, second, case_id, repeat, body.choice, body.reason, name
+            )
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
 
     @app.get("/api/try")
     def try_budget(name: Person) -> trying.Budget:

@@ -14,6 +14,7 @@ export const SHORTCUTS: { keys: string[]; what: string }[] = [
   { keys: ["1", "–", "9"], what: "Pick the numbered choice on the highlighted row" },
   { keys: ["↓", "J"], what: "Next row" },
   { keys: ["↑", "K"], what: "Previous row" },
+  { keys: ["A", "B", "E"], what: "Compare runs: answer A, answer B, or equal" },
   { keys: ["⌘", "Enter"], what: "Finish and open the next item (Ctrl+Enter on Windows and Linux)" },
   { keys: ["Esc"], what: "Leave a text box" },
   { keys: ["?"], what: "Show these shortcuts" },

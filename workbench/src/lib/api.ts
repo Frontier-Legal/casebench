@@ -258,6 +258,57 @@ export interface RunReport {
   rates: RateView[]
 }
 
+export type Shown = "a" | "b" | "equal"
+
+export interface PairRow {
+  case_id: string
+  repeat: number
+  title: string
+  practice_area: string | null
+  given: boolean
+}
+
+export interface AreaView {
+  practice_area: string | null
+  n: number
+  wins: number
+  losses: number
+  ties: number
+  mean: number
+  low: number
+  high: number
+  sign_p: number
+  significant: boolean
+}
+
+export interface Comparison {
+  first: string
+  second: string
+  suite_id: string
+  pairs: PairRow[]
+  areas: AreaView[]
+}
+
+export interface Revealed {
+  choice: Shown
+  reason: string
+  by: string
+  at: string
+  a_run: string
+  b_run: string
+}
+
+export interface Pair {
+  case_id: string
+  repeat: number
+  title: string
+  inputs: Input[]
+  reference: FactView[]
+  a: string | null
+  b: string | null
+  given: Revealed | null
+}
+
 export interface GivenVerdict {
   criterion_id: string
   verdict: Verdict
@@ -328,6 +379,8 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 }
 
 const item = (key: string) => `/api/items/${encodeURIComponent(key)}`
+const pairPath = (first: string, second: string, caseId: string, repeat: number) =>
+  `/api/compare/${[first, second, caseId, String(repeat)].map(encodeURIComponent).join("/")}`
 
 export const api = {
   session: () => call<Session>("GET", "/api/session"),
@@ -346,6 +399,12 @@ export const api = {
     call<Finished>("POST", `${item(key)}/finish`, { decision, note }),
   golden: () => call<Golden>("GET", "/api/golden"),
   runs: () => call<RunRow[]>("GET", "/api/runs"),
+  comparison: (first: string, second: string) =>
+    call<Comparison>("GET", `/api/compare/${encodeURIComponent(first)}/${encodeURIComponent(second)}`),
+  pair: (first: string, second: string, caseId: string, repeat: number) =>
+    call<Pair>("GET", pairPath(first, second, caseId, repeat)),
+  prefer: (first: string, second: string, caseId: string, repeat: number, choice: Shown, reason: string) =>
+    call<Pair>("POST", pairPath(first, second, caseId, repeat), { choice, reason }),
   runReport: (run: string) => call<RunReport>("GET", `/api/runs/${encodeURIComponent(run)}/report`),
   budget: () => call<Budget>("GET", "/api/try"),
   tryQuestion: (question: string) => call<Tried>("POST", "/api/try", { question }),

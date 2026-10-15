@@ -5,6 +5,7 @@ import { CircleCheckBigIcon, CircleHelpIcon } from "lucide-react"
 import { AppSidebar, type Page } from "@/components/app-sidebar"
 import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
+import { CompareRuns } from "@/components/compare-runs"
 import { Reports } from "@/components/reports"
 import { TryQuestion } from "@/components/try-question"
 import { AnswerReview } from "@/components/answer-review"
@@ -71,6 +72,7 @@ const PAGES: Record<Page, string> = {
   queue: "Review queue",
   golden: "Golden data",
   try: "Try a question",
+  compare: "Compare runs",
   reports: "Reports",
 }
 
@@ -225,6 +227,8 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   let body: React.ReactNode
   if (page === "try") {
     body = <TryQuestion locked={me.role_locked} />
+  } else if (page === "compare") {
+    body = <CompareRuns onHelp={() => setHelp(true)} />
   } else if (page === "reports") {
     body = <Reports onOpen={open} />
   } else if (page === "golden") {

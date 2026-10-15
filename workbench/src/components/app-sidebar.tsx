@@ -6,6 +6,7 @@ import {
   DatabaseIcon,
   FileCheckIcon,
   FilePenIcon,
+  GitCompareArrowsIcon,
   InboxIcon,
   MessageCircleQuestionIcon,
   KeyboardIcon,
@@ -45,7 +46,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Me, QueueItem, View } from "@/lib/api"
 
 type Filter = "all" | "answer" | "approve"
-export type Page = "queue" | "golden" | "try" | "reports"
+export type Page = "queue" | "golden" | "try" | "compare" | "reports"
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -125,6 +126,11 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "try"} onClick={() => onPage("try")}>
                   <MessageCircleQuestionIcon /> Try a question
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "compare"} onClick={() => onPage("compare")}>
+                  <GitCompareArrowsIcon /> Compare runs
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
