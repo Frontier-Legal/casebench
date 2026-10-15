@@ -1,0 +1,75 @@
+{
+  "id": "court-of-appeal-2024-0187:outcome",
+  "task": {
+    "type": "outcome",
+    "question": "How did the court rule? Answer with exactly one of: upheld, reversed.",
+    "facts": "The employee was dismissed after a single warning and appealed."
+  },
+  "reference": {
+    "source": "court",
+    "facts": [
+      {
+        "id": "f1",
+        "kind": "outcome",
+        "value": "reversed",
+        "evidence": {
+          "doc": "court-of-appeal-2024-0187",
+          "quote": "The appeal is allowed."
+        }
+      },
+      {
+        "id": "f2",
+        "kind": "statute",
+        "value": "Employment Rights Act 1996, s. 98",
+        "evidence": {
+          "doc": "court-of-appeal-2024-0187",
+          "span": [
+            120,
+            168
+          ]
+        },
+        "document_id": "era-1996-s98"
+      }
+    ],
+    "criteria": [
+      {
+        "id": "c1",
+        "text": "Passes if the answer relies on section 98. Fails if it does not.",
+        "weight": 2,
+        "from": [
+          "f2"
+        ]
+      },
+      {
+        "id": "c2",
+        "text": "Passes if the answer cites no repealed provision. Fails if it does.",
+        "weight": -1
+      }
+    ],
+    "author": "Reviewing lawyer"
+  },
+  "metrics": [
+    "outcome",
+    "statute"
+  ],
+  "tags": [
+    "employment"
+  ],
+  "provenance": {
+    "builder": "court",
+    "source_decision_id": "court-of-appeal-2024-0187",
+    "jurisdiction": "GB",
+    "extracted_by": [
+      "anthropic/model-a",
+      "openai/model-b"
+    ]
+  },
+  "approval": "approved",
+  "extensions": {
+    "example.com": {
+      "reviewed_in": "2024-Q3"
+    }
+  },
+  "practice_area": "labour",
+  "approved_by": "Ayşe Yılmaz"
+}
