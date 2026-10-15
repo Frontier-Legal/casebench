@@ -7,6 +7,7 @@ import click
 from casebench import __version__, network
 from casebench.capture.cli import proxy
 from casebench.cases.cli import case_group
+from casebench.cases.sheet_cli import import_command, template_group
 from casebench.config import ConfigError
 from casebench.corpus.cli import corpus
 from casebench.extract.cli import extract_command
@@ -54,6 +55,8 @@ main.add_command(corpus)
 main.add_command(extract_command)
 main.add_command(generate_command)
 main.add_command(case_group)
+main.add_command(template_group)
+main.add_command(import_command)
 main.add_command(report_command)
 main.add_command(compare_command)
 main.add_command(review_group)

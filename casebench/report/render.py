@@ -119,12 +119,12 @@ def warning_lines(warnings: list[str]) -> list[str]:
 
 
 def unevidenced_lines(unevidenced: list[str]) -> list[str]:
-    """Cases with no criterion to earn (decision 0047)."""
+    """Cases with nothing to earn in a metric they name, such as no criterion (0047, 0049)."""
     if not unevidenced:
         return []
     return [
-        f"unevidenced: {len(unevidenced)} cases have no evidenced fact, so no criterion, and "
-        f"were not scored for criteria: {', '.join(unevidenced)}"
+        f"unevidenced: {len(unevidenced)} cases have no evidenced fact for a metric they "
+        f"name, which did not score them: {', '.join(unevidenced)}"
     ]
 
 

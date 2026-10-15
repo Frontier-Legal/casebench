@@ -24,6 +24,7 @@ dependencies = [
     "httpx2>=2.13.1",
     "jsonpath-ng>=1.10.0",
     "mcp>=2.3.0",
+    "openpyxl>=3.1.5",
     "opentelemetry-proto>=1.45.1",
     "packaging>=26.3",
     "pydantic>=2.14.0",
@@ -55,8 +56,13 @@ http = "casebench.corpus.connectors.http:Connector"
 mcp = "casebench.corpus.connectors.mcp:Connector"
 
 [project.entry-points."casebench.metrics"]
+authority_ndcg = "casebench.metrics.builtin.authority_ndcg:Metric"
+authority_recall = "casebench.metrics.builtin.authority_recall:Metric"
 citation_integrity = "casebench.metrics.builtin.citation_integrity:CitationIntegrity"
 criteria = "casebench.metrics.builtin.criteria:Metric"
+edit_preservation = "casebench.metrics.builtin.edit_preservation:Metric"
+fields = "casebench.metrics.builtin.fields:Metric"
+issues_found = "casebench.metrics.builtin.issues_found:Metric"
 outcome = "casebench.metrics.builtin.outcome:Metric"
 precedent = "casebench.metrics.builtin.precedent:Metric"
 statute = "casebench.metrics.builtin.statute:Metric"
@@ -70,6 +76,14 @@ openai = "casebench.providers.builtin.openai:Provider"
 
 [project.entry-points.pytest11]
 casebench = "casebench.pytest_plugin"
+
+[project.entry-points."casebench.tasks"]
+drafting = "casebench.tasks.builtin.drafting:Task"
+editing = "casebench.tasks.builtin.editing:Task"
+extraction = "casebench.tasks.builtin.extraction:Task"
+outcome = "casebench.tasks.builtin.outcome:Task"
+qa = "casebench.tasks.builtin.qa:Task"
+research = "casebench.tasks.builtin.research:Task"
 
 [project.entry-points."casebench.targets"]
 command = "casebench.targets.builtin.command:Target"

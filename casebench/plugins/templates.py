@@ -56,6 +56,7 @@ class Provider:
 """,
     "task": """class Task:
     input_fields = ("question",)
+    reference_fields = ("key points",)
     default_metrics: tuple[str, ...] = ()
 """,
     "reference": """from typing import Any
