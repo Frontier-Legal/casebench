@@ -5,7 +5,7 @@ import { AnswerText } from "@/components/answer-text"
 import { Choices } from "@/components/choices"
 import { EngineeringCard } from "@/components/engineering-card"
 import { HarnessView } from "@/components/harness-view"
-import { FinishBar } from "@/components/finish-bar"
+import { FinishBar, ReadOnlyBar } from "@/components/finish-bar"
 import { InputsCard } from "@/components/inputs-card"
 import { Overline, Section, Status } from "@/components/section"
 import { CitationStatus, SourcePanel } from "@/components/source-panel"
@@ -181,6 +181,7 @@ export function AnswerReview({
   onFinish,
   onHelp,
   busy,
+  readOnly = false,
 }: {
   item: AnswerItem
   left: number
@@ -188,6 +189,7 @@ export function AnswerReview({
   onFinish: (verdicts: GivenVerdict[]) => void
   onHelp: () => void
   busy: boolean
+  readOnly?: boolean
 }) {
   const wide = useWide()
   const [chosen, setChosen] = useState<Chosen>(() => initial(item))
@@ -388,18 +390,22 @@ export function AnswerReview({
         </Sheet>
       )}
       {item.engineering && <HarnessView itemKey={item.key} />}
-      <FinishBar
-        left={left}
-        busy={busy}
-        onFinish={finish}
-        summary={
-          criteria.length
-            ? changed
-              ? `You overrule the judge on ${plural(changed, "criterion", "criteria")}`
-              : "You agree with the judge on every criterion"
-            : "Read the answer and its citations"
-        }
-      />
+      {readOnly ? (
+        <ReadOnlyBar />
+      ) : (
+        <FinishBar
+          left={left}
+          busy={busy}
+          onFinish={finish}
+          summary={
+            criteria.length
+              ? changed
+                ? `You overrule the judge on ${plural(changed, "criterion", "criteria")}`
+                : "You agree with the judge on every criterion"
+              : "Read the answer and its citations"
+          }
+        />
+      )}
     </>
   )
 }

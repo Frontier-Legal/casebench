@@ -3,7 +3,7 @@ import { CheckIcon, PencilIcon, XIcon } from "lucide-react"
 
 import { Choices } from "@/components/choices"
 import { EngineeringCard } from "@/components/engineering-card"
-import { FinishBar } from "@/components/finish-bar"
+import { FinishBar, ReadOnlyBar } from "@/components/finish-bar"
 import { InputsCard } from "@/components/inputs-card"
 import { Passage } from "@/components/passage"
 import { Overline, Section, Status } from "@/components/section"
@@ -60,6 +60,7 @@ export function DraftReview({
   onFinish,
   onHelp,
   busy,
+  readOnly = false,
 }: {
   item: DraftItem
   left: number
@@ -67,6 +68,7 @@ export function DraftReview({
   onFinish: (facts: GivenFact[]) => void
   onHelp: () => void
   busy: boolean
+  readOnly?: boolean
 }) {
   const wide = useWide()
   const [decided, setDecided] = useState(() => initial(item))
@@ -265,13 +267,17 @@ export function DraftReview({
           <TabsContent value="decision">{decision}</TabsContent>
         </Tabs>
       )}
-      <FinishBar
-        left={left}
-        busy={busy}
-        onFinish={finish}
-        label="Approve the case and next"
-        summary={`${done} of ${plural(facts.length, "fact")} decided`}
-      />
+      {readOnly ? (
+        <ReadOnlyBar />
+      ) : (
+        <FinishBar
+          left={left}
+          busy={busy}
+          onFinish={finish}
+          label="Approve the case and next"
+          summary={`${done} of ${plural(facts.length, "fact")} decided`}
+        />
+      )}
     </>
   )
 }
