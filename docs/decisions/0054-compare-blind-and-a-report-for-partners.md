@@ -53,6 +53,7 @@ Chosen option 1, because a practice area is something every lawyer writes and re
   - the four error rates with their intervals;
   - worked examples: for each error rate with failures, up to three failing answers, each with its question, the answer, and its evidence (the citation and what the corpus found for it, or the court's passage or the lawyer's reference the criterion rests on);
   - who approved the golden data: each approver and how many cases they approved, the cases whose approver is not recorded, and the unreviewed cases.
+  - The export reads the suite at the hash the run ran, and takes each case's practice area from it. When the suite has changed since, the export is refused: who approved the answer key the run was scored against is no longer known. Running the suite again gives a run that exports.
 - **One file with no server.** The HTML export holds its styles inline and loads no script, font or image from elsewhere, so it opens from disk or an email attachment. It prints to A4 with its tables whole.
 - **Libraries.** PDF through ReportLab (BSD), DOCX through python-docx (MIT). The PDF embeds Noto Sans (SIL Open Font License), shipped in the wheel, because the PDF standard fonts lack letters such as ğ, ş and ı.
 
