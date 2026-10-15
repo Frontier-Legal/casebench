@@ -14,6 +14,7 @@ from casebench import keys
 from casebench.core.model import FrozenRecord
 from casebench.core.score import CriterionVerdict, Score
 from casebench.metrics.criteria import label_of, weighted_score
+from casebench.runs.log import RunLog
 
 REVIEWS_FILE = "reviews.jsonl"
 CRITERIA = "criteria"
@@ -80,6 +81,47 @@ def add_review(folder: Path, verdict: LawyerVerdict) -> None:
     """Appended, and scrubbed of keys like every line a run writes."""
     with (folder / REVIEWS_FILE).open("a", encoding="utf-8") as stream:
         stream.write(keys.scrub(verdict.model_dump_json()) + "\n")
+
+
+class CannotRecord(ValueError):
+    """A verdict that cannot be recorded: the run has no such criterion verdict, or it
+    overrules the judge without a note."""
+
+
+def record_verdict(
+    folder: Path,
+    case_id: str,
+    repeat: int,
+    criterion_id: str,
+    verdict: Said,
+    by: str,
+    note: str | None = None,
+) -> LawyerVerdict:
+    """A lawyer's verdict on one criterion of the run's latest score set, appended to its
+    `reviews.jsonl`; overruling the judge needs a note."""
+    sets = RunLog(folder).score_sets()
+    if not sets:
+        raise CannotRecord(f"{folder} has no scores yet; score it first")
+    judged = criterion_verdicts(RunLog.read_scores(sets[-1])).get((case_id, repeat, criterion_id))
+    if judged is None:
+        raise CannotRecord(
+            f"the latest score set has no criteria verdict for case {case_id}, repeat {repeat}, "
+            f"criterion {criterion_id}"
+        )
+    judge = said(judged)
+    if verdict != judge and not (note or "").strip():
+        raise CannotRecord(f"the judge said {judge}; overruling it needs a note saying why")
+    review = LawyerVerdict(
+        case_id=case_id,
+        repeat=repeat,
+        criterion_id=criterion_id,
+        verdict=verdict,
+        judge=judge,
+        note=note or None,
+        by=by,
+    )
+    add_review(folder, review)
+    return review
 
 
 def lawyers_win(scores: list[Score], reviews: list[LawyerVerdict]) -> list[Score]:

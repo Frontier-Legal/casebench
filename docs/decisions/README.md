@@ -63,3 +63,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0047](0047-the-judge-rests-on-evidence.md) | A verdict rests on a quote the answer holds and on the case's evidence, and lawyers' verdicts calibrate the judge | accepted |
 | [0048](0048-a-gate-in-ci.md) | A gate fails a build only on a significant drop, over approved cases, against a saved baseline | accepted |
 | [0049](0049-lawyers-write-cases-in-a-spreadsheet.md) | Lawyers write cases in a spreadsheet, and research, drafting, editing and extraction tasks are graded | accepted |
+| [0050](0050-the-review-queue.md) | The review queue: run folders stay the truth, a database keeps what people do, and one web app serves lawyers and engineers | accepted |

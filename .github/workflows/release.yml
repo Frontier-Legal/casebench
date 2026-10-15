@@ -35,10 +35,21 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.release-please.outputs.tag }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - name: Build the workbench into the package
+        working-directory: workbench
+        run: |
+          npm ci --ignore-scripts
+          npm run build
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: false
       - run: uv build --package casebench
+      - name: The wheel carries the workbench
+        run: unzip -l dist/*.whl | grep -q 'casebench/workbench/static/index.html'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist

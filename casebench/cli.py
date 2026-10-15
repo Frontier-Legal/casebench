@@ -26,6 +26,7 @@ from casebench.setup.keys_cli import keys_command
 from casebench.setup.models_cli import models_command
 from casebench.suites.cli import generate_command
 from casebench.targets.cli import target
+from casebench.workbench.cli import ui_command
 
 
 class _Main(click.Group):
@@ -60,6 +61,7 @@ main.add_command(import_command)
 main.add_command(report_command)
 main.add_command(compare_command)
 main.add_command(review_group)
+main.add_command(ui_command)
 main.add_command(gate_command)
 main.add_command(init_command)
 main.add_command(check_command)
