@@ -14,6 +14,7 @@ from casebench.report.review_sheet import (
 )
 from casebench.runs.cli import DEFAULT_RUNS
 from casebench.runs.log import RUN_FILE, RunLog
+from casebench.runs.offline_cli import export_questions
 from casebench.workbench.items import answer_key
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import DEFAULT_DATABASE, Event, Store, url_for
@@ -26,9 +27,15 @@ IMPORTED = "imported"
     "--review",
     "run_dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    required=True,
     help="The run whose answers lawyers review in the spreadsheet.",
 )
+@click.option(
+    "--suite",
+    "suite_dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="With --format csv: the suite whose questions a closed tool answers (decision 0061).",
+)
+@click.option("--format", "kind", type=click.Choice(["csv"]), help="With --suite: csv.")
 @click.option("--out", "path", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--all", "everything", is_flag=True, help="Also the criteria already reviewed.")
 @click.option(
@@ -47,13 +54,24 @@ IMPORTED = "imported"
     help="Its corpora's link: settings link each court fact to its decision.",
 )
 def export_command(
-    run_dir: Path,
+    run_dir: Path | None,
+    suite_dir: Path | None,
+    kind: str | None,
     path: Path | None,
     everything: bool,
     suite_dirs: tuple[Path, ...],
     config_path: Path,
 ) -> None:
-    """Write a run's criteria to a spreadsheet lawyers review with no server and no login."""
+    """Write a run's criteria to a spreadsheet lawyers review with no server and no login,
+    or a suite's questions as CSV for a tool Casebench cannot reach."""
+    if suite_dir is not None:
+        target = path or Path(f"questions-{suite_dir.name}.csv")
+        if target.exists():
+            raise click.ClickException(f"{target} exists; name another file with --out")
+        export_questions(suite_dir, target)
+        return
+    if run_dir is None:
+        raise click.ClickException("export --review RUN, or --suite DIR --format csv")
     log = RunLog(run_dir)
     path = path or Path(f"review-{log.info.run_id}.xlsx")
     if path.exists():

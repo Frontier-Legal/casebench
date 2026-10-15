@@ -14,6 +14,9 @@ from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.report.review_sheet import run_of
 from casebench.report.review_sheet_cli import import_review_sheet
+from casebench.runs.cli import DEFAULT_RUNS
+from casebench.runs.offline import is_answers
+from casebench.runs.offline_cli import import_answers
 
 
 def _unevidenced(case: Case) -> list[str]:
@@ -79,6 +82,11 @@ def import_command(
     reviewed = run_of(path)
     if reviewed is not None:
         import_review_sheet(path, reviewed, runs_dir, author, database)
+        return
+    if is_answers(path):
+        if suite_dir is None:
+            raise click.ClickException("a sheet of answers needs --suite, the suite it answers")
+        import_answers(path, suite_dir, config_path, runs_dir or DEFAULT_RUNS, None)
         return
     if suite_dir is None or not author:
         raise click.ClickException("a sheet of cases needs --suite and --by")
