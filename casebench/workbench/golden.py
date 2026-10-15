@@ -64,6 +64,9 @@ class GoldenSuite(BaseModel):
 class Golden(BaseModel):
     suites: list[GoldenSuite]
     tasks: list[str] = Field(description="The task types a new case may have.")
+    second_approval: bool = Field(
+        default=False, description="Whether a change waits for a second editor (0053)."
+    )
 
 
 class Form(BaseModel):
@@ -101,9 +104,11 @@ class ChangeItem(BaseModel):
 
 
 class Proposed(BaseModel):
+    """`proposal` is set when the change waits for a second editor."""
+
     suite_id: str
     case_id: str
-    proposal: int
+    proposal: int | None = None
     message: str
 
 
@@ -141,7 +146,7 @@ def _pending(store: Store) -> dict[tuple[str, str], Proposal]:
     return {(p.suite_id, p.case_id): p for p in store.proposals(PENDING)}
 
 
-def golden(workspace: Workspace, store: Store) -> Golden:
+def golden(workspace: Workspace, store: Store, second: bool = False) -> Golden:
     waiting = _pending(store)
     suites = [
         GoldenSuite(
@@ -161,7 +166,7 @@ def golden(workspace: Workspace, store: Store) -> Golden:
         )
         for suite_id, suite in sorted(workspace.suites().items())
     ]
-    return Golden(suites=suites, tasks=task_names())
+    return Golden(suites=suites, tasks=task_names(), second_approval=second)
 
 
 def _suite(workspace: Workspace, suite_id: str) -> SuiteFolder:
@@ -211,13 +216,15 @@ def propose_change(
     cells: dict[str, str],
     reason: str,
     person: str,
+    second: bool = False,
 ) -> Proposed:
-    """The suite stays as it is until another editor approves the change."""
+    """With a second editor's approval on, the suite stays as it is until another editor
+    approves the change; off, the change is written into the suite now (decision 0053)."""
     _, case = _case(workspace, suite_id, case_id)
     if not editable(case):
         raise Refused(f"{case.task.type} cases are changed where they were made, not in the form")
     if not reason.strip():
-        raise Refused("say why you change the case; the second editor reads it")
+        raise Refused("say why you change the case; the event log keeps it")
     if (suite_id, case_id) in _pending(store):
         raise Refused("a change to this case is already waiting for a second editor")
     if not changes(cells_of(case), cells):
@@ -226,6 +233,28 @@ def propose_change(
         after = revised(case, cells, person)
     except SheetError as failure:
         raise Refused(str(failure)) from None
+    if not second:
+        suite = _suite(workspace, suite_id)
+        cases = [after if c.id == case_id else c for c in suite.cases]
+        _, manifest = save(suite.folder, cases)
+        store.log(
+            [
+                Event(
+                    by=person,
+                    action="changed",
+                    item=f"case:{suite_id}/{case_id}",
+                    subject=f"{suite_id}/{case_id}",
+                    before=case.model_dump(mode="json"),
+                    after=after.model_dump(mode="json"),
+                    reason=reason.strip(),
+                )
+            ]
+        )
+        return Proposed(
+            suite_id=suite_id,
+            case_id=case_id,
+            message=f"changed; the suite's hash is now {manifest.content_hash}",
+        )
     proposal = store.propose(
         Proposal(
             kind=CHANGE,
@@ -255,17 +284,40 @@ def create_case(
     cells: dict[str, str],
     person: str,
     reason: str | None = None,
+    second: bool = False,
 ) -> Proposed:
-    """A new case enters its suite as a draft, with a proposal to approve it."""
+    """A new case is approved by its author, or, with a second editor's approval on, enters
+    its suite as a draft with a proposal to approve it (decision 0053)."""
     if task not in task_names():
         raise NotFound(f"no task type {task}")
     suite = _suite(workspace, suite_id)
     case_id = next_id(suite.manifest.suite_id, suite.cases)
     try:
-        case = new_case(task, cells, case_id, person)
+        case = new_case(
+            task, cells, case_id, person, Approval.DRAFT if second else Approval.APPROVED
+        )
     except SheetError as failure:
         raise Refused(str(failure)) from None
     _, manifest = save(suite.folder, [*suite.cases, case])
+    if not second:
+        store.log(
+            [
+                Event(
+                    by=person,
+                    action="created",
+                    item=f"case:{suite_id}/{case_id}",
+                    subject=f"{suite_id}/{case_id}",
+                    after=case.model_dump(mode="json"),
+                    reason=(reason or "").strip() or None,
+                )
+            ]
+        )
+        return Proposed(
+            suite_id=suite_id,
+            case_id=case_id,
+            message=f"{case_id} is approved in {suite_id}; the suite's hash is now "
+            f"{manifest.content_hash}",
+        )
     proposal = store.propose(
         Proposal(
             kind=NEW,

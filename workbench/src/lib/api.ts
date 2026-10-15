@@ -176,6 +176,7 @@ export interface CaseRow {
 export interface Golden {
   suites: { suite_id: string; cases: CaseRow[] }[]
   tasks: string[]
+  second_approval: boolean
 }
 
 export interface FormField {
@@ -222,7 +223,7 @@ export interface Tried {
 export interface Proposed {
   suite_id: string
   case_id: string
-  proposal: number
+  proposal: number | null
   message: string
 }
 

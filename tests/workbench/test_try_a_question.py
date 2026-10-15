@@ -62,7 +62,7 @@ def test_spot_check_to_case(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         "agent_models": [
             {"model": "agent-model", "family": "a", "price": {"input": 1, "output": 2}}
         ],
-        "workbench": {"try_daily_limit_usd": 5},
+        "workbench": {"try_daily_limit_usd": 5, "second_approval": True},
     }
     app = app_for(tmp_path, config)
 
@@ -93,7 +93,7 @@ def test_spot_check_to_case(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     # The judge's calls are counted against the day's limit.
     assert answer["judge_cost"] > 0 and answer["cost"] == pytest.approx(answer["judge_cost"])
     assert answer["budget"]["spent_today"] == pytest.approx(answer["cost"])
-    # Saved as a case, it joins the suite as a draft awaiting approval.
+    # Saved as a case, it joins the suite as a draft awaiting a second editor's approval.
     assert saved.status_code == 200, saved.text
     [case] = load(tmp_path / "suites" / "labour")[1]
     assert (

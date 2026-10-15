@@ -62,12 +62,14 @@ export function CaseEditor({
   opened,
   tasks,
   locked,
+  second,
   onClose,
   onSaved,
 }: {
   opened: Opened | null
   tasks: string[]
   locked: boolean
+  second: boolean
   onClose: () => void
   onSaved: () => void
 }) {
@@ -134,7 +136,9 @@ export function CaseEditor({
           <SheetTitle>{creating ? "New case" : (detail?.case_id ?? "Case")}</SheetTitle>
           <SheetDescription>
             {creating
-              ? `A draft in ${opened?.suite} until a second editor approves it.`
+              ? second
+                ? `A draft in ${opened?.suite} until a second editor approves it.`
+                : `Approved in ${opened?.suite} when you save it.`
               : detail
                 ? `${taskName(detail.task)} · ${detail.source} · ${detail.approval}${detail.author ? ` · written by ${detail.author}` : ""}`
                 : "Loading"}
@@ -222,7 +226,11 @@ export function CaseEditor({
               {!readOnly && (
                 <Field>
                   <FieldLabel htmlFor="field-reason">
-                    {creating ? "A note for the second editor" : "Why do you change it?"}
+                    {creating
+                      ? second
+                        ? "A note for the second editor"
+                        : "A note for the change log"
+                      : "Why do you change it?"}
                   </FieldLabel>
                   <Input
                     id="field-reason"
@@ -232,8 +240,12 @@ export function CaseEditor({
                   />
                   <FieldDescription>
                     {creating
-                      ? "The case joins its suite as a draft."
-                      : "Required. The second editor sees it beside the change."}
+                      ? second
+                        ? "The case joins its suite as a draft."
+                        : "The change log keeps it with your name and the time."
+                      : second
+                        ? "Required. The second editor sees it beside the change."
+                        : "Required. The change log keeps it with your name and the time."}
                   </FieldDescription>
                 </Field>
               )}
@@ -250,7 +262,13 @@ export function CaseEditor({
               disabled={busy || !fields || (!creating && (!changed || !reason.trim()))}
             >
               {busy && <Spinner />}
-              {creating ? "Save as draft" : "Propose the change"}
+              {creating
+                ? second
+                  ? "Save as draft"
+                  : "Save the case"
+                : second
+                  ? "Propose the change"
+                  : "Save the change"}
             </Button>
           </SheetFooter>
         )}
@@ -317,8 +335,10 @@ export function GoldenData({
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">Golden data</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            The answer key every score rests on. A change takes effect only when a second
-            editor approves it.
+            The answer key every score rests on.{" "}
+            {golden.second_approval
+              ? "A change takes effect only when a second editor approves it."
+              : "Every change is kept with who made it, when and why."}
           </p>
         </div>
         {!locked && suite && (
@@ -427,6 +447,7 @@ export function GoldenData({
         opened={opened}
         tasks={golden.tasks}
         locked={locked}
+        second={golden.second_approval}
         onClose={() => onOpen(null)}
         onSaved={() => {
           onOpen(null)

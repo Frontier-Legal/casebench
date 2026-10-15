@@ -39,6 +39,7 @@ const GOLDEN: Golden = {
     },
   ],
   tasks: ["qa", "research", "drafting"],
+  second_approval: true,
 }
 
 const BLANK: FormField[] = ["question", "facts", "reference answer", "key points", "statutes", "precedents"].map(

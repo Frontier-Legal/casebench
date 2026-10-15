@@ -33,9 +33,11 @@ MOST_JUDGES = 2
 
 class WorkbenchConfig(Record):
     """The `workbench:` section: what trying a question in the workbench may spend each day,
-    in US dollars, the agent's and the judge's model calls together (decision 0052)."""
+    in US dollars, the agent's and the judge's model calls together (decision 0052), and
+    whether a change to golden data waits for a second editor (decision 0053)."""
 
     try_daily_limit_usd: float | None = Field(default=None, ge=0)
+    second_approval: bool = False
 
 
 class CasebenchConfig(Record):

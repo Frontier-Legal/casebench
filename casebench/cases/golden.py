@@ -71,8 +71,15 @@ def changes(before: dict[str, str], after: dict[str, str]) -> list[FieldChange]:
     ]
 
 
-def new_case(task: str, cells: dict[str, str], case_id: str, author: str) -> Case:
-    """A case written in the form: a draft until a second editor approves it."""
+def new_case(
+    task: str,
+    cells: dict[str, str],
+    case_id: str,
+    author: str,
+    approval: Approval = Approval.DRAFT,
+) -> Case:
+    """A case written in the form: approved by its author, or a draft until a second editor
+    approves it (decisions 0052, 0053)."""
     return written_case(
         task,
         cells,
@@ -81,7 +88,7 @@ def new_case(task: str, cells: dict[str, str], case_id: str, author: str) -> Cas
         written=Evidence(doc=FORM, note=f"written by {author}"),
         where=f"case {case_id}",
         read=lambda text: text,
-        approval=Approval.DRAFT,
+        approval=approval,
     )
 
 
