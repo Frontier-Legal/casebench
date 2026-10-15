@@ -188,6 +188,12 @@ def new_command(
         raise click.Abort()
     old, manifest = save(suite_dir, [*cases, case])
     click.echo(f"added {case.id}: graded by {', '.join(case.metrics)}")
+    if not case.reference.criteria:
+        # Nothing to earn without an evidenced fact (decision 0047).
+        click.echo(
+            f"  {case.id} is unevidenced: it states no ruling, answer, statute or precedent, so "
+            "no criterion was made and runs will not score it"
+        )
     waiting = unresolved(case)
     if waiting:
         later = "casebench case resolve" if resolver else "a corpus, then casebench case resolve"

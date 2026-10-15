@@ -362,6 +362,10 @@ def init_command(
         if warning:
             screen.warn(warning)
             click.echo(warning, err=True)
+        # Each run checks the judge's family against these again (decision 0047).
+        named = families(listed(), [m.name for m in found.models])
+        if named:
+            data["agent_models"] = [{"model": m, "family": f} for m, f in sorted(named.items())]
     asks_extract = choose_all and not no_extract
     wants_extract = bool(extract_models) or (
         asks_extract

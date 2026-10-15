@@ -146,7 +146,8 @@ def test_judge_family_warning(workspace):
     ran = run(tmp_path, config)
 
     assert ran.exit_code == 0, ran.output
-    assert "pick a judge from another model family than your target's model" in ran.stderr
+    # No `agent_models:`, so the run says the family was not checked (decision 0047).
+    assert "whether a judge shares their family was not checked" in ran.stderr
 
 
 def test_statute_cases_need_a_judge_and_a_corpus(workspace):

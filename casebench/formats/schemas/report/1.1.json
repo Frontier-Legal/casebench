@@ -1,0 +1,921 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Approval": {
+      "description": "Whether a lawyer has approved a case's reference.",
+      "enum": [
+        "draft",
+        "approved"
+      ],
+      "title": "Approval",
+      "type": "string"
+    },
+    "AuthorityTrace": {
+      "additionalProperties": false,
+      "description": "One court authority: which stages it reached; None where a stage could not be checked.",
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "retrieved": {
+          "type": "boolean"
+        },
+        "kept": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "cited": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "document_id",
+        "retrieved",
+        "kept",
+        "read",
+        "cited",
+        "label"
+      ],
+      "title": "AuthorityTrace",
+      "type": "object"
+    },
+    "Calibration": {
+      "additionalProperties": false,
+      "description": "For one kind of criterion: how many verdicts lawyers gave, and how many agreed with\nthe judge's in the score set reported.",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "labelled": {
+          "type": "integer"
+        },
+        "agreed": {
+          "type": "integer"
+        },
+        "overruled": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "labelled",
+        "agreed",
+        "overruled"
+      ],
+      "title": "Calibration",
+      "type": "object"
+    },
+    "CaseFunnel": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "diagnostic": {
+          "type": "boolean"
+        },
+        "authorities": {
+          "items": {
+            "$ref": "#/$defs/AuthorityTrace"
+          },
+          "type": "array"
+        },
+        "ungrounded": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "diagnostic",
+        "authorities",
+        "ungrounded"
+      ],
+      "title": "CaseFunnel",
+      "type": "object"
+    },
+    "CitationCheck": {
+      "additionalProperties": false,
+      "description": "One citation in an answer: as written, the claim it carried, what the corpus found.",
+      "properties": {
+        "citation": {
+          "type": "string"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "label": {
+          "$ref": "#/$defs/CitationLabel"
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "routed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What chose the corpora searched: citation, case or all (decision 0036)."
+        }
+      },
+      "required": [
+        "citation",
+        "claim",
+        "label"
+      ],
+      "title": "CitationCheck",
+      "type": "object"
+    },
+    "CitationLabel": {
+      "description": "`unchecked`: no connected corpus covers the citation's jurisdiction or kind, so\nCasebench cannot say; it never counts against the answer (decision 0036).",
+      "enum": [
+        "verified",
+        "misgrounded",
+        "fabricated",
+        "unchecked"
+      ],
+      "title": "CitationLabel",
+      "type": "string"
+    },
+    "CitationRate": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/CitationLabel"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "count",
+        "rate"
+      ],
+      "title": "CitationRate",
+      "type": "object"
+    },
+    "CriterionVerdict": {
+      "additionalProperties": false,
+      "description": "Whether the output met one criterion, with the quote of the output that shows it and\nthe evidence the criterion rests on (decision 0047).",
+      "properties": {
+        "criterion_id": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "integer"
+        },
+        "met": {
+          "type": "boolean"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The kind of fact the criterion comes from, such as outcome."
+        },
+        "evidence": {
+          "description": "The court's passage, or the value a lawyer wrote, for each fact the criterion comes from.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why a verdict the judge gave does not count as given."
+        },
+        "reviewed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The lawyer whose verdict replaced the judge's (0047)."
+        },
+        "judge_met": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the judge decided, when a lawyer's verdict replaced it."
+        }
+      },
+      "required": [
+        "criterion_id",
+        "weight",
+        "met"
+      ],
+      "title": "CriterionVerdict",
+      "type": "object"
+    },
+    "Direction": {
+      "description": "Which way is better.",
+      "enum": [
+        "higher",
+        "lower"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Disagreement": {
+      "additionalProperties": false,
+      "description": "One item two judges decided differently; the stricter verdict is the one that counted,\nuntil a lawyer decides it (decision 0035).",
+      "properties": {
+        "item": {
+          "type": "string"
+        },
+        "first": {
+          "type": "string"
+        },
+        "second": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "item",
+        "first",
+        "second"
+      ],
+      "title": "Disagreement",
+      "type": "object"
+    },
+    "Funnel": {
+      "additionalProperties": false,
+      "description": "How many gold authorities survived each step, over the run and per case.",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/FunnelSummary"
+        },
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/CaseFunnel"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "cases"
+      ],
+      "title": "Funnel",
+      "type": "object"
+    },
+    "FunnelSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "cases": {
+          "type": "integer"
+        },
+        "diagnosed": {
+          "type": "integer"
+        },
+        "authorities": {
+          "type": "integer"
+        },
+        "survived": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "ungrounded": {
+          "type": "integer"
+        },
+        "without_rerank": {
+          "type": "integer"
+        },
+        "cited_checked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cases",
+        "diagnosed",
+        "authorities",
+        "survived",
+        "labels",
+        "ungrounded",
+        "without_rerank",
+        "cited_checked"
+      ],
+      "title": "FunnelSummary",
+      "type": "object"
+    },
+    "JudgeAgreement": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "items": {
+          "type": "integer"
+        },
+        "disagreed": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "metric",
+        "items",
+        "disagreed",
+        "rate"
+      ],
+      "title": "JudgeAgreement",
+      "type": "object"
+    },
+    "JudgeUsed": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
+        "candidates": {
+          "description": "Search results the judge matches a citation against.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "family",
+        "candidates"
+      ],
+      "title": "JudgeUsed",
+      "type": "object"
+    },
+    "MetricUsed": {
+      "additionalProperties": false,
+      "description": "A metric's version, and which of the judge and the corpus it reads.",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "reads": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "MetricUsed",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "description": "The first line of every score set, and a copy in its report.",
+      "properties": {
+        "casebench_version": {
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/MetricUsed"
+          },
+          "type": "object"
+        },
+        "judges": {
+          "items": {
+            "$ref": "#/$defs/JudgeUsed"
+          },
+          "type": "array"
+        },
+        "prompts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "The SHA-256 of each prompt the judge is asked.",
+          "type": "object"
+        },
+        "corpora": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Each corpus's name and the key of its settings.",
+          "type": "object"
+        },
+        "extracted_by": {
+          "description": "The models that wrote the cases' answer keys.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "metrics"
+      ],
+      "title": "Producer",
+      "type": "object"
+    },
+    "ReferenceSource": {
+      "description": "Where a reference's facts came from.",
+      "enum": [
+        "court",
+        "lawyer",
+        "structured",
+        "hybrid"
+      ],
+      "title": "ReferenceSource",
+      "type": "string"
+    },
+    "Row": {
+      "additionalProperties": false,
+      "description": "`jurisdiction` is None for the cases that name none (decision 0036).",
+      "properties": {
+        "reference_source": {
+          "$ref": "#/$defs/ReferenceSource"
+        },
+        "approval": {
+          "type": "string"
+        },
+        "jurisdiction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "n": {
+          "type": "integer"
+        },
+        "mean": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "majority_baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text_only_baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The share of cases where every criterion passed, for metrics with criteria; never folded into the mean (decision 0035)."
+        },
+        "strict_low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "strict_high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "reference_source",
+        "approval",
+        "n",
+        "mean",
+        "low",
+        "high"
+      ],
+      "title": "Row",
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "description": "One metric's verdict on one output, carrying where its answer key came from.",
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "repeat": {
+          "default": 0,
+          "type": "integer"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "metric_version": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ScoreKind"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction"
+        },
+        "value": {
+          "type": "number"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/CriterionVerdict"
+          },
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/CitationCheck"
+          },
+          "type": "array"
+        },
+        "judged_twice": {
+          "default": 0,
+          "description": "Items both judges decided (decision 0035).",
+          "type": "integer"
+        },
+        "disagreements": {
+          "items": {
+            "$ref": "#/$defs/Disagreement"
+          },
+          "type": "array"
+        },
+        "task_type": {
+          "type": "string"
+        },
+        "reference_source": {
+          "$ref": "#/$defs/ReferenceSource"
+        },
+        "approval": {
+          "$ref": "#/$defs/Approval"
+        },
+        "jurisdiction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The case's jurisdiction, so scores split by it (0036)."
+        }
+      },
+      "required": [
+        "case_id",
+        "metric",
+        "metric_version",
+        "kind",
+        "direction",
+        "value",
+        "task_type",
+        "reference_source",
+        "approval"
+      ],
+      "title": "Score",
+      "type": "object"
+    },
+    "ScoreKind": {
+      "description": "Who produced a score.",
+      "enum": [
+        "code",
+        "llm",
+        "human"
+      ],
+      "title": "ScoreKind",
+      "type": "string"
+    },
+    "ScoringError": {
+      "additionalProperties": false,
+      "description": "A metric that could not score one result, such as a judge call that still failed after\nits retries; the case has no score for it until the run is scored again (decision 0037).",
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "repeat": {
+          "default": 0,
+          "type": "integer"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id",
+        "metric",
+        "error"
+      ],
+      "title": "ScoringError",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "task_type": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/Row"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_type",
+        "metric",
+        "rows"
+      ],
+      "title": "Table",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One scored run: a table per task and metric, never one overall figure (rule 8).",
+  "properties": {
+    "format": {
+      "pattern": "^casebench\\.report/1\\.[0-9]+$",
+      "type": "string"
+    },
+    "score_set": {
+      "type": "string"
+    },
+    "suite_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "suite_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The hash of the suite the run ran, which changes with any case (0039)."
+    },
+    "produced_by": {
+      "$ref": "#/$defs/Producer"
+    },
+    "tables": {
+      "items": {
+        "$ref": "#/$defs/Table"
+      },
+      "type": "array"
+    },
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/CitationRate"
+      },
+      "type": "array"
+    },
+    "agreement": {
+      "description": "Per metric, with two judges (decision 0035).",
+      "items": {
+        "$ref": "#/$defs/JudgeAgreement"
+      },
+      "type": "array"
+    },
+    "funnel": {
+      "$ref": "#/$defs/Funnel"
+    },
+    "scores": {
+      "items": {
+        "$ref": "#/$defs/Score"
+      },
+      "type": "array"
+    },
+    "scoring_errors": {
+      "description": "Results a metric could not score; scoring the run again finishes them (decision 0037).",
+      "items": {
+        "$ref": "#/$defs/ScoringError"
+      },
+      "type": "array"
+    },
+    "warnings": {
+      "description": "Such as a judge of the agent's model family (decision 0047).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "unevidenced": {
+      "description": "Cases with no criterion to earn, so not scored for criteria (0047).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "calibration": {
+      "description": "Lawyers' verdicts against the judge's, per kind of criterion (0047).",
+      "items": {
+        "$ref": "#/$defs/Calibration"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": false,
+      "description": "Data outside this format, under a domain its author controls, such as {\"example.com\": {...}}. Never required, and never read by Casebench.",
+      "patternProperties": {
+        "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$": {}
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "score_set",
+    "produced_by",
+    "tables",
+    "citations",
+    "funnel",
+    "scores"
+  ],
+  "title": "Report",
+  "type": "object"
+}

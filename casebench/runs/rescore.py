@@ -12,6 +12,16 @@ from casebench.runs.log import Result, RunLog, ScoringError
 from casebench.runs.producer import Producer
 
 
+def evidenced(case: Case, metrics: list[Metric]) -> bool:
+    """False when a metric the case names has nothing to earn in it, such as criteria with
+    no evidenced fact (decision 0047)."""
+    for metric in metrics:
+        check = getattr(metric, "evidenced", None)
+        if metric.name in case.metrics and check is not None and not check(case):
+            return False
+    return True
+
+
 def _score_one(
     case: Case, result: Result, metrics: list[Metric]
 ) -> tuple[list[Score], list[ScoringError]]:
@@ -19,6 +29,9 @@ def _score_one(
     scores, errors = [], []
     for metric in metrics:
         if metric.name not in case.metrics:
+            continue
+        if not evidenced(case, [metric]):
+            # Nothing to earn, which is no scoring error; the report lists it (0047).
             continue
         try:
             scores.append(score(metric, case, result))

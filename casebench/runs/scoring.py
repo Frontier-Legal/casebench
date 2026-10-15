@@ -5,23 +5,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from casebench.capture.step import StepKind
 from casebench.config import CasebenchConfig
 from casebench.core.case import Case
 from casebench.core.score import Score
 from casebench.corpus.cache import corpus_key
 from casebench.corpus.corpora import Corpora
 from casebench.judge.client import Judge
+from casebench.judge.families import family_warnings
 from casebench.judge.judges import judges_for
 from casebench.judge.memo import MEMO_FILE, Memo
 from casebench.judge.resolve import Resolver, cited_documents
 from casebench.metrics.base import Metric
 from casebench.metrics.loading import metrics_for
 from casebench.report import render
+from casebench.report.calibration import lawyers_win, read_reviews
 from casebench.report.funnel import CaseFunnel, FunnelSummary, case_funnel, gold, summarise
 from casebench.report.tables import Table, build_tables
 from casebench.runs.log import RunLog, ScoringError
 from casebench.runs.producer import JudgeUsed, Producer, producer_for
-from casebench.runs.rescore import rescore
+from casebench.runs.rescore import evidenced, rescore
 
 
 @dataclass
@@ -32,6 +35,8 @@ class Scored:
     funnel: FunnelSummary
     report: Path
     errors: list[ScoringError] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    unevidenced: list[str] = field(default_factory=list)
 
 
 def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, Any]:
@@ -133,11 +138,22 @@ def score(
             on_scored(case_id, seconds, judge_cost(context))
 
     path = rescore(log, cases, metrics, produced_by, concurrency, heard)
-    scores, errors = RunLog.read_scores(path), RunLog.read_errors(path)
+    # The score set keeps the judge's verdicts; lawyers' replace them in the report (0047).
+    scores = lawyers_win(RunLog.read_scores(path), read_reviews(log.folder))
+    errors = RunLog.read_errors(path)
     tables = build_tables(scores, cases, suite_id)
     traced, unfunnelled = funnels(log, cases, context, errors)
     errors += unfunnelled
     summary = summarise(traced)
+    judges = [(f"{j.provider}/{j.model}", j.family) for j in produced_by.judges]
+    called = {
+        step.model
+        for result in log.results()
+        for step in result.steps
+        if step.kind is StepKind.LLM and step.model
+    }
+    warnings = family_warnings(judges, config.agent_models, called)
+    unevidenced = [case.id for case in cases if not evidenced(case, metrics)]
     report = render.write(
         log.folder,
         produced_by,
@@ -148,5 +164,7 @@ def score(
         summary,
         errors,
         (log.info.suite_id, log.info.suite_hash),
+        warnings,
+        unevidenced,
     )
-    return Scored(path, scores, tables, summary, report, errors)
+    return Scored(path, scores, tables, summary, report, errors, warnings, unevidenced)
