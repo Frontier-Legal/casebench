@@ -209,13 +209,16 @@ def create_app(
     if (root / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=root / "assets"), name="assets")
 
+    # The files the build put at the top of the folder, such as the icon, listed once: a
+    # request names one of them or gets the app, and never reaches the disk itself.
+    top = {f.name: f for f in root.iterdir() if f.is_file()} if root.is_dir() else {}
+
     @app.get("/{path:path}", include_in_schema=False)
     def web_app(path: str) -> Response:
         if path.startswith("api/"):
             raise HTTPException(404, "no such endpoint")
-        shipped = (root / path).resolve()
-        if path and shipped.is_file() and shipped.is_relative_to(root.resolve()):
-            return FileResponse(shipped)
+        if path in top:
+            return FileResponse(top[path])
         if index.is_file():
             return FileResponse(index)
         return HTMLResponse(NOT_BUILT)

@@ -401,3 +401,22 @@ def test_only_this_machine_reaches_it(project: dict[str, Any]):
     assert rebound.status_code == 403
     assert forged.status_code == 403
     assert nameless.status_code == 401
+
+
+def test_the_app_serves_only_its_own_files(project: dict[str, Any]):
+    built = project["tmp"] / "static"
+    built.mkdir()
+    (built / "index.html").write_text("<p>the app</p>", encoding="utf-8")
+    (built / "favicon.svg").write_text("<svg></svg>", encoding="utf-8")
+    app = TestClient(
+        create_app(project["workspace"], project["store"], [HOST], static=built),
+        base_url=f"http://{HOST}",
+    )
+
+    icon = app.get("/favicon.svg")
+    deep = app.get("/review/answer")
+    escaped = [app.get(path) for path in ("/..%2Fcasebench.db", "/%2e%2e/casebench.db")]
+
+    assert icon.text == "<svg></svg>"
+    assert deep.text == "<p>the app</p>"
+    assert all(r.text == "<p>the app</p>" for r in escaped)
