@@ -33,6 +33,8 @@ from casebench.core.score import (
 )
 from casebench.corpus.binding import CorpusConfig
 from casebench.corpus.corpora import Corpora
+from casebench.judge.config import Price
+from casebench.judge.families import AgentModel
 from casebench.report.calibration import lawyers_win, read_reviews
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.producer import Producer
@@ -208,8 +210,9 @@ def project(tmp_path: Path) -> dict[str, Any]:
     suite = freeze("suite", [reviewed_case()], tmp_path / "suites" / "suite")
     freeze("drafts", [court_draft()], tmp_path / "suites" / "drafts")
     log = scored_run(tmp_path / "runs", reviewed_case(), suite.content_hash)
+    priced = AgentModel(model="agent-model", family="agent", price=Price(input=3.0, output=15.0))
     workspace = Workspace(
-        tmp_path / "runs", [tmp_path / "suites"], write_corpus(tmp_path / "decisions")
+        tmp_path / "runs", [tmp_path / "suites"], write_corpus(tmp_path / "decisions"), [priced]
     )
     store = Store(f"sqlite:///{tmp_path / 'casebench.db'}")
     return {"tmp": tmp_path, "workspace": workspace, "store": store, "log": log}
@@ -360,6 +363,8 @@ def test_no_engineering_on_screen(project: dict[str, Any]):
     switched = reviewer.put("/api/me", json={"name": "Can", "view": "engineering"}).json()
 
     assert built["engineering"]["input_tokens"] == 812
+    # What the answer cost the agent, at the price casebench.yaml gives its model (0051).
+    assert built["engineering"]["cost"] == pytest.approx((812 * 3.0 + 95 * 15.0) / 1_000_000)
     assert built["engineering"]["steps"][0]["model"] == "agent-model"
     # No response carries a span, a token count or a raw record, and no one can switch.
     assert asked["view"] == "review" and asked["role_locked"] is True

@@ -60,7 +60,8 @@ def ui_command(
 
     config = load_config(config_path) if config_path.is_file() else None
     corpora = Corpora(config.corpora) if config and config.corpora else None
-    workspace = Workspace(runs_dir, list(suite_dirs) or [Path(".")], corpora)
+    agent_models = config.agent_models if config else []
+    workspace = Workspace(runs_dir, list(suite_dirs) or [Path(".")], corpora, agent_models)
     store = Store(database or url_for(DEFAULT_DATABASE))
     hosts = [f"{LOOPBACK}:{port}", f"localhost:{port}"]
     app = create_app(workspace, store, hosts, role)

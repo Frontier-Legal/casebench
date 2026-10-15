@@ -13,8 +13,10 @@ from casebench.report.funnel import CaseFunnel, FunnelSummary
 from casebench.report.tables import Table
 from casebench.runs.log import ScoringError
 from casebench.runs.producer import Producer
+from casebench.runs.spend import Spend
 
-# 1.1 adds warnings, unevidenced cases, calibration, and evidence on verdicts (0047).
+# 1.1 adds warnings, unevidenced cases, calibration, and evidence on verdicts (0047), and
+# what the run spent (0051).
 FORMAT = FormatVersion("report", 1, 1)
 
 
@@ -59,5 +61,9 @@ class Report(FrozenRecord):
     calibration: list[Calibration] = Field(
         default_factory=list,
         description="Lawyers' verdicts against the judge's, per kind of criterion (0047).",
+    )
+    spend: Spend | None = Field(
+        default=None,
+        description="What the run's model calls cost, the agent's and the judge's (0051).",
     )
     extensions: Extensions = Field(default_factory=dict)

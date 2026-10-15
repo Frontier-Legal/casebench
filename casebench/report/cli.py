@@ -18,6 +18,7 @@ from casebench.report.render import (
     corpus_lines,
     error_lines,
     lines,
+    spend_lines,
     suite_line,
     unevidenced_lines,
     warning_lines,
@@ -55,6 +56,8 @@ def report_command(run_dir: Path) -> None:
     for line in corpus_lines(report.produced_by):
         click.echo(line)
     for line in error_lines(report.scoring_errors, run_dir.name):
+        click.echo(line)
+    for line in spend_lines(report.spend):
         click.echo(line)
     for line in unevidenced_lines(report.unevidenced):
         click.echo(line)

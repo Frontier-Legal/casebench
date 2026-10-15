@@ -3,6 +3,7 @@
 from pydantic import Field
 
 from casebench.core.model import Record
+from casebench.judge.config import Price
 
 UNLISTED = (
     "the agent's models are not listed under `agent_models:` in casebench.yaml, so whether a "
@@ -11,10 +12,15 @@ UNLISTED = (
 
 
 class AgentModel(Record):
-    """A model the agent calls, with its family as the model catalog gives it."""
+    """A model the agent calls, with its family and price as the model catalog gives them."""
 
     model: str
     family: str = Field(description="The model catalog's family, such as claude or qwen.")
+    price: Price | None = Field(
+        default=None,
+        description="US dollars per million input and output tokens, so a run can say what the "
+        "agent's calls cost (decision 0051).",
+    )
 
 
 def family_warnings(

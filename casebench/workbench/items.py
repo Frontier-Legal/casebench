@@ -15,6 +15,7 @@ from casebench.cases.approve import CannotApprove, FactDecision, approve_draft
 from casebench.cases.suite import save
 from casebench.core.case import Approval, Case, Fact, ReferenceSource
 from casebench.core.score import CitationLabel, Score
+from casebench.judge.families import AgentModel
 from casebench.report.calibration import (
     CannotRecord,
     LawyerVerdict,
@@ -24,6 +25,7 @@ from casebench.report.calibration import (
     said,
 )
 from casebench.runs.log import Result, RunLog
+from casebench.runs.spend import steps_cost
 from casebench.workbench.sources import SuiteFolder, Workspace
 from casebench.workbench.store import FINISHED, Event, Store
 
@@ -124,6 +126,9 @@ class Engineering(BaseModel):
     latency_ms: float | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cost: float | None = Field(
+        default=None, description="US dollars the agent's calls cost, when each has a price."
+    )
     steps: list[StepView] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)
 
@@ -350,12 +355,15 @@ def fact_view(fact: Fact, text: str | None = None) -> FactView:
     )
 
 
-def _engineering(result: Result | None, raw: dict[str, Any]) -> Engineering:
+def _engineering(
+    result: Result | None, raw: dict[str, Any], agent_models: list[AgentModel] | None = None
+) -> Engineering:
     steps = result.steps if result else []
     return Engineering(
         latency_ms=result.latency_ms if result else None,
         input_tokens=sum(s.input_tokens or 0 for s in steps) or None,
         output_tokens=sum(s.output_tokens or 0 for s in steps) or None,
+        cost=steps_cost(steps, agent_models or []) if steps else None,
         steps=[
             StepView(
                 kind=s.kind.value,
@@ -442,7 +450,7 @@ def answer_item(
         scores=[ScoreView(metric=s.metric, value=s.value, label=s.label) for s in scores],
         draft=store.draft(key, person),
         held_by=store.holder(key),
-        engineering=_engineering(result, raw) if engineering else None,
+        engineering=_engineering(result, raw, workspace.agent_models) if engineering else None,
     )
 
 

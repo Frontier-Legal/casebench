@@ -15,7 +15,8 @@ def memo_key(provider: str, model: str, system: str, user: str) -> str:
 
 
 class Memo:
-    """One line per question: its key and the judge's parsed reply."""
+    """One line per question: its key, the judge's parsed reply and, since decision 0051, the
+    model and tokens of the call that made it, so the run can say what grading cost."""
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -30,8 +31,18 @@ class Memo:
     def get(self, key: str) -> Any | None:
         return self.replies.get(key)
 
-    def put(self, key: str, reply: Any) -> None:
+    def put(self, key: str, reply: Any, usage: dict[str, Any] | None = None) -> None:
+        line = {"key": key, "reply": reply} | ({"usage": usage} if usage else {})
         with self.lock:
             self.replies[key] = reply
             with self.path.open("a", encoding="utf-8") as out:
-                out.write(json.dumps({"key": key, "reply": reply}, ensure_ascii=False) + "\n")
+                out.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+
+def usages(path: Path) -> list[dict[str, Any]]:
+    """Each paid judge call kept beside the run: its provider, model and tokens, or nothing for
+    a reply kept before calls recorded them."""
+    if not path.is_file():
+        return []
+    lines = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    return [line.get("usage") or {} for line in lines]

@@ -8,6 +8,7 @@ from casebench.core.case import Case
 from casebench.corpus.corpora import Corpora
 from casebench.corpus.record import DecisionRecord
 from casebench.formats.version import UnreadableFormat
+from casebench.judge.families import AgentModel
 from casebench.runs.log import RUN_FILE, RunLog
 from casebench.suites.freeze import MANIFEST_FILE, SuiteManifest, load
 
@@ -29,11 +30,17 @@ class Workspace:
     """`suite_dirs` are searched for frozen suites; a run finds its suite by the suite's id."""
 
     def __init__(
-        self, runs_dir: Path, suite_dirs: list[Path], corpora: Corpora | None = None
+        self,
+        runs_dir: Path,
+        suite_dirs: list[Path],
+        corpora: Corpora | None = None,
+        agent_models: list[AgentModel] | None = None,
     ) -> None:
         self.runs_dir = runs_dir
         self.suite_dirs = suite_dirs
         self.corpora = corpora
+        # Their prices say what each answer cost the agent (decision 0051).
+        self.agent_models = agent_models or []
 
     def _manifests(self) -> list[Path]:
         found: list[Path] = []

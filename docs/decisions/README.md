@@ -64,3 +64,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0048](0048-a-gate-in-ci.md) | A gate fails a build only on a significant drop, over approved cases, against a saved baseline | accepted |
 | [0049](0049-lawyers-write-cases-in-a-spreadsheet.md) | Lawyers write cases in a spreadsheet, and research, drafting, editing and extraction tasks are graded | accepted |
 | [0050](0050-the-review-queue.md) | The review queue: run folders stay the truth, a database keeps what people do, and one web app serves lawyers and engineers | accepted |
+| [0051](0051-what-a-run-spends.md) | A run reports what it spent, per model, for the agent and for the judge | accepted |
