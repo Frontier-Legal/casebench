@@ -150,7 +150,7 @@ def test_a_frozen_suite_names_its_formats(tmp_path: Path):
     manifest = json.loads((tmp_path / MANIFEST_FILE).read_text(encoding="utf-8"))
     assert (manifest["format"], manifest["case_format"]) == (
         "casebench.suite/1.0",
-        "casebench.case/1.0",
+        "casebench.case/1.1",
     )
     ran = validate(tmp_path / SUITE_FILE)
     assert ran.exit_code == 0, ran.output
@@ -162,7 +162,7 @@ def test_a_suite_at_a_newer_minor_version_loads_with_its_hash(tmp_path: Path):
     newer = {**json.loads(line), "difficulty": "hard"}
     (tmp_path / SUITE_FILE).write_text(json.dumps(newer) + "\n", encoding="utf-8")
     manifest = json.loads((tmp_path / MANIFEST_FILE).read_text(encoding="utf-8"))
-    manifest["case_format"] = "casebench.case/1.1"
+    manifest["case_format"] = "casebench.case/1.2"
     manifest["content_hash"] = content_hash([canonical_json(newer)])
     written(tmp_path / MANIFEST_FILE, manifest)
 

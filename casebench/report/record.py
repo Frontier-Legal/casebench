@@ -9,14 +9,15 @@ from casebench.formats.version import FormatVersion
 from casebench.report.agreement import JudgeAgreement
 from casebench.report.calibration import Calibration
 from casebench.report.citations import CitationRate
+from casebench.report.errors import ErrorRate
 from casebench.report.funnel import CaseFunnel, FunnelSummary
 from casebench.report.tables import Table
 from casebench.runs.log import ScoringError
 from casebench.runs.producer import Producer
 from casebench.runs.spend import Spend
 
-# 1.1 adds warnings, unevidenced cases, calibration, and evidence on verdicts (0047), and
-# what the run spent (0051).
+# 1.1 adds warnings, unevidenced cases, calibration, and evidence on verdicts (0047), what
+# the run spent (0051), and error rates and the practice area on scores (0054).
 FORMAT = FormatVersion("report", 1, 1)
 
 
@@ -65,5 +66,10 @@ class Report(FrozenRecord):
     spend: Spend | None = Field(
         default=None,
         description="What the run's model calls cost, the agent's and the judge's (0051).",
+    )
+    error_rates: list[ErrorRate] = Field(
+        default_factory=list,
+        description="Fabricated citation, unsupported claim, wrong outcome and wrong statute, "
+        "each with the answers that have it (0054).",
     )
     extensions: Extensions = Field(default_factory=dict)

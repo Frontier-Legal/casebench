@@ -1,5 +1,6 @@
 import { useState } from "react"
 import {
+  ChartColumnIcon,
   ChevronsUpDownIcon,
   CodeIcon,
   DatabaseIcon,
@@ -44,7 +45,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Me, QueueItem, View } from "@/lib/api"
 
 type Filter = "all" | "answer" | "approve"
-export type Page = "queue" | "golden" | "try"
+export type Page = "queue" | "golden" | "try" | "reports"
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -124,6 +125,11 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "try"} onClick={() => onPage("try")}>
                   <MessageCircleQuestionIcon /> Try a question
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "reports"} onClick={() => onPage("reports")}>
+                  <ChartColumnIcon /> Reports
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

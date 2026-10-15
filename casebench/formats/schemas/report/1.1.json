@@ -1,6 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "Answer": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "repeat": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "case_id"
+      ],
+      "title": "Answer",
+      "type": "object"
+    },
     "Approval": {
       "description": "Whether a lawyer has approved a case's reference.",
       "enum": [
@@ -338,6 +355,47 @@
         "second"
       ],
       "title": "Disagreement",
+      "type": "object"
+    },
+    "ErrorRate": {
+      "additionalProperties": false,
+      "description": "`n` counts the answers the error could occur in; `failing` lists those that have it.",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "meaning": {
+          "type": "string"
+        },
+        "n": {
+          "type": "integer"
+        },
+        "rate": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "failing": {
+          "items": {
+            "$ref": "#/$defs/Answer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "error",
+        "meaning",
+        "n",
+        "rate",
+        "low",
+        "high",
+        "failing"
+      ],
+      "title": "ErrorRate",
       "type": "object"
     },
     "Funnel": {
@@ -775,6 +833,18 @@
           ],
           "default": null,
           "description": "The case's jurisdiction, so scores split by it (0036)."
+        },
+        "practice_area": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The case's practice area, so scores split by it (0054)."
         }
       },
       "required": [
@@ -990,6 +1060,13 @@
       ],
       "default": null,
       "description": "What the run's model calls cost, the agent's and the judge's (0051)."
+    },
+    "error_rates": {
+      "description": "Fabricated citation, unsupported claim, wrong outcome and wrong statute, each with the answers that have it (0054).",
+      "items": {
+        "$ref": "#/$defs/ErrorRate"
+      },
+      "type": "array"
     },
     "extensions": {
       "additionalProperties": false,

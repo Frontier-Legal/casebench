@@ -77,4 +77,6 @@ def approve_draft(case: Case, decisions: list[FactDecision], by: str) -> Case | 
     reference = case.reference.model_copy(
         update={"facts": facts, "criteria": criteria, "author": by}
     )
-    return case.model_copy(update={"reference": reference, "approval": Approval.APPROVED})
+    return case.model_copy(
+        update={"reference": reference, "approval": Approval.APPROVED, "approved_by": by}
+    )

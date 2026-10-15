@@ -227,6 +227,37 @@ export interface Proposed {
   message: string
 }
 
+export interface RunRow {
+  run_id: string
+  suite_id: string
+  target: string
+  scored: boolean
+}
+
+export interface FailingAnswer {
+  key: string
+  case_id: string
+  repeat: number
+  title: string
+}
+
+export interface RateView {
+  error: string
+  meaning: string
+  n: number
+  rate: number
+  low: number
+  high: number
+  failing: FailingAnswer[]
+}
+
+export interface RunReport {
+  run_id: string
+  suite_id: string
+  target: string
+  rates: RateView[]
+}
+
 export interface GivenVerdict {
   criterion_id: string
   verdict: Verdict
@@ -314,6 +345,8 @@ export const api = {
   finishChange: (key: string, decision: "approve" | "reject", note: string | null) =>
     call<Finished>("POST", `${item(key)}/finish`, { decision, note }),
   golden: () => call<Golden>("GET", "/api/golden"),
+  runs: () => call<RunRow[]>("GET", "/api/runs"),
+  runReport: (run: string) => call<RunReport>("GET", `/api/runs/${encodeURIComponent(run)}/report`),
   budget: () => call<Budget>("GET", "/api/try"),
   tryQuestion: (question: string) => call<Tried>("POST", "/api/try", { question }),
   goldenCase: (suite: string, id: string) =>

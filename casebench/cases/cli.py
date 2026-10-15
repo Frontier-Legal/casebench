@@ -154,6 +154,7 @@ def case_group() -> None:
 @click.option("--pick", "given", type=int, help="Which listed decision, by its number.")
 @click.option("--manual", is_flag=True, help="Write the question and answer by hand.")
 @click.option("--author", help="Your name, as the case's reviewer.")
+@click.option("--practice-area", help="The area of law, such as labour or tax.")
 @CONFIG
 def new_command(
     suite_dir: Path,
@@ -161,6 +162,7 @@ def new_command(
     given: int | None,
     manual: bool,
     author: str | None,
+    practice_area: str | None,
     config_path: Path,
 ) -> None:
     """Find a decision on a topic, let one model draft the case from it, and approve it; or
@@ -180,7 +182,9 @@ def new_command(
     author = author or click.prompt("your name, as the case's reviewer", default=getpass.getuser())
     before, cases = existing(suite_dir)
     suite_id = before.suite_id if before else suite_dir.name
-    case = lawyer_case(next_id(suite_id, cases), written, author, made)
+    case = lawyer_case(
+        next_id(suite_id, cases), written, author, made, (practice_area or "").strip() or None
+    )
     resolver = _resolver(config)
     if resolver is not None:
         case = resolve_case(case, resolver)

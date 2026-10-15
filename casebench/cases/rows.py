@@ -4,7 +4,14 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from casebench.cases.sheet import ID, Row, SheetError, read_document, task_type
+from casebench.cases.sheet import (
+    ID,
+    PRACTICE_AREA,
+    Row,
+    SheetError,
+    read_document,
+    task_type,
+)
 from casebench.core.case import (
     Approval,
     Case,
@@ -134,6 +141,8 @@ def written_case(
         metrics=metrics,
         provenance=Provenance(builder="lawyer"),
         approval=approval,
+        practice_area=cells.get(PRACTICE_AREA, "").strip() or None,
+        approved_by=author if approval is Approval.APPROVED else None,
     )
 
 

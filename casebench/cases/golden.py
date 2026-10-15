@@ -7,7 +7,7 @@ form and one written in a spreadsheet are built the same way.
 from pydantic import BaseModel
 
 from casebench.cases.rows import written_case
-from casebench.cases.sheet import ID, columns, task_names, task_type
+from casebench.cases.sheet import ID, PRACTICE_AREA, columns, task_names, task_type
 from casebench.core.case import Approval, Case, Evidence
 
 # Where a fact the form wrote is said to come from.
@@ -59,6 +59,7 @@ def cells_of(case: Case) -> dict[str, str]:
         "key points": "\n".join(f"{c.weight:+d} {c.text}" for c in case.reference.criteria),
     }
     cells |= {name: _text(value) for name, value in case.task.inputs.items()}
+    cells[PRACTICE_AREA] = case.practice_area or ""
     return {name: cells.get(name, "") for name in wanted}
 
 
@@ -95,7 +96,7 @@ def new_case(
 def revised(case: Case, cells: dict[str, str], author: str) -> Case:
     """The case with the form's fields. A fact the lawyer left as it was keeps its evidence
     and the corpus document it resolved to; the case keeps its id, source, author, metrics,
-    provenance and approval."""
+    provenance, approval and approver, and takes the form's practice area."""
     rebuilt = written_case(
         case.task.type,
         cells,
@@ -122,5 +123,10 @@ def revised(case: Case, cells: dict[str, str], author: str) -> Case:
     )
     metrics = list(dict.fromkeys([*rebuilt.metrics, *case.metrics]))
     return case.model_copy(
-        update={"task": rebuilt.task, "reference": reference, "metrics": metrics}
+        update={
+            "task": rebuilt.task,
+            "reference": reference,
+            "metrics": metrics,
+            "practice_area": rebuilt.practice_area,
+        }
     )

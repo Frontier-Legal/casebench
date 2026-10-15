@@ -5,6 +5,7 @@ import { CircleCheckBigIcon, CircleHelpIcon } from "lucide-react"
 import { AppSidebar, type Page } from "@/components/app-sidebar"
 import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
+import { Reports } from "@/components/reports"
 import { TryQuestion } from "@/components/try-question"
 import { AnswerReview } from "@/components/answer-review"
 import { DraftReview } from "@/components/draft-review"
@@ -66,6 +67,13 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+const PAGES: Record<Page, string> = {
+  queue: "Review queue",
+  golden: "Golden data",
+  try: "Try a question",
+  reports: "Reports",
+}
+
 const CRUMBS: Record<Item["kind"], string> = {
   answer: "Answer",
   draft: "Court draft",
@@ -94,7 +102,7 @@ function TopBar({
         <BreadcrumbList className="flex-nowrap">
           {page !== "queue" ? (
             <BreadcrumbItem>
-              <BreadcrumbPage>{page === "golden" ? "Golden data" : "Try a question"}</BreadcrumbPage>
+              <BreadcrumbPage>{PAGES[page]}</BreadcrumbPage>
             </BreadcrumbItem>
           ) : (
             <>
@@ -217,6 +225,8 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   let body: React.ReactNode
   if (page === "try") {
     body = <TryQuestion locked={me.role_locked} />
+  } else if (page === "reports") {
+    body = <Reports onOpen={open} />
   } else if (page === "golden") {
     body = (
       <GoldenData

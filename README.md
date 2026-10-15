@@ -33,7 +33,7 @@ workbench:
   second_approval: true   # off unless set
 ```
 
-Every run reports what it spent, per model, the agent's calls apart from the judge's, at the prices `casebench.yaml` gives each model.
+Every run reports what it spent, per model, the agent's calls apart from the judge's, at the prices `casebench.yaml` gives each model. It also reports how often the agent cited a decision the corpus does not hold, cited one for something it does not say, missed the ruling, or relied on a statute the court did not apply. In the workbench each of these rates opens the answers behind it. A case can name its practice area, in a spreadsheet column or in the workbench.
 
 ## Jurisdictions
 

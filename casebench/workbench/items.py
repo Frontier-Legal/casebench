@@ -212,7 +212,7 @@ def _parse(key: str) -> list[str]:
     raise NotFound(f"no item {key}")
 
 
-def _title(case: Case | None, fallback: str) -> str:
+def title_of(case: Case | None, fallback: str) -> str:
     if case is None:
         return fallback
     inputs = case.task.inputs
@@ -237,7 +237,7 @@ def _inputs(case: Case | None) -> list[Input]:
     return shown
 
 
-def _latest(log: RunLog) -> list[Score]:
+def latest_scores(log: RunLog) -> list[Score]:
     sets = log.score_sets()
     return RunLog.read_scores(sets[-1]) if sets else []
 
@@ -287,7 +287,7 @@ def queue(workspace: Workspace, store: Store, person: str) -> list[QueueItem]:
         info = log.info
         suite = suites.get(info.suite_id)
         reviewed = {(r.case_id, r.repeat, r.criterion_id) for r in read_reviews(log.folder)}
-        for (case_id, repeat), scores in sorted(_groups(_latest(log)).items()):
+        for (case_id, repeat), scores in sorted(_groups(latest_scores(log)).items()):
             key = answer_key(info.run_id, case_id, repeat)
             if key in finished or key in held or not _reviewable(scores):
                 continue
@@ -299,7 +299,7 @@ def queue(workspace: Workspace, store: Store, person: str) -> list[QueueItem]:
             item = QueueItem(
                 key=key,
                 kind=ANSWER,
-                title=_title(case, case_id),
+                title=title_of(case, case_id),
                 where=f"run {info.run_id}",
                 task=scores[0].task_type,
                 flags=flags,
@@ -309,7 +309,7 @@ def queue(workspace: Workspace, store: Store, person: str) -> list[QueueItem]:
         QueueItem(
             key=draft_key(suite_id, case.id),
             kind=DRAFT,
-            title=_title(case, case.id),
+            title=title_of(case, case.id),
             where=f"suite {suite_id}",
             task=case.task.type,
             flags=["court draft"],
@@ -385,7 +385,7 @@ def _answer(
     log = workspace.run(run_id)
     if log is None:
         raise NotFound(f"no run {run_id}")
-    scores = _groups(_latest(log)).get((case_id, repeat))
+    scores = _groups(latest_scores(log)).get((case_id, repeat))
     if not scores:
         raise NotFound(f"run {run_id} has no scores for case {case_id}, repeat {repeat}")
     suite = workspace.suites().get(log.info.suite_id)
@@ -439,7 +439,7 @@ def answer_item(
     }
     return AnswerItem(
         key=key,
-        title=_title(case, case_id),
+        title=title_of(case, case_id),
         where=f"run {run_id}",
         task=scores[0].task_type,
         inputs=_inputs(case),
@@ -487,7 +487,7 @@ def draft_item(
     text = record.text if record else None
     return DraftItem(
         key=key,
-        title=_title(case, case.id),
+        title=title_of(case, case.id),
         where=f"suite {suite.manifest.suite_id}",
         task=case.task.type,
         inputs=_inputs(case),
