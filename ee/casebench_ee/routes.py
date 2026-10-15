@@ -22,6 +22,7 @@ from casebench.workbench.app import Who
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
 from casebench_ee.access import COOKIE
+from casebench_ee.hosting import SeatCheck, members
 from casebench_ee.mail import Mailer, NoMail
 from casebench_ee.models import Key, User
 from casebench_ee.oidc import Provider, SignInRefused
@@ -191,6 +192,7 @@ def team_routes(
     providers: dict[str, Provider],
     settings: Settings,
     workspace: Workspace,
+    seats: SeatCheck | None = None,
 ) -> APIRouter:
     router = APIRouter()
     failures: dict[str, list[float]] = defaultdict(list)
@@ -338,6 +340,15 @@ def team_routes(
         refuse(who, Can.ENGINEER)
         if body.role in (ENGINEER, ADMIN):
             refuse(who, Can.ADMIN)
+        if seats is not None:
+            paid = seats(team)
+            taken = len(members(team))
+            if taken >= paid.paid:
+                raise HTTPException(
+                    402,
+                    f"all {paid.paid} seats are taken by {taken} members; add seats at "
+                    f"{paid.add_at}",
+                )
         try:
             user = team.add(body.email, body.name, body.role, who.name)
         except TeamError as refused:

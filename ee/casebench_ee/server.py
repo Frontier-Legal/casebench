@@ -16,6 +16,7 @@ from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
 from casebench.workbench.trying import Limits
 from casebench_ee.access import TeamAccess
+from casebench_ee.hosting import SeatCheck
 from casebench_ee.mail import Mailer, NoMail
 from casebench_ee.oidc import Provider
 from casebench_ee.routes import Settings, team_routes
@@ -62,6 +63,7 @@ def build(
     mailer: Mailer | None = None,
     providers: dict[str, Provider] | None = None,
     hosts: list[str] | None = None,
+    seats: SeatCheck | None = None,
 ) -> Server:
     """A team with no one yet gets a one-time setup code, which the caller prints."""
     store = Store(database_url(database))
@@ -90,7 +92,7 @@ def build(
         config=config,
         access=TeamAccess(team),
         routers=[
-            team_routes(team, mailer or NoMail(), providers or {}, settings, workspace),
+            team_routes(team, mailer or NoMail(), providers or {}, settings, workspace, seats),
             sync_routes(workspace, store),
         ],
         limits=limits,

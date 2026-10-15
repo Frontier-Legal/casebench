@@ -32,6 +32,10 @@ The first start prints a one-time setup code to the log. Open the public URL, en
 
 Register the Google or Microsoft client with `<public URL>/auth/google/callback` or `<public URL>/auth/microsoft/callback` as its redirect address.
 
+## Erasing a team
+
+`casebench-team erase --database URL --runs-dir DIR --suites DIR --confirm NAME` removes every table in the team's database, with the audit log, and everything in its run and suite folders. `NAME` is the database's name, typed back. What is erased cannot be restored.
+
 ## From an engineer's machine
 
 Create an API key with the engineer role on the Team page, set it as `CASEBENCH_CLOUD_KEY` on the engineer's machine, and name the server in `casebench.yaml` under `cloud: url:`. Then `casebench push`, `casebench invite` and `casebench pull` work against it ([decision 0059](../docs/decisions/0059-push-invite-pull.md)).
