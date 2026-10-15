@@ -124,20 +124,41 @@ def _today() -> str:
     return datetime.now(UTC).date().isoformat()
 
 
-def spent_today(store: Store) -> float:
+def spent_today(store: Store, person: str | None = None) -> float:
+    """What questions cost today, everyone's, or one person's."""
     today = _today()
     return sum(
         float((e.after or {}).get("cost") or 0)
         for e in store.events(TRY_ITEM)
-        if e.action == TRIED and e.at.date().isoformat() == today
+        if e.action == TRIED
+        and e.at.date().isoformat() == today
+        and (person is None or e.by == person)
     )
 
 
-def budget(config: CasebenchConfig | None, store: Store) -> Budget:
+@dataclass(frozen=True)
+class Limits:
+    """Daily limits in dollars a team server sets in place of casebench.yaml's: the team's,
+    and each person's (decision 0058)."""
+
+    team: float | None = None
+    person: float | None = None
+
+
+def budget(
+    config: CasebenchConfig | None,
+    store: Store,
+    person: str | None = None,
+    limits: Limits | None = None,
+) -> Budget:
     """Without a limit, a target, or a price for every model it may call, nothing is sent:
-    the workbench could not say what a question costs."""
+    the workbench could not say what a question costs. A person's own limit, when there is
+    one, holds too."""
     spent = spent_today(store)
-    limit = config.workbench.try_daily_limit_usd if config and config.workbench else None
+    if limits is not None:
+        limit = limits.team
+    else:
+        limit = config.workbench.try_daily_limit_usd if config and config.workbench else None
     checks = bool(config and config.judges and config.corpora)
     why = None
     if config is None or not config.target:
@@ -157,6 +178,13 @@ def budget(config: CasebenchConfig | None, store: Store) -> Budget:
         )
     elif spent >= limit:
         why = f"today's limit of ${limit:.2f} is spent; it resets at midnight UTC"
+    elif (
+        limits is not None
+        and limits.person is not None
+        and person is not None
+        and spent_today(store, person) >= limits.person
+    ):
+        why = f"your limit of ${limits.person:.2f} today is spent; it resets at midnight UTC"
     return Budget(
         target=target_name(config),
         limit=limit,
@@ -183,12 +211,17 @@ def _cleared(unpriced: list[str], config: CasebenchConfig) -> list[str]:
 
 
 async def try_question(
-    question: str, person: str, config: CasebenchConfig | None, store: Store, asker: Asker | None
+    question: str,
+    person: str,
+    config: CasebenchConfig | None,
+    store: Store,
+    asker: Asker | None,
+    limits: Limits | None = None,
 ) -> Tried:
     question = question.strip()
     if not question:
         raise Refused("write a question first")
-    before = budget(config, store)
+    before = budget(config, store, person, limits)
     if not before.can_ask or config is None or asker is None:
         raise Refused(before.why_not or "nothing to ask")
     asked = await asker.ask(question)
@@ -221,5 +254,5 @@ async def try_question(
         judge_cost=asked.judge_cost,
         cost=cost,
         unpriced=unpriced,
-        budget=budget(config, store),
+        budget=budget(config, store, person, limits),
     )

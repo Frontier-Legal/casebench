@@ -1,9 +1,10 @@
 """The workbench's API and its web app, served on the loopback address (decision 0050)."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from importlib import resources
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
@@ -72,7 +73,7 @@ class Loopback(BaseHTTPMiddleware):
         if (
             request.method in UNSAFE
             and origin is not None
-            and origin.removeprefix("http://") not in self.hosts
+            and urlsplit(origin).netloc not in self.hosts
         ):
             return JSONResponse({"detail": "writes come only from this app"}, status_code=403)
         response = await call_next(request)
@@ -192,6 +193,7 @@ def create_app(
     asker: trying.Asker | None = None,
     access: Access | None = None,
     routers: Sequence[APIRouter] = (),
+    limits: Callable[[], trying.Limits] | None = None,
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
     fields, whatever the browser asks for. A team server passes its own `access`, which says
@@ -348,7 +350,7 @@ def create_app(
 
     @app.get("/api/try")
     def try_budget(name: Person) -> trying.Budget:
-        return trying.budget(config, store)
+        return trying.budget(config, store, name, limits() if limits else None)
 
     @app.post("/api/try")
     async def try_question(body: Ask, name: Trier) -> trying.Tried:
@@ -360,6 +362,7 @@ def create_app(
                 config,
                 store,
                 asker or (trying.ConfiguredAsker(config) if config else None),
+                limits() if limits else None,
             )
         except trying.Refused as refused:
             raise HTTPException(422, str(refused)) from None

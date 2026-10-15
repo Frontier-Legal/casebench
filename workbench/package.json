@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:team": "tsc -p tsconfig.ee.json && CASEBENCH_EXTENSION=../ee/web/extension.tsx CASEBENCH_STATIC=../ee/casebench_ee/static vite build",
     "typecheck": "tsc -b",
     "test": "vitest run"
   },

@@ -11,6 +11,8 @@ const outDir = process.env.CASEBENCH_STATIC ?? "../casebench/workbench/static"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    // The team build's files live outside this folder; their packages resolve from here.
+    dedupe: extension ? ["react", "react-dom", "lucide-react", "sonner"] : [],
     alias: [
       ...(extension ? [{ find: "@/extension", replacement: path.resolve(__dirname, extension) }] : []),
       { find: "@", replacement: path.resolve(__dirname, "./src") },

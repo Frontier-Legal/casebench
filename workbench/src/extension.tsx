@@ -19,6 +19,8 @@ export interface Extension {
   pages: ExtraPage[]
   /** Stands in front of the app until someone is signed in; the core asks for a name. */
   Gate?: ComponentType<{ children: ReactNode }>
+  /** Ends the session; the core forgets the typed name instead. */
+  signOut?: () => Promise<void>
 }
 
 export const extension: Extension = { pages: [] }
