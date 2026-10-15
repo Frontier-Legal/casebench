@@ -8,15 +8,17 @@ import click
 from casebench.extract.compare import compare_lines, is_extraction
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
-from casebench.report.calibration import calibration, read_reviews
+from casebench.report.calibration import calibration, lawyers_win, read_reviews
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
+from casebench.report.errors import error_rates
 from casebench.report.record import FORMAT, Report
 from casebench.report.render import (
     REPORT_FILE,
     calibration_lines,
     corpus_lines,
     error_lines,
+    error_rate_lines,
     lines,
     spend_lines,
     suite_line,
@@ -56,6 +58,10 @@ def report_command(run_dir: Path) -> None:
     for line in corpus_lines(report.produced_by):
         click.echo(line)
     for line in error_lines(report.scoring_errors, run_dir.name):
+        click.echo(line)
+    # Lawyers' verdicts given since the run was scored count here too (decision 0047).
+    shown = lawyers_win(report.scores, read_reviews(run_dir))
+    for line in error_rate_lines(error_rates(shown, report.suite_id or "")):
         click.echo(line)
     for line in spend_lines(report.spend):
         click.echo(line)

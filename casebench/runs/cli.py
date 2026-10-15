@@ -15,6 +15,7 @@ from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
 from casebench.perimeter import enforce
 from casebench.report import render
+from casebench.report.errors import error_rates
 from casebench.runs.commit import current_commit
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
@@ -173,6 +174,8 @@ def run(
     for line in render.corpus_lines(RunLog.read_producer(scored.score_set)):
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):
+        click.echo(line)
+    for line in render.error_rate_lines(error_rates(scored.scores, manifest.suite_id)):
         click.echo(line)
     for line in render.spend_lines(scored.spend):
         click.echo(line)

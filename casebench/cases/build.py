@@ -56,7 +56,13 @@ def criterion_for(fact: Fact) -> Criterion:
     return Criterion(id=f"c-{fact.id}", text=text, weight=1, derived_from=[fact.id])
 
 
-def lawyer_case(case_id: str, written: Written, author: str, drafted: Draft | None) -> Case:
+def lawyer_case(
+    case_id: str,
+    written: Written,
+    author: str,
+    drafted: Draft | None,
+    practice_area: str | None = None,
+) -> Case:
     """An approved case: `court` when it came from a decision, `lawyer` when written by hand."""
     doc = drafted.decision.id if drafted else None
     reading = drafted.reading if drafted else None
@@ -95,4 +101,6 @@ def lawyer_case(case_id: str, written: Written, author: str, drafted: Draft | No
             extracted_by=[drafted.model] if drafted else [],
         ),
         approval=Approval.APPROVED,
+        practice_area=practice_area,
+        approved_by=author,
     )

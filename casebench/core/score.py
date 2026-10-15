@@ -111,3 +111,6 @@ class Score(FrozenRecord):
     jurisdiction: str | None = Field(
         default=None, description="The case's jurisdiction, so scores split by it (0036)."
     )
+    practice_area: str | None = Field(
+        default=None, description="The case's practice area, so scores split by it (0054)."
+    )

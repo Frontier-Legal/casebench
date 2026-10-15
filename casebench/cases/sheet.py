@@ -15,10 +15,13 @@ from casebench.plugins.kinds import kind_named
 from casebench.tasks.interface import TaskType
 
 ID = "id"
+PRACTICE_AREA = "practice area"
 HOW = "how to fill"
 # What each column takes, for the sheet that explains them.
 COLUMNS = {
     ID: "Optional. The case's id; without one, the file's name and the row's number.",
+    PRACTICE_AREA: "Optional. The area of law, as your team names it, such as labour or tax. "
+    "The report gives each metric by practice area.",
     "question": "The question, as a client or a colleague would ask it.",
     "facts": "The facts the answer may rely on.",
     "constraints": "Limits on the research, such as courts or dates.",
@@ -61,7 +64,7 @@ def task_names() -> list[str]:
 
 
 def columns(task: TaskType) -> list[str]:
-    return [ID, *task.input_fields, *task.reference_fields]
+    return [ID, *task.input_fields, *task.reference_fields, PRACTICE_AREA]
 
 
 def write_template(path: Path, task: str) -> None:

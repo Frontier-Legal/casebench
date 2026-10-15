@@ -9,6 +9,7 @@ from casebench.corpus.routing import Route
 from casebench.report.agreement import agreement
 from casebench.report.calibration import Calibration, calibration, read_reviews
 from casebench.report.citations import citation_rates
+from casebench.report.errors import ErrorRate, error_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
@@ -166,6 +167,15 @@ def calibration_lines(rows: list[Calibration]) -> list[str]:
     ]
 
 
+def error_rate_lines(rates: list[ErrorRate]) -> list[str]:
+    """Each error's share of the answers it could occur in, with its interval (0054)."""
+    return [
+        f"{rate.error}: {rate.rate:.0%} of {rate.n} answers "
+        f"[{rate.low:.0%}, {rate.high:.0%}], {rate.meaning}"
+        for rate in rates
+    ]
+
+
 def write(
     folder: Path,
     produced_by: Producer,
@@ -199,6 +209,7 @@ def write(
         unevidenced=unevidenced or [],
         calibration=calibration(scores, read_reviews(folder)),
         spend=spend,
+        error_rates=error_rates(scores, suite[0] if suite else ""),
     )
     # Scrubbed of keys like every file a run writes (decision 0046).
     path.write_text(keys.scrub(report.model_dump_json(indent=2)) + "\n", encoding="utf-8")

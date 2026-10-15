@@ -70,4 +70,5 @@ def score(metric: Metric, case: Case, result: Result) -> Score:
         reference_source=case.reference.source,
         approval=case.approval,
         jurisdiction=case.provenance.jurisdiction if case.provenance else None,
+        practice_area=case.practice_area,
     )

@@ -234,6 +234,9 @@ def propose_change(
     except SheetError as failure:
         raise Refused(str(failure)) from None
     if not second:
+        if after.approval is Approval.APPROVED:
+            # The lawyer who saved the change answers for the key now (decision 0054).
+            after = after.model_copy(update={"approved_by": person})
         suite = _suite(workspace, suite_id)
         cases = [after if c.id == case_id else c for c in suite.cases]
         _, manifest = save(suite.folder, cases)
@@ -410,7 +413,9 @@ def finish_change(
     place = [c.id for c in cases].index(case.id)
     message = ""
     if decision == "approve":
-        cases[place] = after.model_copy(update={"approval": Approval.APPROVED})
+        cases[place] = after.model_copy(
+            update={"approval": Approval.APPROVED, "approved_by": person}
+        )
         _, manifest = save(suite.folder, cases)
         message = f"approved; the suite's hash is now {manifest.content_hash}"
     elif proposal.kind == NEW:

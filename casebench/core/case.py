@@ -10,7 +10,8 @@ from casebench.core.model import Record
 from casebench.formats.extensions import Extensions
 from casebench.formats.version import FormatVersion
 
-FORMAT = FormatVersion("case", 1, 0)
+# 1.1 adds the practice area and who approved the answer key (decision 0054).
+FORMAT = FormatVersion("case", 1, 1)
 # The inputs Casebench's own cases give a target, by name: every case asks a question, and a
 # case drawn from a decision also gives its facts. A Python target is called with them.
 INPUTS = ("question", "facts")
@@ -137,4 +138,24 @@ class Case(Record):
     tags: list[str] = Field(default_factory=list)
     provenance: Provenance | None = None
     approval: Approval = Approval.DRAFT
+    # Left out of the file when unset, so a case written before 1.1 keeps its bytes and its
+    # suite its hash.
+    practice_area: str | None = Field(
+        default=None,
+        description="The area of law, as the team names it, such as labour (decision 0054).",
+        exclude_if=lambda value: value is None,
+    )
+    approved_by: str | None = Field(
+        default=None,
+        description="Who approved the answer key (decision 0054).",
+        exclude_if=lambda value: value is None,
+    )
     extensions: Extensions = Field(default_factory=dict)
+
+    @property
+    def approver(self) -> str | None:
+        """Before 1.1 every path that approved a case made the approver the reference's
+        author, so the author stands in where the approver is not recorded."""
+        if self.approval is not Approval.APPROVED:
+            return None
+        return self.approved_by or self.reference.author

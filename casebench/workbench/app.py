@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from casebench.config import CasebenchConfig
-from casebench.workbench import golden, items, trying
+from casebench.workbench import golden, items, reports, trying
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -200,6 +200,18 @@ def create_app(
                 editor()
                 return golden.change_item(store, key, name)
             return items.item(workspace, store, key, name, engineering(name))
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+
+    @app.get("/api/runs")
+    def runs(name: Person) -> list[reports.RunRow]:
+        return reports.runs(workspace)
+
+    @app.get("/api/runs/{run_id}/report")
+    def run_report(run_id: str, name: Person) -> reports.RunReport:
+        """The run's error rates, each with its failing answers (decision 0054)."""
+        try:
+            return reports.run_report(workspace, run_id)
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
 

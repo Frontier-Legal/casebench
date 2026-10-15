@@ -30,14 +30,14 @@
 | Screen | Who | What they do |
 |---|---|---|
 | Inbox | everyone | items assigned to me: drafts to approve, answers to review, judge disagreements; one item at a time with auto-advance |
-| Golden data | lawyer editor | grid of cases (spreadsheet-like), XLSX import/export; open a case to edit question, facts, reference answer, weighted pass/fail criteria and authorities; every save needs a reason, shows a diff, and waits for a second approver |
+| Golden data | lawyer editor | grid of cases (spreadsheet-like), XLSX import/export; open a case to edit question, facts, reference answer, weighted pass/fail criteria and authorities; every case names its practice area and who approved it; every save needs a reason, shows a diff, and waits for a second approver when the team turns that on ([decision 0053](../decisions/0053-second-approval-is-opt-in.md)) |
 | Court drafts | lawyer editor | cases Casebench extracted from decisions: each fact shown beside its highlighted passage in the decision; approve, edit or reject with one key; a draft can be run at once, and its scores stay in the unreviewed row until approved |
 | Try a question | lawyer | type a question, send it to a target the engineer configured, see the answer with every citation checked; "save as case" turns a spot check into golden data |
 | Answer review | lawyer reviewer | evidence on the left (court record or reference), the agent's answer on the right; citations coloured verified, misgrounded or fabricated, each opening its source passage; per-criterion judge verdict with overrule plus required note; failure tags |
 | Compare runs | lawyer, engineer | two runs per case, blind A/B/Equal with a reason; filters for regressions and improvements; significance summary |
 | Judge agreement | engineer, lead lawyer | human vs judge per criterion and Cohen's κ; overruled verdicts become calibration data |
 | Harness view | engineer | per case per run, a waterfall: each model call and tool call a bar with model, latency, input and output tokens and cost; a table per step and per model; the same case diffed across two runs; the authority funnel ([harness-eval.md](harness-eval.md)); time no span accounts for shown as a gap; hidden from reviewer roles |
-| Report | lawyer lead | partner-readable PDF/DOCX per suite: metrics by task and practice area with intervals, worked examples, who approved the golden data |
+| Report | lawyer lead | per run, the rates of fabricated citations, unsupported claims, wrong outcomes and wrong statutes, each opening its failing answers beside their evidence; a partner-readable PDF/DOCX per suite: metrics by task and practice area with intervals, worked examples, who approved the golden data ([decision 0054](../decisions/0054-compare-blind-and-a-report-for-partners.md)) |
 | Settings | admin | targets, corpus, judge model and key, users and roles, spend limits |
 
 ## Interaction rules

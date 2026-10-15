@@ -121,6 +121,7 @@ def test_new_case_from_the_form(project: dict[str, Any]):
         "reference answer": "No: overtime needs the worker's consent each year.",
         "key points": "+5 Says overtime needs consent\n-3 Says refusal is a valid reason",
         "statutes": "4857 sayılı İş Kanunu m. 41",
+        "practice area": "labour",
     }
 
     refused = reviewer.post("/api/golden/labour", json={"fields": fields}, headers=as_("Rıza"))
@@ -140,6 +141,7 @@ def test_new_case_from_the_form(project: dict[str, Any]):
 
     assert [f["name"] for f in blank] == [
         "question", "facts", "reference answer", "key points", "statutes", "precedents",
+        "practice area",
     ]  # fmt: skip
     assert refused.status_code == 403
     assert created.status_code == 200, created.text
@@ -152,7 +154,9 @@ def test_new_case_from_the_form(project: dict[str, Any]):
     ]
     assert row["approval"] == "draft" and row["waiting"]["kind"] == "new"
     assert approved.status_code == 200, approved.text
-    assert next(c for c in after if c.id == new.id).approval is Approval.APPROVED
+    approved_case = next(c for c in after if c.id == new.id)
+    assert approved_case.approval is Approval.APPROVED and approved_case.approved_by == "Can"
+    assert new.practice_area == "labour" and new.approved_by is None
 
 
 def test_a_rejected_new_case_leaves_its_suite(project: dict[str, Any]):
