@@ -109,6 +109,6 @@ Result record, one per test per repeat:
 | Cost | `--dry-run` reports call and token estimates for target and judge before anything is sent |
 | Scale | samples from corpora of any size through the connector; never loads the whole corpus |
 | Distribution | a Python package with a CLI; the target can be in any language because it is reached over a connector |
-| License | open core: Apache-2.0 core, source-available `ee/` team server ([open-source.md](open-source.md)) |
+| License | `ee/` under the Elastic License 2.0, everything else under Apache-2.0 ([open-source.md](open-source.md)) |
 | Language | models do the language work, with no per-country parsers or word lists (decision 0024) |
 | Model choice | extractor and judge go through one provider interface; users pick any model |

@@ -10,7 +10,10 @@ import pytest
 
 from tests.repository.files import ROOT, load_yaml, run_lines, text, uses, workflow
 
-EE_HEADER = "Licensed under the Casebench team server licence"
+EE_HEADER = "SPDX-License-Identifier: Elastic-2.0"
+# Files under ee/ that are not source code carry no header.
+UNMARKED = {"LICENSE", "README.md"}
+SKIPPED = {"node_modules", "__pycache__", ".venv", "dist"}
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv to build the wheel")
@@ -41,17 +44,30 @@ def test_install_from_pypi(tmp_path: Path):
 
 
 def test_licence_boundary_visible():
+    """`ee/` is under the Elastic License 2.0, word for word, and everything else under
+    Apache-2.0 (decision 0057)."""
     licence = text("LICENSE")
-    assert '"ee/" directory' in licence
+    assert '"ee/" directory' in licence and "Elastic License 2.0" in licence
     assert "Apache License, Version 2.0" in licence
-    assert (ROOT / "ee" / "LICENSE").is_file()
+    ee = text("ee/LICENSE")
+    assert "Elastic License 2.0" in ee
+    assert "You may not provide the software to third parties as a hosted or managed" in ee
 
     for path in (ROOT / "ee").rglob("*"):
-        if path.is_file() and path.name != "LICENSE":
-            assert EE_HEADER in path.read_text(encoding="utf-8"), path
+        parts = set(path.relative_to(ROOT / "ee").parts)
+        if not path.is_file() or path.name in UNMARKED or parts & SKIPPED:
+            continue
+        head = path.read_text(encoding="utf-8").splitlines()[:5]
+        assert any(EE_HEADER in line for line in head), path
 
 
-@pytest.mark.xfail(strict=True, reason="the CLA text for ee/ awaits counsel review")
+def test_the_core_never_imports_ee():
+    """The Apache-2.0 package works without `ee/` (decision 0057)."""
+    for path in (ROOT / "casebench").rglob("*.py"):
+        code = path.read_text(encoding="utf-8")
+        assert "casebench_ee" not in code and "from ee" not in code, path
+
+
 def test_contribution_gates():
     dco = run_lines(workflow("commits.yml")["jobs"]["commits"])
     assert "Signed-off-by" in dco
@@ -59,8 +75,8 @@ def test_contribution_gates():
     matrix = workflow("ci.yml")["jobs"]["test"]["strategy"]["matrix"]["include"]
     assert {entry["os"] for entry in matrix} == {"ubuntu-latest", "macos-latest", "windows-latest"}
 
-    cla = workflow("cla.yml")
-    assert cla[True]["pull_request_target"]["paths"] == ["ee/**"]
+    # `ee/` takes no outside contributions for now, so no contributor agreement (0057).
+    assert "takes no outside contributions" in text("CONTRIBUTING.md")
 
 
 def test_security_posture():

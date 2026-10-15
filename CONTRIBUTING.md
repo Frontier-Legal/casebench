@@ -32,7 +32,7 @@ BREAKING CHANGE: report.json groups rows by reference source.
 
 `feat` bumps the minor version, `fix` the patch version, and a `!` or a `BREAKING CHANGE:` footer marks a break. While the version is 0.x a break bumps the minor version.
 
-Sign off every commit with `git commit -s`. This is the [Developer Certificate of Origin](https://developercertificate.org/): you certify that you have the right to submit the change under the project's licence. Contributions to `ee/` also need a contributor licence agreement.
+Sign off every commit with `git commit -s`. This is the [Developer Certificate of Origin](https://developercertificate.org/): you certify that you have the right to submit the change under the project's licence. The `ee/` directory takes no outside contributions for now.
 
 ## Decisions
 

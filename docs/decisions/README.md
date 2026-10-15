@@ -17,7 +17,7 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions in MADR 4 | accepted |
 | [0002](0002-evaluation-case-model.md) | The evaluation case is the unit: task, reference, metrics | accepted |
 | [0003](0003-opentelemetry-genai-trace-model.md) | OpenTelemetry GenAI conventions are the trace model | accepted |
-| [0004](0004-open-core-and-ee-boundary.md) | Open core: Apache-2.0 everywhere except `ee/` | accepted |
+| [0004](0004-open-core-and-ee-boundary.md) | Open core: Apache-2.0 everywhere except `ee/` | amended by [0057](0057-ee-under-the-elastic-license.md) |
 | [0005](0005-cloud-never-computes-a-score.md) | A shared server never computes a score | accepted |
 | [0006](0006-every-adapter-is-its-own-package.md) | Every jurisdiction adapter is its own package | superseded by [0013](0013-built-in-jurisdictions-load-on-demand.md) |
 | [0007](0007-no-telemetry.md) | No telemetry | accepted |
@@ -70,3 +70,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0054](0054-compare-blind-and-a-report-for-partners.md) | Lawyers compare two runs blind, and a run's report, with its error rates, is exported for partners by practice area | accepted |
 | [0055](0055-review-in-a-spreadsheet.md) | Lawyers review a run in a spreadsheet when there is no server, and the import writes the same verdicts the workbench writes | accepted |
 | [0056](0056-the-harness-view.md) | Engineers see each answer as a waterfall of its calls, with unaccounted time, the authority funnel and a diff against another run | accepted |
+| [0057](0057-ee-under-the-elastic-license.md) | `ee/` is under the Elastic License 2.0, and the rest of the repository under Apache-2.0 | accepted |

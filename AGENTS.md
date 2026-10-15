@@ -8,7 +8,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 - Casebench has no country-specific code. Models extract answer keys and citations, and the corpus resolves citations to documents (decision 0024).
 - Corpus connectors, capture parsers, model providers and the other plugin kinds are plugins, discovered through entry points, each kind with an interface and a conformance suite defined in the core. Built-in plugins register in the core's own `pyproject.toml`; a third-party plugin is its own package named `casebench-<name>`.
 - `docs/design/` describes the system; `docs/decisions/` records why, one MADR file per decision.
-- Anything that serves several users at once (accounts, roles, audit) lives under `ee/`, which carries its own licence. Everything else is Apache-2.0. `LICENSE` names the boundary.
+- `ee/` is under the Elastic License 2.0 and everything else under Apache-2.0; `LICENSE` names the boundary. `ee/` is packaged on its own and plugs into the core through entry points. The core never imports from `ee/`. Every source file under `ee/` starts with `SPDX-License-Identifier: Elastic-2.0`.
 
 ## Rules
 

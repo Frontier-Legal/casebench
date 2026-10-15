@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: amended by 0057
 date: 2026-10-11
 decision-makers: Casebench maintainers
 ---
 
 # Open core: Apache-2.0 everywhere except `ee/`
+
+Amended by [0057](0057-ee-under-the-elastic-license.md): `ee/` is under the Elastic License 2.0, with no contributor licence agreement for now, and what goes into `ee/` is decided feature by feature.
 
 ## Context and problem statement
 
