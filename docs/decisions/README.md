@@ -59,3 +59,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0043](0043-guided-onboarding.md) | Onboarding detects first, asks last, and finds keys in the project's .env files; Rich draws it | accepted |
 | [0044](0044-onboarding-by-a-coding-agent.md) | A coding agent sets Casebench up from one prompt, and only casebench.yaml and .casebench/ change | accepted |
 | [0045](0045-setup-spends-little.md) | Setup spends one search and one document, and greets the agent once | accepted |
+| [0046](0046-the-perimeter.md) | A run calls only the hosts its config names, never follows a redirect to another host, and writes no key | accepted |
