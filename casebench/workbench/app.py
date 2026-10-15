@@ -11,7 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from casebench.workbench import golden, items
+from casebench.config import CasebenchConfig
+from casebench.workbench import golden, items, trying
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -105,6 +106,10 @@ class Finish(BaseModel):
     note: str | None = None
 
 
+class Ask(BaseModel):
+    question: str = Field(max_length=4000)
+
+
 class SaveCase(BaseModel):
     fields: dict[str, str]
     reason: str = ""
@@ -137,6 +142,8 @@ def create_app(
     hosts: list[str],
     role: str | None = None,
     static: Path | None = None,
+    config: CasebenchConfig | None = None,
+    asker: trying.Asker | None = None,
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
     fields, whatever the browser asks for."""
@@ -193,6 +200,24 @@ def create_app(
             return items.item(workspace, store, key, name, engineering(name))
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
+
+    @app.get("/api/try")
+    def try_budget(name: Person) -> trying.Budget:
+        return trying.budget(config, store)
+
+    @app.post("/api/try")
+    async def try_question(body: Ask, name: Person) -> trying.Tried:
+        """Asks the configured target within the day's limit; refused, nothing is sent."""
+        try:
+            return await trying.try_question(
+                body.question,
+                name,
+                config,
+                store,
+                asker or (trying.ConfiguredAsker(config) if config else None),
+            )
+        except trying.Refused as refused:
+            raise HTTPException(422, str(refused)) from None
 
     @app.get("/api/golden")
     def golden_data(name: Person) -> Golden:

@@ -6,6 +6,7 @@ import {
   FileCheckIcon,
   FilePenIcon,
   InboxIcon,
+  MessageCircleQuestionIcon,
   KeyboardIcon,
   LogOutIcon,
   MessageSquareTextIcon,
@@ -43,7 +44,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Me, QueueItem, View } from "@/lib/api"
 
 type Filter = "all" | "answer" | "approve"
-export type Page = "queue" | "golden"
+export type Page = "queue" | "golden" | "try"
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -118,6 +119,11 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "golden"} onClick={() => onPage("golden")}>
                   <DatabaseIcon /> Golden data
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "try"} onClick={() => onPage("try")}>
+                  <MessageCircleQuestionIcon /> Try a question
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

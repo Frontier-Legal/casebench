@@ -197,6 +197,28 @@ export interface CaseDetail {
   waiting: Waiting | null
 }
 
+export interface Budget {
+  target: string | null
+  limit: number | null
+  spent_today: number
+  remaining: number | null
+  can_ask: boolean
+  why_not: string | null
+  checks_citations: boolean
+}
+
+export interface Tried {
+  question: string
+  answer: string | null
+  error: string | null
+  citations: CitationView[]
+  agent_cost: number | null
+  judge_cost: number | null
+  cost: number
+  unpriced: string[]
+  budget: Budget
+}
+
 export interface Proposed {
   suite_id: string
   case_id: string
@@ -291,6 +313,8 @@ export const api = {
   finishChange: (key: string, decision: "approve" | "reject", note: string | null) =>
     call<Finished>("POST", `${item(key)}/finish`, { decision, note }),
   golden: () => call<Golden>("GET", "/api/golden"),
+  budget: () => call<Budget>("GET", "/api/try"),
+  tryQuestion: (question: string) => call<Tried>("POST", "/api/try", { question }),
   goldenCase: (suite: string, id: string) =>
     call<CaseDetail>("GET", `/api/golden/${encodeURIComponent(suite)}/${encodeURIComponent(id)}`),
   blankForm: (task: string) => call<FormField[]>("GET", `/api/golden/forms/${encodeURIComponent(task)}`),

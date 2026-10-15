@@ -5,6 +5,7 @@ import { CircleCheckBigIcon, CircleHelpIcon } from "lucide-react"
 import { AppSidebar, type Page } from "@/components/app-sidebar"
 import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
+import { TryQuestion } from "@/components/try-question"
 import { AnswerReview } from "@/components/answer-review"
 import { DraftReview } from "@/components/draft-review"
 import { ItemHeader } from "@/components/item-header"
@@ -91,9 +92,9 @@ function TopBar({
       <Separator orientation="vertical" className="mx-1 h-5" />
       <Breadcrumb className="min-w-0 flex-1">
         <BreadcrumbList className="flex-nowrap">
-          {page === "golden" ? (
+          {page !== "queue" ? (
             <BreadcrumbItem>
-              <BreadcrumbPage>Golden data</BreadcrumbPage>
+              <BreadcrumbPage>{page === "golden" ? "Golden data" : "Try a question"}</BreadcrumbPage>
             </BreadcrumbItem>
           ) : (
             <>
@@ -182,7 +183,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
     return () => window.clearInterval(timer)
   }, [item])
 
-  useShortcuts({ help: () => setHelp(true) }, item === null || page === "golden")
+  useShortcuts({ help: () => setHelp(true) }, item === null || page !== "queue")
 
   async function finish(send: () => Promise<{ message: string }>) {
     if (!item) return
@@ -214,7 +215,9 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
 
   const left = queue?.length ?? 0
   let body: React.ReactNode
-  if (page === "golden") {
+  if (page === "try") {
+    body = <TryQuestion locked={me.role_locked} />
+  } else if (page === "golden") {
     body = (
       <GoldenData
         locked={me.role_locked}
