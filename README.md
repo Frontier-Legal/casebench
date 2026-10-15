@@ -13,6 +13,14 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 - Report per task, per metric and per reference source, with the failing example beside every rate. There is no single accuracy number.
 - Give lawyers a review queue in the browser, on a laptop or a phone: the evidence beside each answer, the judge's verdict filled in, one key per verdict.
 
+## See it first
+
+```bash
+uvx casebench demo
+```
+
+The demo runs a small bundled suite with no key, no data and no network, and opens the workbench on its failed answers, each beside the passage it cited. Its cases, decisions and answers are written for the demo, not taken from real law.
+
 ## Set it up
 
 Paste this into the coding agent you use in your project:
@@ -20,6 +28,12 @@ Paste this into the coding agent you use in your project:
 > Set up Casebench for this project. Run `uvx casebench guide` and follow it.
 
 The guide has the coding agent read your project and write two things: `casebench.yaml` and an adapter in `.casebench/` that starts your agent the way your production does. Nothing else in your project changes, and no key's value is read or written. It ends when `casebench check` passes, and it asks you one question: which judge model to pay for. Without a coding agent, `casebench init` asks the same things in the terminal.
+
+A coding agent that reads skills from a folder can take the same steps as a skill: copy [`skills/casebench-setup`](skills/casebench-setup/SKILL.md) into its skills folder and ask it to set up Casebench for this agent and run the first evaluation. The skill follows the guide, then runs the first evaluation and opens the workbench.
+
+Then `casebench run` evaluates the agent. With no suite yet, the first run builds one from your corpus: it says what that costs and waits for a yes, then extracts, generates and runs. Run it again after an interruption and it resumes. `casebench ui` opens the results.
+
+A tool Casebench cannot call, such as a research product used through its web page, is measured the same way by hand: `casebench export --suite DIR --format csv` writes the questions, someone pastes each into the tool and writes its answer in the sheet, and `casebench import answers.csv --suite DIR` scores the answers as a connected run's are.
 
 ## Review with lawyers
 

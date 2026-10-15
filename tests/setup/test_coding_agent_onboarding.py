@@ -129,7 +129,8 @@ def test_one_prompt_sets_a_project_up(project: Path):
         # What a coding agent does, following `casebench guide` step by step.
         guide = invoke("guide")
         write(project / ".casebench" / "target.py", ADAPTER)
-        write(project / ".casebench" / ".gitignore", "*\n!.gitignore\n!target.py\n")
+        ignored = "*\n!.gitignore\n!target.py\n!casebench.schema.json\n"
+        write(project / ".casebench" / ".gitignore", ignored)
         located = invoke("keys", "ANTHROPIC_API_KEY", "DOC_KEY", "--json")
         listed = invoke("models", "anthropic", "--catalog", str(CATALOG), "--json")
         initialised = invoke(
@@ -156,6 +157,7 @@ def test_one_prompt_sets_a_project_up(project: Path):
     assert json.loads(checked.output)["passed"] is True, checked.output
     assert sorted(changed) == [
         "?? .casebench/.gitignore",
+        "?? .casebench/casebench.schema.json",
         "?? .casebench/target.py",
         "?? casebench.yaml",
     ]  # nothing the team ships changed
