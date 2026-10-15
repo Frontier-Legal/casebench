@@ -62,3 +62,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0046](0046-the-perimeter.md) | A run calls only the hosts its config names, never follows a redirect to another host, and writes no key | accepted |
 | [0047](0047-the-judge-rests-on-evidence.md) | A verdict rests on a quote the answer holds and on the case's evidence, and lawyers' verdicts calibrate the judge | accepted |
 | [0048](0048-a-gate-in-ci.md) | A gate fails a build only on a significant drop, over approved cases, against a saved baseline | accepted |
+| [0049](0049-lawyers-write-cases-in-a-spreadsheet.md) | Lawyers write cases in a spreadsheet, and research, drafting, editing and extraction tasks are graded | accepted |
