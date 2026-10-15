@@ -18,6 +18,7 @@ from casebench.plugins.cli import plugin
 from casebench.report.cli import compare_command, report_command
 from casebench.report.gate_cli import gate_command
 from casebench.report.review_cli import review_group
+from casebench.report.review_sheet_cli import export_command
 from casebench.runs.cli import run
 from casebench.setup.check_cli import check_command
 from casebench.setup.guide_cli import guide_command
@@ -58,6 +59,7 @@ main.add_command(generate_command)
 main.add_command(case_group)
 main.add_command(template_group)
 main.add_command(import_command)
+main.add_command(export_command)
 main.add_command(report_command)
 main.add_command(compare_command)
 main.add_command(review_group)

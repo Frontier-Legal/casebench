@@ -76,7 +76,7 @@
 | Team mode | Docker image; password login with no default password (first admin set at setup), OIDC for Entra ID or Google, API keys for CI, roles above |
 | Cloud | the same `ee/` app as a hosted service, one tenant per organisation; magic-link email, Microsoft and Google login; `casebench invite <email> --role` from the CLI; retention, SSO and scheduled runs |
 | Sync | `casebench push` and `casebench pull` between the local store and the cloud or team server; the table above says what crosses |
-| Spreadsheet review | `casebench export --review` writes an XLSX with answer, evidence links and verdict columns; lawyers fill it; `casebench import` merges the verdicts as reviews. The lawyer path when there is no server and no cloud |
+| Spreadsheet review | `casebench export --review` writes an XLSX with one row per criterion: the answer, the judge's verdict, the evidence as links (a corpus's `link:` names the provider's page) and verdict, note and reviewer columns; lawyers fill it; `casebench import` checks every row, then merges the verdicts as reviews, exactly as the workbench would. The lawyer path when there is no server and no cloud ([decision 0055](../decisions/0055-review-in-a-spreadsheet.md)) |
 | Model calls | only through targets and the judge the admin configured, with per-user and per-day spend limits |
 
 The same package serves local, team and cloud use. Review, overrule, compare and agreement are in the Apache-2.0 core and work locally with no login. The multi-user layer (roles, SSO, audit, invites) is in `ee/`, free to self-host for your own organisation ([open-source.md](open-source.md)).

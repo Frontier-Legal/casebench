@@ -41,6 +41,8 @@ For partners, the report exports as PDF, Word or one HTML file that opens with n
 casebench report runs/2026-10-15-nightly --export report.pdf
 ```
 
+A firm that runs no server can review in a spreadsheet instead: `casebench export --review RUN` writes the answers with the judge's verdicts and links to the evidence, a lawyer fills in the verdict and note columns, and `casebench import` reads them back. Each verdict counts exactly as one given in the workbench.
+
 To see whether a new version of the agent is better, lawyers compare two runs of one suite in the workbench. They read the two answers to each case as A and B, not knowing which run wrote which, and choose one or call them equal, with a reason. The later run's wins, losses and ties are summed per practice area and marked significant or not; `casebench compare` prints them too.
 
 ## Jurisdictions

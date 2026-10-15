@@ -24,5 +24,6 @@ def test_no_country_in_the_core():
         "search_filters",  # per kind of citation the judge names, statute or decision (0037)
         "keep",  # what the provider's terms let Casebench keep on disk (0041)
         "probe",  # the search the corpus was added with, which check runs (0044)
+        "link",  # the provider's page for a document, with {id} for its id (0055)
     }
     assert plugin_leaks(ROOT) == []
