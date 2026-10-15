@@ -1,5 +1,6 @@
 """`casebench demo`: run the bundled project and open the workbench on its failures."""
 
+import contextlib
 import shutil
 import tempfile
 from pathlib import Path
@@ -34,6 +35,12 @@ def demo_command(ctx: click.Context, folder: Path | None, no_serve: bool, port: 
     elif folder.exists() and any(folder.iterdir()):
         raise click.ClickException(f"{folder} is not empty; name a new folder with --dir")
     folder.mkdir(parents=True, exist_ok=True)
+    # Everything the demo writes, its corpus cache included, stays in its own folder.
+    with contextlib.chdir(folder):
+        _demo(ctx, folder.resolve(), no_serve, port)
+
+
+def _demo(ctx: click.Context, folder: Path, no_serve: bool, port: int) -> None:
     click.echo(
         "The demo's cases, court decisions and answers are written for it: none is a real "
         "decision or legal advice. Its judge's replies are kept with it, so nothing is sent."

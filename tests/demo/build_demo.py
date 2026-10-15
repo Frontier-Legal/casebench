@@ -6,6 +6,7 @@ judge's replies come from the scripted judge below, which reads each prompt as a
 would for these few cases, and are kept as the run's memo keeps a model's (decision 0061).
 """
 
+import contextlib
 import json
 import re
 import shutil
@@ -69,7 +70,7 @@ DOCUMENTS = [
         "date": "2024-01-30",
         "text": (
             "CA 2024/02. Examplia Court of Appeal, Labour Chamber. The claimant resigned after "
-            "her pay was withheld for three months. Held: a resignation the employer forced by "
+            "their pay was withheld for three months. Held: a resignation the employer forced by "
             "a serious breach is treated as a dismissal by the employer, and the employee keeps "
             "every claim a dismissed employee has."
         ),
@@ -305,9 +306,11 @@ def build(project: Path = PROJECT) -> None:
         json.dumps(by_question, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     freeze("demo", cases(), project / "suite", {"written_for": "the casebench demo"})
-    with tempfile.TemporaryDirectory() as scratch:
+    # In a new folder, so the corpus is read from the files just written and not from a cache
+    # an earlier build left in this one.
+    with tempfile.TemporaryDirectory() as scratch, contextlib.chdir(scratch):
         folder = Path(scratch)
-        config_path = write_config(project, folder)
+        config_path = write_config(project.resolve(), folder)
         config = load_config(config_path)
         manifest, suite = load(project / "suite")
         log = RunLog.create(
