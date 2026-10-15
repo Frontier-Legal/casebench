@@ -17,7 +17,8 @@ from casebench.core.case import Approval, Case
 from casebench.metrics.builtin.outcome import WRONG
 from casebench.report.gate import MARKER
 from casebench.runs.log import RunLog
-from tests.report.suites import frozen, mixed, outcome_case
+from tests.judge.fake_judge import start_fake_judge
+from tests.report.suites import criteria_case, frozen, mixed, outcome_case
 
 AGENTS = Path(__file__).parent / "agents.py"
 ACTION = Path(__file__).parents[2] / "action.yml"
@@ -40,7 +41,7 @@ def twelve() -> list[Case]:
     return cases
 
 
-def run(project: Path, agent: str, run_id: str):
+def run(project: Path, agent: str, run_id: str, config: str = "none.yaml"):
     return CliRunner().invoke(
         main,
         [
@@ -48,7 +49,7 @@ def run(project: Path, agent: str, run_id: str):
             "--suite",
             str(project / "suite"),
             "--config",
-            str(project / "none.yaml"),
+            str(project / config),
             "--python",
             f"{AGENTS}:{agent}",
             "--runs-dir",
@@ -188,3 +189,36 @@ def test_a_gate_before_approvals_exist(project: Path):
     assert "over 12 cases" in unreviewed.output
     assert unreviewed.exit_code == 1
     assert RunLog(project / "runs" / "new").info.commit == COMMIT
+
+
+def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    server = start_fake_judge()
+    judge = {
+        "provider": "anthropic",
+        "model": "judge-model",
+        "options": {"base_url": f"http://127.0.0.1:{server.server_port}", "max_tokens": 1024},
+    }
+    (project / "judged.yaml").write_text(yaml.safe_dump({"judge": judge}), encoding="utf-8")
+    suite(project, approved([criteria_case(n, {"Mentions upheld": 1}) for n in range(12)]))
+    run(project, "upheld", "baseline", "judged.yaml")
+    run(project, "upheld", "new", "judged.yaml")
+    server.shutdown()
+    held = gate(project)
+    for n in range(8):
+        CliRunner().invoke(
+            main,
+            [
+                "review", "criterion", str(project / "runs" / "new"), "--case", f"case-{n:03d}",
+                "--criterion", "c1", "--verdict", "fail", "--by", "Ayşe",
+                "--note", "it names the outcome but not the reason",
+            ],
+        )  # fmt: skip
+
+    overruled = gate(project)
+
+    assert held.exit_code == 0, held.output
+    # The lawyer's verdicts replace the judge's in the run, as in its report, with no new score set.
+    assert overruled.exit_code == 1, overruled.output
+    assert "qa · criteria: 100% -> 33% over 12 cases" in overruled.output
+    assert "  failed outcome criteria: 0 -> 8" in overruled.output

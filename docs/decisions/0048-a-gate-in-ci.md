@@ -33,6 +33,7 @@ Chosen option 1, because only a drop larger than the run-to-run noise says the c
   - a setting that moves a metric differs between the two score sets (0035), such as another judge.
 
   Comparing them would credit or blame the agent for a change in the measurement.
+- **The scores it compares** are the ones each run's report shows: a lawyer's verdict on a criterion replaces the judge's ([0047](0047-the-judge-rests-on-evidence.md)). A lawyer who overrules the judge on the run changes the gate's result without scoring the run again.
 - **Approved cases only.** By default the gate pairs only cases a lawyer approved, and reports how many draft cases it left out. A suite with no approved case is reported as such, and the gate passes: there is nothing to gate yet.
   - `--include-unreviewed` pairs draft cases too, such as court-derived cases no lawyer has read yet, and says so on its first line.
 - **Cost and latency** are reported, before and after, and never fail the gate.
@@ -56,5 +57,5 @@ Chosen option 1, because only a drop larger than the run-to-run noise says the c
 
 ## More information
 
-- [0028](0028-scores-baselines-and-intervals.md), [0035](0035-comparable-and-strict-scores.md).
+- [0028](0028-scores-baselines-and-intervals.md), [0035](0035-comparable-and-strict-scores.md), [0047](0047-the-judge-rests-on-evidence.md).
 - GitHub's documentation on composite actions and on `GITHUB_SHA`.
