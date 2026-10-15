@@ -5,6 +5,7 @@ The server stores what the runner computed and never scores (decision 0059).
 """
 
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -57,6 +58,15 @@ class State(BaseModel):
     runs: dict[str, dict[str, str]]
 
 
+def inside(base: Path, *parts: str) -> Path:
+    """A path under `base`, resolved; refused when it would leave it."""
+    root = os.path.realpath(base)
+    full = os.path.realpath(os.path.join(root, *parts))
+    if not full.startswith(root + os.sep):
+        raise HTTPException(422, "that path leaves the server's folder")
+    return Path(full)
+
+
 def _too_large(files: dict[str, str]) -> None:
     if sum(len(text) for text in files.values()) > LARGEST:
         raise HTTPException(413, "push fewer runs at a time; this is over 64 MB")
@@ -74,7 +84,7 @@ def sync_routes(workspace: Workspace, store: Store) -> APIRouter:
 
     def where(suite_id: str) -> Path:
         found = workspace.suites().get(suite_id)
-        return found.folder if found else workspace.suite_dirs[0] / suite_id
+        return found.folder if found else inside(workspace.suite_dirs[0], suite_id)
 
     @router.post("/api/sync/suites/{suite_id}")
     def push_suite(suite_id: str, body: Files, who: Who) -> Stored:
@@ -88,8 +98,8 @@ def sync_routes(workspace: Workspace, store: Store) -> APIRouter:
             raise HTTPException(422, f"a suite is sent as {', '.join(SUITE_FILES)}")
         _too_large(body.files)
         with tempfile.TemporaryDirectory() as scratch:
-            for name, text in body.files.items():
-                (Path(scratch) / name).write_text(text, encoding="utf-8")
+            for name in SUITE_FILES:
+                (Path(scratch) / name).write_text(body.files[name], encoding="utf-8")
             try:
                 manifest, _ = load(Path(scratch))
             except Exception as failure:
@@ -111,8 +121,8 @@ def sync_routes(workspace: Workspace, store: Store) -> APIRouter:
                     "lawyers approved or edited cases; run casebench pull, then push again",
                 )
         folder.mkdir(parents=True, exist_ok=True)
-        for name, text in body.files.items():
-            (folder / name).write_text(text, encoding="utf-8")
+        for name in SUITE_FILES:
+            (folder / name).write_text(body.files[name], encoding="utf-8")
         marker.write_text(manifest.content_hash, encoding="utf-8")
         store.log(
             [
@@ -140,7 +150,7 @@ def sync_routes(workspace: Workspace, store: Store) -> APIRouter:
         if refused_paths:
             raise HTTPException(422, f"these do not cross the line: {', '.join(refused_paths)}")
         _too_large(body.files)
-        folder = workspace.runs_dir / run_id
+        folder = inside(workspace.runs_dir, run_id)
         if RUN_FILE not in body.files and not (folder / RUN_FILE).is_file():
             raise HTTPException(422, f"a new run is sent with its {RUN_FILE}")
         if RUN_FILE in body.files:
@@ -155,7 +165,7 @@ def sync_routes(workspace: Workspace, store: Store) -> APIRouter:
                         Result.model_validate(line)
         changed = []
         for path, text in sorted(body.files.items()):
-            target = folder / path
+            target = inside(folder, path)
             old = target.read_text(encoding="utf-8") if target.is_file() else None
             if path in MERGED:
                 text = merged(old or "", text)

@@ -259,3 +259,21 @@ def test_the_cloud_never_grades(database: str, tmp_path: Path):
     # The score set is the runner's, byte for byte, even after a lawyer's verdict.
     assert stored.read_bytes() == local.read_bytes()
     assert not [p for p in paths if re.search(r"score|grade|judge|rerun", p)]
+
+
+def test_a_push_never_leaves_the_servers_folders(database: str, tmp_path: Path):
+    server = team_server(database, tmp_path / "server")
+    cloud = engineer_cloud(server)
+    info = {"run_id": "..", "suite_id": "s", "suite_hash": "h", "target": "t"}
+    tries = [
+        ("..", {"run.json": json.dumps(info)}),
+        ("r1", {"scores/../../escape.jsonl": "{}"}),
+        ("r1", {"judge.jsonl": "{}"}),
+    ]
+
+    for run_id, sent in tries:
+        with pytest.raises(CloudError):
+            cloud.push_run(run_id, sent)
+
+    assert not list(tmp_path.rglob("escape.jsonl"))
+    assert not (tmp_path / "server" / "runs" / "r1").exists()
