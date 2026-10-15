@@ -1,9 +1,11 @@
 {
   "released": {
     "case/1.0.json": "sha256:6157e627acdecffbe8309a9bd05a6922ed3fc4a747751379042310f0a2275577",
+    "case/1.1.json": "sha256:c891caf395a57190a6d33920059dfdff01f464b57af5b5f9669b0eba7b71c687",
     "document/1.0.json": "sha256:03474b976819aacb8b997127626ba66ce196eda5db77796b006da2d6c04d89f9",
     "profile/1.0.json": "sha256:8d658e26d5e110f315f4abcad5215564b7cdce5e145ada1fcab66ef4551eb099",
     "report/1.0.json": "sha256:f99e9c2a81cd05e66ead12486fde72a6e1a801cc18f484e04c6fe05e8697acfb",
+    "report/1.1.json": "sha256:0e6cf3267a8dd80910cc7e3082dd55b4a41d996ba9370a71561e4cab8aadb19e",
     "suite/1.0.json": "sha256:13c76d52a86ec435b2e64e25bfbbc4f6b25f997504218fa24b96df4554e4fa3b"
   }
 }

@@ -1,0 +1,144 @@
+{
+  "format": "casebench.report/1.1",
+  "score_set": "0001.jsonl",
+  "produced_by": {
+    "casebench_version": "0.1.0",
+    "metrics": {
+      "citation_integrity": {
+        "version": "2",
+        "reads": [
+          "corpus",
+          "judge"
+        ]
+      },
+      "outcome": {
+        "version": "1",
+        "reads": []
+      }
+    },
+    "judges": [
+      {
+        "provider": "anthropic",
+        "model": "judge-model",
+        "family": "anthropic",
+        "candidates": 5
+      }
+    ],
+    "prompts": {
+      "list_citations": "7c4f0e8f9c1b2a3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5",
+      "match": "0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "weigh": "f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8"
+    },
+    "corpora": {
+      "uk-legislation": "http-3f1c2a9b0d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a"
+    },
+    "extracted_by": [
+      "anthropic/model-a",
+      "openai/model-b"
+    ]
+  },
+  "tables": [
+    {
+      "task_type": "outcome",
+      "metric": "outcome",
+      "rows": [
+        {
+          "reference_source": "court",
+          "approval": "lawyer-approved",
+          "n": 1,
+          "mean": 1.0,
+          "low": 1.0,
+          "high": 1.0,
+          "majority_baseline": 1.0,
+          "text_only_baseline": 1.0
+        }
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "label": "verified",
+      "count": 1,
+      "rate": 1.0
+    }
+  ],
+  "funnel": {
+    "summary": {
+      "cases": 1,
+      "diagnosed": 1,
+      "authorities": 1,
+      "survived": {
+        "retrieved": 1,
+        "kept": 1,
+        "read": 1,
+        "cited": 1
+      },
+      "labels": {},
+      "ungrounded": 0,
+      "without_rerank": 1,
+      "cited_checked": true
+    },
+    "cases": [
+      {
+        "case_id": "court-of-appeal-2024-0187:outcome",
+        "diagnostic": true,
+        "authorities": [
+          {
+            "document_id": "era-1996-s98",
+            "retrieved": true,
+            "kept": null,
+            "read": true,
+            "cited": true,
+            "label": null
+          }
+        ],
+        "ungrounded": []
+      }
+    ]
+  },
+  "scores": [
+    {
+      "case_id": "court-of-appeal-2024-0187:outcome",
+      "metric": "outcome",
+      "metric_version": "1",
+      "kind": "code",
+      "direction": "higher",
+      "value": 1.0,
+      "label": "reversed",
+      "criteria": [
+        {
+          "criterion_id": "c1",
+          "weight": 2,
+          "met": true,
+          "quote": "section 98"
+        }
+      ],
+      "citations": [
+        {
+          "citation": "Employment Rights Act 1996, s. 98",
+          "claim": "The dismissal must be for a fair reason.",
+          "label": "verified",
+          "document_id": "era-1996-s98"
+        }
+      ],
+      "task_type": "outcome",
+      "reference_source": "court",
+      "approval": "approved",
+      "practice_area": "labour"
+    }
+  ],
+  "error_rates": [
+    {
+      "error": "wrong outcome",
+      "meaning": "does not reach the ruling the court or the lawyer gave: states another, or none",
+      "n": 1,
+      "rate": 0.0,
+      "low": 0.0,
+      "high": 0.0,
+      "failing": []
+    }
+  ],
+  "warnings": [],
+  "unevidenced": [],
+  "calibration": []
+}
