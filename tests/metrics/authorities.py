@@ -56,6 +56,8 @@ def reply(system: str, user: str) -> object:
         ]
     if system == prompts.MATCH:
         return picks(user, by_alias)
+    if system == prompts.WEIGH:
+        return {"supports": True, "quote": None, "reason": "the provision applies"}
     raise AssertionError(f"unexpected judge prompt: {system[:40]}")
 
 

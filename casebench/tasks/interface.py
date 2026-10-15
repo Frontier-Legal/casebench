@@ -11,6 +11,11 @@ class TaskType(Protocol):
         ...
 
     @property
+    def reference_fields(self) -> tuple[str, ...]:
+        """What a lawyer writes for the reference, by its spreadsheet column (decision 0049)."""
+        ...
+
+    @property
     def default_metrics(self) -> tuple[str, ...]:
         """The metrics a case of this type gets when it names none."""
         ...
