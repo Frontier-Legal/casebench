@@ -17,7 +17,7 @@ from casebench.capture.proxy.redact import redact_url
 from casebench.capture.proxy.routes import Route
 from casebench.capture.proxy.sse import parse_events
 from casebench.capture.recorder import Recorder
-from casebench.capture.redirect import FOLLOWED
+from casebench.capture.redirect import DIRECT, FOLLOWED
 from casebench.capture.step import HttpExchange
 
 # RFC 9110 section 7.6.1: connection-specific headers a proxy must not forward.
@@ -78,6 +78,8 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
         # Wall-clock times order the steps; the duration comes from the monotonic clock, which
         # on Windows is fine enough to time a fast local call, as the wall clock is not.
         started, begun = time.time(), time.perf_counter()
+        # In the agent's own process, the libraries it patched must not send this back here.
+        direct = DIRECT.set(True)
         try:
             upstream = await client.send(
                 client.build_request(request.method, url, headers=headers, content=raw),
@@ -86,6 +88,8 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
         except network.HostRefused as refused:
             recorder.refuse(str(refused))
             return PlainTextResponse(str(refused), status_code=403)
+        finally:
+            DIRECT.reset(direct)
         chunks: list[bytes] = []
 
         async def relay() -> AsyncIterator[bytes]:

@@ -73,3 +73,19 @@ class Step(FrozenRecord):
     ended: float | None = None
     duration_ms: float | None = None
     note: str | None = None
+
+
+def without_content(steps: list[Step]) -> list[Step]:
+    """Each step without the arguments of its tool calls and named functions, which often hold
+    a client's facts; ids, names, models, tokens, sizes and times stay (decision 0062)."""
+    return [
+        step.model_copy(
+            update={
+                "arguments": None,
+                "requested_tools": [
+                    call.model_copy(update={"arguments": None}) for call in step.requested_tools
+                ],
+            }
+        )
+        for step in steps
+    ]

@@ -58,6 +58,7 @@ def demo_command(ctx: click.Context, folder: Path | None, no_serve: bool, port: 
         suite_dir=folder / "suite",
         config_path=config_path,
         python=None,
+        endpoint=None,
         max_concurrency=None,
         run_id=RUN_ID,
         runs_dir=runs_dir,

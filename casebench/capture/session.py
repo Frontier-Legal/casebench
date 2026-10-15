@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from casebench import keys
+from casebench.capture import redirect
 from casebench.capture.backend import backend_step
 from casebench.capture.config import CaptureConfig, routes_for
 from casebench.capture.corpus_routes import corpus_routes
@@ -62,10 +63,17 @@ class CaptureSession:
         port: int = 0,
         functions: list[StepFunction] | None = None,
         traces: bool = False,
+        content: bool = False,
+        in_process: bool = False,
     ) -> None:
+        """`content` keeps tool and function arguments in stored steps (decision 0062).
+        `in_process` records an agent in this process: the patched libraries follow the
+        proxy for the length of the run, and no variable is set."""
         self.routes = {route.name: route for route in routes}
         self.functions = functions or []
         self.traces = traces
+        self.content = content
+        self.in_process = in_process
         self.port = port
         self.recorder = Recorder()
         self.parsers: dict[str, CaptureParser] = {
@@ -114,6 +122,9 @@ class CaptureSession:
             self.env[STEP_FUNCTIONS] = json.dumps(
                 [f.model_dump(mode="json") for f in self.functions]
             )
+        if self.in_process:
+            redirect.follow(proxy)
+            return self.env
         for name, value in self.env.items():
             self._previous[name] = os.environ.get(name)
             os.environ[name] = value
@@ -146,6 +157,8 @@ class CaptureSession:
         return next((r for r in self.routes.values() if urlsplit(r.upstream).netloc == host), None)
 
     async def stop(self) -> None:
+        if self.in_process:
+            redirect.follow(None)
         for name, value in self._previous.items():
             if value is None:
                 os.environ.pop(name, None)
@@ -158,12 +171,21 @@ class CaptureSession:
 
 
 def session_for(
-    capture: CaptureConfig | None, corpora: dict[str, CorpusConfig] | None = None
+    capture: CaptureConfig | None,
+    corpora: dict[str, CorpusConfig] | None = None,
+    in_process: bool = False,
 ) -> CaptureSession:
     """The session the config's `capture:` section describes, or the defaults without one,
     with a route at each corpus the agent may search itself (decision 0044)."""
     routes = routes_for(capture)
     routes += corpus_routes(corpora or {}, routes)
     if capture is None:
-        return CaptureSession(routes)
-    return CaptureSession(routes, capture.port, capture.functions, capture.traces)
+        return CaptureSession(routes, in_process=in_process)
+    return CaptureSession(
+        routes,
+        capture.port,
+        capture.functions,
+        capture.traces,
+        capture.content,
+        in_process,
+    )

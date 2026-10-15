@@ -31,15 +31,25 @@ from casebench.targets.load import target_from_config
 DEFAULT_RUNS = Path(".casebench") / "runs"
 
 
-def _config(path: Path, python: str | None) -> CasebenchConfig:
+def endpoint_target(url: str) -> dict[str, Any]:
+    """An HTTP agent in any language: each case's question as `{"question": ...}` by POST,
+    the answer read from `answer` in the JSON reply (decision 0062)."""
+    return {"type": "http", "url": url, "body": {"question": "{{question}}"}, "answer": "$.answer"}
+
+
+def _config(path: Path, python: str | None, endpoint: str | None = None) -> CasebenchConfig:
+    if python is not None and endpoint is not None:
+        raise click.UsageError("give --python or --endpoint, not both")
     if path.is_file():
         config = load_config(path)
-    elif python is not None:
-        config = CasebenchConfig(target={"type": "python", "entry": python})
+    elif python is not None or endpoint is not None:
+        config = CasebenchConfig()
     else:
-        raise click.ClickException(f"{path} does not exist; pass --config or --python")
+        raise click.ClickException(f"{path} does not exist; pass --config, --python or --endpoint")
     if python is not None:
         config = config.model_copy(update={"target": {"type": "python", "entry": python}})
+    if endpoint is not None:
+        config = config.model_copy(update={"target": endpoint_target(endpoint)})
     enforce(config)
     return config
 
@@ -83,6 +93,11 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     help="Run a Python agent in this process; FUNCTION defaults to answer.",
 )
 @click.option(
+    "--endpoint",
+    metavar="URL",
+    help='An HTTP agent: POST {"question": ...}, read "answer" from the JSON reply.',
+)
+@click.option(
     "--max-concurrency",
     type=click.IntRange(min=1),
     help="Cases at once; overrides the target's setting.",
@@ -122,6 +137,7 @@ def run(
     suite_dir: Path | None,
     config_path: Path,
     python: str | None,
+    endpoint: str | None,
     max_concurrency: int | None,
     run_id: str | None,
     runs_dir: Path,
@@ -134,7 +150,7 @@ def run(
 ) -> None:
     """Send every case of a frozen suite to the target, store each result and score the run.
     With no --suite, the first run builds one from the corpus, and a later run resumes it."""
-    config = _config(config_path, python)
+    config = _config(config_path, python, endpoint)
     if suite_dir is None:
         suite_dir = first.FIRST
         if not first.is_built(suite_dir) and not dry_run:

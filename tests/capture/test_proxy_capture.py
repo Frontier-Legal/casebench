@@ -74,11 +74,8 @@ def test_any_language_through_the_proxy(tmp_path: Path):
         ]
         assert all(s.duration_ms is not None and s.duration_ms > 0 for s in calls)
         [tool] = [s for s in result.steps if s.kind is StepKind.TOOL]
-        assert (tool.name, tool.arguments, tool.result_size) == (
-            "search",
-            {"query": "dismissal"},
-            len("tr-1, tr-2"),
-        )
+        # The arguments are dropped before the result is stored (decision 0062).
+        assert (tool.name, tool.arguments, tool.result_size) == ("search", None, len("tr-1, tr-2"))
         assert tool.duration_ms is not None and tool.duration_ms >= 0
 
 

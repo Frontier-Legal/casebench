@@ -9,6 +9,7 @@ from casebench.capture.assemble import assemble
 from casebench.capture.context import capturing
 from casebench.capture.otlp.mapping import to_step, without_duplicates
 from casebench.capture.session import CaptureSession
+from casebench.capture.step import without_content
 from casebench.core.case import Case
 from casebench.runs.log import Result, RunLog
 from casebench.targets.interface import Target
@@ -43,6 +44,8 @@ async def ask(
         traced = [step for span in spans if (step := to_step(span)) is not None]
         in_process = captured.steps + without_duplicates(traced, proxied)
         steps = assemble(exchanges, capture.parse, in_process)
+    if capture is None or not capture.content:
+        steps = without_content(steps)
     if answer is None:
         return Result(case_id=case.id, error=error, steps=steps, latency_ms=latency_ms)
     return Result(

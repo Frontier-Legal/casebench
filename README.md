@@ -33,6 +33,17 @@ A coding agent that reads skills from a folder can take the same steps as a skil
 
 Then `casebench run` evaluates the agent. With no suite yet, the first run builds one from your corpus: it says what that costs and waits for a yes, then extracts, generates and runs. Run it again after an interruption and it resumes. `casebench ui` opens the results.
 
+From a script or a notebook, three lines run a suite against an agent built in memory, recording its model and search calls:
+
+```python
+import casebench as cb
+
+cb.instrument()
+cb.run(my_agent, suite="suites/labour")  # in a notebook: await cb.arun(...)
+```
+
+An HTTP service in any language takes one flag: `casebench run --endpoint URL --suite DIR` posts each question as `{"question": ...}` and reads `answer` from the reply. A run keeps ids, models, tokens and times, never the arguments of the agent's tool calls, unless `capture: {content: true}` asks for them.
+
 A tool Casebench cannot call, such as a research product used through its web page, is measured the same way by hand: `casebench export --suite DIR --format csv` writes the questions, someone pastes each into the tool and writes its answer in the sheet, and `casebench import answers.csv --suite DIR` scores the answers as a connected run's are.
 
 ## Review with lawyers

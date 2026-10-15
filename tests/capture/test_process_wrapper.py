@@ -80,7 +80,8 @@ def test_process_wrapper(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     ]
     assert all(s.duration_ms and s.duration_ms > 0 for s in calls)
     [tool] = [s for s in result.steps if s.kind is StepKind.TOOL]
-    assert (tool.name, tool.arguments, tool.result_size) == ("search", {"query": "dismissal"}, 10)
+    # The arguments are dropped before the result is stored (decision 0062).
+    assert (tool.name, tool.arguments, tool.result_size) == ("search", None, 10)
     assert tool.duration_ms is not None
     [gap] = [s for s in result.steps if s.kind is StepKind.GAP]
     assert gap.name == "between llm gpt-5 and llm gpt-5"
