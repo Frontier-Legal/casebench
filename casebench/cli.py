@@ -10,6 +10,7 @@ from casebench.cases.cli import case_group
 from casebench.cases.sheet_cli import import_command, template_group
 from casebench.config import ConfigError
 from casebench.corpus.cli import corpus
+from casebench.demo.cli import demo_command
 from casebench.extract.cli import extract_command
 from casebench.formats.schema_cli import schema
 from casebench.formats.validate_cli import validate_command
@@ -72,3 +73,4 @@ main.add_command(guide_command)
 main.add_command(models_command)
 main.add_command(schema)
 main.add_command(validate_command)
+main.add_command(demo_command)
