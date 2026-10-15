@@ -42,7 +42,7 @@ def _evidence(value: str, drafted: list[Item], doc: str | None, author: str) -> 
     return Evidence(doc=doc or REVIEWER, note=f"written by {author}")
 
 
-def _criterion(fact: Fact) -> Criterion:
+def criterion_for(fact: Fact) -> Criterion:
     """Written from the fact by Casebench, never by a model (decision 0002)."""
     text = {
         "outcome": f'Passes if the answer concludes that the court ruled "{fact.value}". '
@@ -83,7 +83,7 @@ def lawyer_case(case_id: str, written: Written, author: str, drafted: Draft | No
         reference=Reference(
             source=ReferenceSource.COURT if drafted else ReferenceSource.LAWYER,
             facts=facts,
-            criteria=[_criterion(fact) for fact in facts],
+            criteria=[criterion_for(fact) for fact in facts],
             author=author,
         ),
         metrics=["criteria"],

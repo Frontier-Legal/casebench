@@ -11,6 +11,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 - Check every citation in every answer against the corpus: does the authority exist, and does it say what the answer claims?
 - Show where in a multi-step system the right authority was lost: retrieved, kept, read, cited, characterised.
 - Report per task, per metric and per reference source, with the failing example beside every rate. There is no single accuracy number.
+- Give lawyers a review queue in the browser, on a laptop or a phone: the evidence beside each answer, the judge's verdict filled in, one key per verdict.
 
 ## Set it up
 
@@ -19,6 +20,10 @@ Paste this into the coding agent you use in your project:
 > Set up Casebench for this project. Run `uvx casebench guide` and follow it.
 
 The guide has the coding agent read your project and write two things: `casebench.yaml` and an adapter in `.casebench/` that starts your agent the way your production does. Nothing else in your project changes, and no key's value is read or written. It ends when `casebench check` passes, and it asks you one question: which judge model to pay for. Without a coding agent, `casebench init` asks the same things in the terminal.
+
+## Review with lawyers
+
+`casebench ui` opens the review queue on this machine. Lawyers confirm or overrule the judge on each criterion of an answer, read every citation's source passage, and approve, edit or reject the facts of cases drawn from court decisions. Their verdicts replace the judge's in the report and in the gate. `casebench ui --role reviewer` shows only legal text, citations and passages.
 
 ## Jurisdictions
 

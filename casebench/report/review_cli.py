@@ -1,16 +1,16 @@
 """`casebench review`: a lawyer's verdict on the judge's, kept in the run's folder (0047)."""
 
 from pathlib import Path
+from typing import cast
 
 import click
 
 from casebench.report.calibration import (
-    LawyerVerdict,
-    add_review,
+    CannotRecord,
+    Said,
     calibration,
-    criterion_verdicts,
     read_reviews,
-    said,
+    record_verdict,
 )
 from casebench.report.render import calibration_lines
 from casebench.runs.log import RunLog
@@ -47,36 +47,18 @@ def criterion_command(
 ) -> None:
     """Give a lawyer's verdict on one criterion of a scored run. It is counted against the
     judge's in the run's report; the scores stay the judge's."""
-    sets = RunLog(run_dir).score_sets()
-    if not sets:
-        raise click.ClickException(f"{run_dir} has no scores yet; score it first")
-    scores = RunLog.read_scores(sets[-1])
-    judged = criterion_verdicts(scores).get((case_id, repeat, criterion_id))
-    if judged is None:
-        raise click.ClickException(
-            f"the latest score set has no criteria verdict for case {case_id}, repeat {repeat}, "
-            f"criterion {criterion_id}"
-        )
-    judge = said(judged)
-    if verdict != judge and not note:
-        raise click.ClickException(f"the judge said {judge}; overruling it needs --note saying why")
-    add_review(
-        run_dir,
-        LawyerVerdict(
-            case_id=case_id,
-            repeat=repeat,
-            criterion_id=criterion_id,
-            verdict=verdict,  # type: ignore[arg-type]
-            judge=judge,
-            note=note,
-            by=by,
-        ),
-    )
+    try:
+        said = cast(Said, verdict)
+        review = record_verdict(run_dir, case_id, repeat, criterion_id, said, by, note)
+    except CannotRecord as failure:
+        raise click.ClickException(str(failure).replace("a note", "--note")) from None
+    judge = review.judge
     agreed = "agrees with" if verdict == judge else "overrules"
     click.echo(f"recorded: {by} says {verdict}, which {agreed} the judge ({judge})")
     click.echo(
         "it replaces the judge's verdict in the scores the next time the run is scored; "
         "scoring again reads the judge's kept replies and asks the judge nothing"
     )
+    scores = RunLog.read_scores(RunLog(run_dir).score_sets()[-1])
     for line in calibration_lines(calibration(scores, read_reviews(run_dir))):
         click.echo(line)

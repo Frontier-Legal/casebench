@@ -28,3 +28,6 @@ node_modules/
 .idea/
 .vscode/
 .DS_Store
+
+# Workbench build, made by npm run build in workbench/ and shipped in the wheel
+casebench/workbench/static/
