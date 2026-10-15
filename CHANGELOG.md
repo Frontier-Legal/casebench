@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.2.0](https://github.com/Frontier-Legal/casebench/compare/v0.1.1...v0.2.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* a run, check, extract or case command now refuses every host casebench.yaml does not name. A setup whose agent calls a model API or another service that the config does not name stops at the first such call; add the host under `network: allow:`.
+
+### Features
+
+* a run calls only the hosts its config names, never follows a redirect to another host, and writes no key ([#60](https://github.com/Frontier-Legal/casebench/issues/60)) ([4a1a8c1](https://github.com/Frontier-Legal/casebench/commit/4a1a8c1a4610c42ed575ba3cdb5dc6525b5cbd4c))
+* **cases:** lawyers write cases in a spreadsheet, and research, drafting, editing and extraction tasks are graded ([#66](https://github.com/Frontier-Legal/casebench/issues/66)) ([92e6383](https://github.com/Frontier-Legal/casebench/commit/92e6383f486814c7752af55a70dbc3e1aa56e582))
+* **gate:** a gate fails a build only on a significant drop against a saved baseline, in pytest and a GitHub Action ([#64](https://github.com/Frontier-Legal/casebench/issues/64)) ([31a9289](https://github.com/Frontier-Legal/casebench/commit/31a9289e101682a3771c1c1b51fc162dce6abe38))
+* **judge:** a verdict rests on a quote the answer holds and on the case's evidence, and lawyers' verdicts calibrate the judge ([#63](https://github.com/Frontier-Legal/casebench/issues/63)) ([e00459c](https://github.com/Frontier-Legal/casebench/commit/e00459c51e1cb49cd875e81e231fdcd548ed1a94))
+* **report:** a run reports four error rates, each opening its failing answers, and a case names its practice area and approver ([#71](https://github.com/Frontier-Legal/casebench/issues/71)) ([5859549](https://github.com/Frontier-Legal/casebench/commit/585954994b4199b716a89c5e4f728c2d6c5df6e5))
+* **report:** a run reports what it spent, per model, for the agent and for the judge ([#68](https://github.com/Frontier-Legal/casebench/issues/68)) ([2699c16](https://github.com/Frontier-Legal/casebench/commit/2699c165eaf881effb4b46419c04b33b1fb76660))
+* **report:** a run's report exports for partners as PDF, Word or one HTML file that opens with no server ([#73](https://github.com/Frontier-Legal/casebench/issues/73)) ([fa0e2bd](https://github.com/Frontier-Legal/casebench/commit/fa0e2bdbfaca0e675dc260d6afdb33917acf2138))
+* **review:** lawyers review a run in a spreadsheet, and the import writes the same verdicts the workbench writes ([#74](https://github.com/Frontier-Legal/casebench/issues/74)) ([b177153](https://github.com/Frontier-Legal/casebench/commit/b177153c2fa7c4909cab0c5cd89f1ab59efa02ef))
+* **workbench:** a lawyer's change to golden data takes effect at once unless a second editor's approval is on ([#70](https://github.com/Frontier-Legal/casebench/issues/70)) ([628a906](https://github.com/Frontier-Legal/casebench/commit/628a9061473a5b05f08e101f95cc74259f36a773))
+* **workbench:** engineers see each answer's harness as a waterfall, with unaccounted time, the authority funnel and a diff against another run ([#75](https://github.com/Frontier-Legal/casebench/issues/75)) ([9b179f6](https://github.com/Frontier-Legal/casebench/commit/9b179f604a857177912e10b7a1a9cd46b55c9950))
+* **workbench:** golden data changes only when a second editor approves, and a question can be tried within a daily dollar limit ([#69](https://github.com/Frontier-Legal/casebench/issues/69)) ([1428607](https://github.com/Frontier-Legal/casebench/commit/142860736bd667296f454f5042e7bfeec4d3dd90))
+* **workbench:** lawyers compare two runs of one suite blind, with a reason, summed per practice area ([#72](https://github.com/Frontier-Legal/casebench/issues/72)) ([a15560c](https://github.com/Frontier-Legal/casebench/commit/a15560cd1c71f40031fbc8c646690d8f88f77654))
+* **workbench:** the review queue, where lawyers confirm or overrule the judge and approve court drafts ([#67](https://github.com/Frontier-Legal/casebench/issues/67)) ([58c5165](https://github.com/Frontier-Legal/casebench/commit/58c51659ec9c9a218b3fcd49b9c0d68fc46a3121))
+
+
+### Bug Fixes
+
+* **formats:** record the schemas 0.1.0 released, so they never change ([#62](https://github.com/Frontier-Legal/casebench/issues/62)) ([b6abfd8](https://github.com/Frontier-Legal/casebench/commit/b6abfd81aff331e3d90b9bc1ba42d08661ef0117))
+* **gate:** the gate compares the scores the report shows, and names failed criteria by kind ([#65](https://github.com/Frontier-Legal/casebench/issues/65)) ([df326ae](https://github.com/Frontier-Legal/casebench/commit/df326ae778525ec9353dfa583d3b0fd211ae54b8))
+
 ## [0.1.1](https://github.com/Frontier-Legal/casebench/compare/v0.1.0...v0.1.1) (2026-10-14)
 
 
