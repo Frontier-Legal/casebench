@@ -21,7 +21,7 @@ from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
-from casebench.runs.scoring import prepare, score
+from casebench.runs.scoring import Scored, prepare, score
 from casebench.suites.freeze import load
 from casebench.suites.qualify import as_qualified
 from casebench.targets.interface import TargetDidNotStart
@@ -168,6 +168,11 @@ def run(
         concurrency,
         on_scored=progress.scored_one if progress else None,
     )
+    show_scored(log, scored, manifest.suite_id, runs_dir)
+
+
+def show_scored(log: RunLog, scored: Scored, suite_id: str, runs_dir: Path) -> None:
+    """What `casebench run` prints once a run is scored, and where to open it."""
     click.echo(render.suite_line(log.info.suite_id, log.info.suite_hash))
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
@@ -175,7 +180,7 @@ def run(
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):
         click.echo(line)
-    for line in render.error_rate_lines(error_rates(scored.scores, manifest.suite_id)):
+    for line in render.error_rate_lines(error_rates(scored.scores, suite_id)):
         click.echo(line)
     for line in render.spend_lines(scored.spend):
         click.echo(line)
@@ -184,3 +189,4 @@ def run(
     for line in render.warning_lines(scored.warnings):
         click.echo(line, err=True)
     click.echo(str(scored.report))
+    click.echo(f"open it in the workbench: casebench ui --runs-dir {runs_dir}")
