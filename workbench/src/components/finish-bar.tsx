@@ -14,12 +14,16 @@ export function FinishBar({
   busy,
   onFinish,
   label = "Finish and next",
+  unit = "item",
+  last = "The last item in the queue",
 }: {
   summary: string
   left: number
   busy: boolean
   onFinish: () => void
   label?: string
+  unit?: string
+  last?: string
 }) {
   return (
     <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:-mx-6">
@@ -27,7 +31,7 @@ export function FinishBar({
         <div className="min-w-0 flex-1 text-sm">
           <div className="truncate font-medium">{summary}</div>
           <div className="text-xs text-muted-foreground">
-            {left > 1 ? `${plural(left - 1, "more item")} after this one` : "The last item in the queue"}
+            {left > 1 ? `${plural(left - 1, `more ${unit}`)} after this one` : last}
           </div>
         </div>
         <Button onClick={onFinish} disabled={busy} size="lg" className="h-11 gap-2 px-5 md:h-10">

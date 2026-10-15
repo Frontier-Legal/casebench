@@ -11,6 +11,7 @@ from casebench.report.calibration import Calibration, calibration, read_reviews
 from casebench.report.citations import citation_rates
 from casebench.report.errors import ErrorRate, error_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
+from casebench.report.preferences import AreaPreferences
 from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
 from casebench.runs.log import ScoringError
@@ -174,6 +175,21 @@ def error_rate_lines(rates: list[ErrorRate]) -> list[str]:
         f"[{rate.low:.0%}, {rate.high:.0%}], {rate.meaning}"
         for rate in rates
     ]
+
+
+def preference_lines(areas: list[AreaPreferences]) -> list[str]:
+    """Lawyers' blind preferences, the second run against the first, per practice area."""
+    if not areas:
+        return []
+    out = ["lawyers compared the answers blind, the second run against the first:"]
+    for area in areas:
+        verdict = "significant" if area.significant else "not significant"
+        out.append(
+            f"  {area.practice_area or 'no practice area'}: {area.wins} wins, {area.losses} "
+            f"losses, {area.ties} ties over {area.n} pairs, mean {area.mean:+.2f} "
+            f"[{area.low:+.2f}, {area.high:+.2f}], {verdict}"
+        )
+    return out
 
 
 def write(

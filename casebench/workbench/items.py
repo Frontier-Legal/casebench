@@ -222,7 +222,7 @@ def title_of(case: Case | None, fallback: str) -> str:
     return f"{case.task.type} case {case.id}"
 
 
-def _inputs(case: Case | None) -> list[Input]:
+def inputs_of(case: Case | None) -> list[Input]:
     if case is None:
         return []
     inputs = case.task.inputs
@@ -442,7 +442,7 @@ def answer_item(
         title=title_of(case, case_id),
         where=f"run {run_id}",
         task=scores[0].task_type,
-        inputs=_inputs(case),
+        inputs=inputs_of(case),
         answer=result.output if result else None,
         reference=[fact_view(f) for f in case.reference.facts] if case else [],
         criteria=criteria,
@@ -490,7 +490,7 @@ def draft_item(
         title=title_of(case, case.id),
         where=f"suite {suite.manifest.suite_id}",
         task=case.task.type,
-        inputs=_inputs(case),
+        inputs=inputs_of(case),
         decision=decision,
         facts=[fact_view(f, text) for f in case.reference.facts],
         draft=store.draft(key, person),
