@@ -7,6 +7,7 @@ from statistics import fmean
 
 from casebench.core.case import Approval
 from casebench.core.score import CitationLabel, Direction, Score
+from casebench.report.calibration import OTHER, lawyers_win, read_reviews
 from casebench.report.comparable import Change, changes
 from casebench.report.compare import Difference, compare
 from casebench.runs.log import Result, RunLog
@@ -56,12 +57,12 @@ def latest(folder: Path) -> Path:
 
 
 def error_types(scores: list[Score]) -> Counter[str]:
-    """What went wrong: each citation's label, each failed criterion, else the score's own
-    label."""
+    """What went wrong: each citation's label, the kind of each failed criterion, else the
+    score's own label."""
     counted: Counter[str] = Counter()
     for score in scores:
         found = [f"{c.label.value} citations" for c in score.citations if c.label not in NOT_ERRORS]
-        found += ["failed criteria" for v in score.criteria if not v.passed]
+        found += [f"failed {v.kind or OTHER} criteria" for v in score.criteria if not v.passed]
         if not found and score.value < 1 and score.label:
             found = [score.label]
         counted.update(found)
@@ -95,7 +96,11 @@ def gate(baseline: Path, run: Path, include_unreviewed: bool = False) -> Gated:
             f"the two runs were measured differently ({named}); score the baseline again with "
             "the run's settings"
         )
-    old, new = (RunLog.read_scores(path) for path in sets)
+    # The scores the report shows: a lawyer's verdict replaces the judge's (0047).
+    old, new = (
+        lawyers_win(RunLog.read_scores(path), read_reviews(log.folder))
+        for path, log in zip(sets, (first, second), strict=True)
+    )
     allowed = {Approval.APPROVED} | ({Approval.DRAFT} if include_unreviewed else set())
     drafts = {s.case_id for s in new if s.approval is Approval.DRAFT}
     old, new = ([s for s in scores if s.approval in allowed] for scores in (old, new))
