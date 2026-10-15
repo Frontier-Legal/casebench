@@ -3,6 +3,7 @@ graded (decision 0049)."""
 
 import csv
 import json
+import time
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ import yaml
 from click.testing import CliRunner
 from openpyxl import Workbook, load_workbook
 
+from casebench.cases.golden import new_case
 from casebench.cli import main
 from casebench.core.case import ReferenceSource
 from casebench.suites.freeze import load
@@ -325,3 +327,23 @@ def test_a_blank_template_imports_nothing(tmp_path: Path):
 
     assert empty.exit_code != 0 and "has no filled row" in empty.output
     assert unknown.exit_code != 0 and "no sheet named after a task type" in unknown.output
+
+
+def test_a_long_line_is_read_in_one_pass():
+    """A key point or an expected field padded with spaces, as a form can send it, is read at
+    once and to the same values."""
+    padding = " " * 200_000
+    started = time.perf_counter()
+    case = new_case(
+        "extraction",
+        {"document": "Acme A.Ş. and Beta Ltd.", "expected": f"party_a:{padding}Acme A.Ş."},
+        "fields-1",
+        "Ayşe",
+    )
+    pointed = new_case(
+        "qa", {"question": "Q?", "key points": f"+5{padding}Says yes"}, "qa-1", "Ayşe"
+    )
+
+    assert time.perf_counter() - started < 2
+    assert [(f.id, f.value) for f in case.reference.facts] == [("party_a", "Acme A.Ş.")]
+    assert [(c.weight, c.text) for c in pointed.reference.criteria] == [(5, "Says yes")]

@@ -1,6 +1,5 @@
 """Turn what a lawyer wrote, a spreadsheet row or the workbench's form, into a case (0049, 0052)."""
 
-import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -21,9 +20,6 @@ from casebench.core.case import (
 ANSWER = "answer-1"
 KEY_POINT = "key point"
 CRITERIA = "criteria"
-# A key point's weight, such as +5 or -4, before its text.
-WEIGHTED = re.compile(r"^([+-]?\d+)\s+(.+)$")
-NAMED = re.compile(r"^([^:]+):\s*(.+)$")
 
 
 def _lines(text: str) -> list[str]:
@@ -34,16 +30,27 @@ def _named(text: str, where: str, column: str) -> list[tuple[str, str]]:
     """Lines such as `9.2: Uncapped indemnity` or `party_a: Acme`."""
     out = []
     for line in _lines(text):
-        found = NAMED.match(line)
-        if not found:
+        name, colon, value = line.partition(":")
+        if not colon or not name.strip() or not value.strip():
             raise SheetError(f"{where}: {column} wants name: value, not {line!r}")
-        out.append((found.group(1).strip(), found.group(2).strip()))
+        out.append((name.strip(), value.strip()))
     return out
 
 
+def _is_weight(word: str) -> bool:
+    """A signed whole number, such as +5 or -4."""
+    digits = word[1:] if word[:1] in "+-" else word
+    return digits.isascii() and digits.isdigit()
+
+
 def _weighted(line: str, where: str) -> tuple[int, str]:
-    found = WEIGHTED.match(line)
-    weight, text = (int(found.group(1)), found.group(2)) if found else (1, line)
+    """A key point's weight, such as +5 or -4, before its text; without one it weighs 1. Split
+    on whitespace, never matched by a pattern, so a line of any length is read in one pass."""
+    parts = line.split(maxsplit=1)
+    if len(parts) == 2 and _is_weight(parts[0]):
+        weight, text = int(parts[0]), parts[1]
+    else:
+        weight, text = 1, line
     if weight == 0:
         raise SheetError(f"{where}: the key point {text!r} weighs 0, so never counts")
     return weight, text.strip()
