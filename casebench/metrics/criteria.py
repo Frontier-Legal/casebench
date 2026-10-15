@@ -24,6 +24,11 @@ class CriteriaGrader(Protocol):
         ...
 
 
+def label_of(verdicts: list[CriterionVerdict]) -> str:
+    failed = [v.criterion_id for v in verdicts if not v.passed]
+    return "all criteria passed" if not failed else f"failed: {', '.join(failed)}"
+
+
 def weighted_score(verdicts: list[CriterionVerdict]) -> float:
     """The weighted sum of met criteria over the sum of positive weights, clipped to 0 to 1.
 
@@ -127,8 +132,7 @@ class WeightedCriteria:
                 )
         graded = [_grounded(case, checked(verdicts, result.output)) for verdicts in graded]
         verdicts, disagreements = both(*graded) if len(graded) > 1 else (graded[0], [])
-        failed = [v.criterion_id for v in verdicts if not v.passed]
-        label = "all criteria passed" if not failed else f"failed: {', '.join(failed)}"
+        label = label_of(verdicts)
         return Verdict(
             value=weighted_score(verdicts),
             label=label,

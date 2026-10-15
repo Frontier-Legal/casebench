@@ -13,6 +13,7 @@ from pydantic import Field
 from casebench import keys
 from casebench.core.model import FrozenRecord
 from casebench.core.score import CriterionVerdict, Score
+from casebench.metrics.criteria import label_of, weighted_score
 
 REVIEWS_FILE = "reviews.jsonl"
 CRITERIA = "criteria"
@@ -46,7 +47,16 @@ class Calibration(FrozenRecord):
 
 
 def said(verdict: CriterionVerdict) -> Said:
-    return "pass" if verdict.passed else "fail"
+    """The judge's verdict, also when a lawyer's has replaced it."""
+    met = verdict.met if verdict.judge_met is None else verdict.judge_met
+    passed = met if verdict.weight > 0 else not met
+    return "pass" if passed else "fail"
+
+
+def _met(review: "LawyerVerdict", weight: int) -> bool:
+    """A criterion passes when met, or, with a negative weight, when not triggered."""
+    passes = review.verdict == "pass"
+    return passes if weight > 0 else not passes
 
 
 def criterion_verdicts(scores: list[Score]) -> dict[tuple[str, int, str], CriterionVerdict]:
@@ -70,6 +80,37 @@ def add_review(folder: Path, verdict: LawyerVerdict) -> None:
     """Appended, and scrubbed of keys like every line a run writes."""
     with (folder / REVIEWS_FILE).open("a", encoding="utf-8") as stream:
         stream.write(keys.scrub(verdict.model_dump_json()) + "\n")
+
+
+def lawyers_win(scores: list[Score], reviews: list[LawyerVerdict]) -> list[Score]:
+    """The scores with each lawyer's latest verdict in place of the judge's, which each
+    replaced verdict keeps; a score with a replaced verdict is computed again (0047)."""
+    latest = {(r.case_id, r.repeat, r.criterion_id): r for r in reviews}
+    out = []
+    for score in scores:
+        found = [latest.get((score.case_id, score.repeat, v.criterion_id)) for v in score.criteria]
+        if score.metric != CRITERIA or not any(found):
+            out.append(score)
+            continue
+        verdicts = [
+            v
+            if review is None
+            else v.model_copy(
+                update={
+                    "met": _met(review, v.weight),
+                    "reviewed_by": review.by,
+                    "judge_met": v.met if v.judge_met is None else v.judge_met,
+                }
+            )
+            for v, review in zip(score.criteria, found, strict=True)
+        ]
+        update = {
+            "criteria": verdicts,
+            "value": weighted_score(verdicts),
+            "label": label_of(verdicts),
+        }
+        out.append(score.model_copy(update=update))
+    return out
 
 
 def calibration(scores: list[Score], reviews: list[LawyerVerdict]) -> list[Calibration]:

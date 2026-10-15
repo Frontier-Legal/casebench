@@ -42,6 +42,12 @@ class CriterionVerdict(FrozenRecord):
     note: str | None = Field(
         default=None, description="Why a verdict the judge gave does not count as given."
     )
+    reviewed_by: str | None = Field(
+        default=None, description="The lawyer whose verdict replaced the judge's (0047)."
+    )
+    judge_met: bool | None = Field(
+        default=None, description="What the judge decided, when a lawyer's verdict replaced it."
+    )
 
     @property
     def passed(self) -> bool:

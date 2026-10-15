@@ -34,7 +34,7 @@ from casebench.metrics.criteria import UNQUOTED, WeightedCriteria
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
 from casebench.providers.interface import HttpRequest
-from casebench.runs.log import Result
+from casebench.runs.log import Result, RunLog
 from tests.judge.fake_judge import start_fake_judge
 from tests.report.suites import criteria_case, frozen
 
@@ -201,9 +201,15 @@ def test_overrule_becomes_calibration(tmp_path: Path, port: int):
     assert agreed.exit_code == 0, agreed.output
     assert "judge vs lawyers · outcome: 1 of 2 agreed, 1 overruled" in shown.output
     assert again.exit_code == 0, again.output
-    assert report(tmp_path)["calibration"] == [
-        {"kind": "outcome", "labelled": 2, "agreed": 1, "overruled": 1}
-    ]
+    saved = report(tmp_path)
+    assert saved["calibration"] == [{"kind": "outcome", "labelled": 2, "agreed": 1, "overruled": 1}]
+    # The lawyer's verdict replaces the judge's in the report's scores; the judge's is kept.
+    [overruled_score] = [s for s in saved["scores"] if s["case_id"] == "case-001"]
+    [verdict] = overruled_score["criteria"]
+    assert overruled_score["value"] == 0.0 and not verdict["met"]
+    assert verdict["reviewed_by"] == "Ayşe" and verdict["judge_met"] is True
+    score_set = RunLog.read_scores(RunLog(tmp_path / "runs" / "r").score_sets()[-1])
+    assert [s.value for s in score_set if s.case_id == "case-001"] == [1.0]
 
 
 def test_one_provider_interface():

@@ -275,6 +275,30 @@
           ],
           "default": null,
           "description": "Why a verdict the judge gave does not count as given."
+        },
+        "reviewed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The lawyer whose verdict replaced the judge's (0047)."
+        },
+        "judge_met": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What the judge decided, when a lawyer's verdict replaced it."
         }
       },
       "required": [

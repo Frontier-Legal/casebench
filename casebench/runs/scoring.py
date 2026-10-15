@@ -19,6 +19,7 @@ from casebench.judge.resolve import Resolver, cited_documents
 from casebench.metrics.base import Metric
 from casebench.metrics.loading import metrics_for
 from casebench.report import render
+from casebench.report.calibration import lawyers_win, read_reviews
 from casebench.report.funnel import CaseFunnel, FunnelSummary, case_funnel, gold, summarise
 from casebench.report.tables import Table, build_tables
 from casebench.runs.log import RunLog, ScoringError
@@ -137,7 +138,9 @@ def score(
             on_scored(case_id, seconds, judge_cost(context))
 
     path = rescore(log, cases, metrics, produced_by, concurrency, heard)
-    scores, errors = RunLog.read_scores(path), RunLog.read_errors(path)
+    # The score set keeps the judge's verdicts; lawyers' replace them in the report (0047).
+    scores = lawyers_win(RunLog.read_scores(path), read_reviews(log.folder))
+    errors = RunLog.read_errors(path)
     tables = build_tables(scores, cases, suite_id)
     traced, unfunnelled = funnels(log, cases, context, errors)
     errors += unfunnelled

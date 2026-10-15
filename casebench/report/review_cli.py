@@ -74,5 +74,9 @@ def criterion_command(
     )
     agreed = "agrees with" if verdict == judge else "overrules"
     click.echo(f"recorded: {by} says {verdict}, which {agreed} the judge ({judge})")
+    click.echo(
+        "it replaces the judge's verdict in the scores the next time the run is scored; "
+        "scoring again reads the judge's kept replies and asks the judge nothing"
+    )
     for line in calibration_lines(calibration(scores, read_reviews(run_dir))):
         click.echo(line)
