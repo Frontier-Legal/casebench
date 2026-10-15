@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { Status } from "@/components/section"
+import { extension } from "@/extension"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -46,7 +47,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Me, QueueItem, View } from "@/lib/api"
 
 type Filter = "all" | "answer" | "approve"
-export type Page = "queue" | "golden" | "try" | "compare" | "reports"
+// A team build adds its own pages, named extra:<id> (decision 0058).
+export type Page = "queue" | "golden" | "try" | "compare" | "reports" | `extra:${string}`
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -123,11 +125,13 @@ export function AppSidebar({
                   <DatabaseIcon /> Golden data
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={page === "try"} onClick={() => onPage("try")}>
-                  <MessageCircleQuestionIcon /> Try a question
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {(me.can?.includes("try") ?? true) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={page === "try"} onClick={() => onPage("try")}>
+                    <MessageCircleQuestionIcon /> Try a question
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "compare"} onClick={() => onPage("compare")}>
                   <GitCompareArrowsIcon /> Compare runs
@@ -138,6 +142,18 @@ export function AppSidebar({
                   <ChartColumnIcon /> Reports
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {extension.pages
+                .filter((extra) => me.can?.includes(extra.needs) ?? false)
+                .map((extra) => (
+                  <SidebarMenuItem key={extra.id}>
+                    <SidebarMenuButton
+                      isActive={page === `extra:${extra.id}`}
+                      onClick={() => onPage(`extra:${extra.id}`)}
+                    >
+                      <extra.icon /> {extra.title}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

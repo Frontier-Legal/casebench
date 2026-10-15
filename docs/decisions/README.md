@@ -71,3 +71,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0055](0055-review-in-a-spreadsheet.md) | Lawyers review a run in a spreadsheet when there is no server, and the import writes the same verdicts the workbench writes | accepted |
 | [0056](0056-the-harness-view.md) | Engineers see each answer as a waterfall of its calls, with unaccounted time, the authority funnel and a diff against another run | accepted |
 | [0057](0057-ee-under-the-elastic-license.md) | `ee/` is under the Elastic License 2.0, and the rest of the repository under Apache-2.0 | accepted |
+| [0058](0058-the-team-server.md) | The team server: the workbench with logins, five roles and an append-only audit log, from one image | accepted |

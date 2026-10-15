@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { Choices } from "@/components/choices"
-import { FinishBar } from "@/components/finish-bar"
+import { FinishBar, ReadOnlyBar } from "@/components/finish-bar"
 import { Overline, Section } from "@/components/section"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
@@ -40,6 +40,7 @@ export function ChangeReview({
   onFinish,
   onHelp,
   busy,
+  readOnly = false,
 }: {
   item: ChangeItem
   left: number
@@ -47,6 +48,7 @@ export function ChangeReview({
   onFinish: (decision: Decision, note: string | null) => void
   onHelp: () => void
   busy: boolean
+  readOnly?: boolean
 }) {
   const saved = item.draft as { decision?: Decision; note?: string } | null
   const [decision, setDecision] = useState<Decision | null>(saved?.decision ?? null)
@@ -155,19 +157,23 @@ export function ChangeReview({
           </Section>
         </div>
       </div>
-      <FinishBar
-        left={left}
-        busy={busy}
-        onFinish={finish}
-        label={decision === "reject" ? "Reject and next" : "Approve and next"}
-        summary={
-          decision
-            ? decision === "approve"
-              ? "You approve the change"
-              : "You reject the change"
-            : `${isNew ? "A new case" : "A change"} by ${item.proposal.author}`
-        }
-      />
+      {readOnly ? (
+        <ReadOnlyBar />
+      ) : (
+        <FinishBar
+          left={left}
+          busy={busy}
+          onFinish={finish}
+          label={decision === "reject" ? "Reject and next" : "Approve and next"}
+          summary={
+            decision
+              ? decision === "approve"
+                ? "You approve the change"
+                : "You reject the change"
+              : `${isNew ? "A new case" : "A change"} by ${item.proposal.author}`
+          }
+        />
+      )}
     </>
   )
 }

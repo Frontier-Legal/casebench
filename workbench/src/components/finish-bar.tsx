@@ -7,6 +7,18 @@ import { plural } from "@/lib/words"
 
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
 
+/** In place of the finish bar, for a caller whose role reads the item but does not act on it
+ * (decision 0058). */
+export function ReadOnlyBar() {
+  return (
+    <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:-mx-6">
+      <div className="px-4 py-3 text-sm text-muted-foreground md:px-6">
+        Your role lets you read this item. Someone with a reviewer's or an editor's role acts on it.
+      </div>
+    </div>
+  )
+}
+
 /** The bar at the foot of every item: what is decided, and finishing it. */
 export function FinishBar({
   summary,

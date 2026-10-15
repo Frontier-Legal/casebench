@@ -7,6 +7,7 @@ import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
 import { CompareRuns } from "@/components/compare-runs"
 import { Reports } from "@/components/reports"
+import { extension } from "@/extension"
 import { TryQuestion } from "@/components/try-question"
 import { AnswerReview } from "@/components/answer-review"
 import { DraftReview } from "@/components/draft-review"
@@ -64,11 +65,21 @@ function useDarkMode() {
   }, [])
 }
 
+/** What the caller may do, as the server says; an older server says nothing and allows all. */
+function allows(me: Me, action: string): boolean {
+  return me.can?.includes(action) ?? true
+}
+
+/** An answer is worked on by a reviewer; a court draft or a change by an editor (0058). */
+function works(me: Me, key: string): boolean {
+  return allows(me, key.startsWith("answer:") ? "review" : "edit")
+}
+
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-const PAGES: Record<Page, string> = {
+const PAGES: Record<string, string> = {
   queue: "Review queue",
   golden: "Golden data",
   try: "Try a question",
@@ -104,7 +115,9 @@ function TopBar({
         <BreadcrumbList className="flex-nowrap">
           {page !== "queue" ? (
             <BreadcrumbItem>
-              <BreadcrumbPage>{PAGES[page]}</BreadcrumbPage>
+              <BreadcrumbPage>
+                {PAGES[page] ?? extension.pages.find((extra) => `extra:${extra.id}` === page)?.title}
+              </BreadcrumbPage>
             </BreadcrumbItem>
           ) : (
             <>
@@ -143,6 +156,8 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   const [done, setDone] = useState(0)
   const [page, setPage] = useState<Page>("queue")
   const [opened, setOpened] = useState<Opened | null>(null)
+  const meRef = useRef(me)
+  meRef.current = me
   const skipped = useRef<Set<string>>(new Set())
   const { isMobile, setOpenMobile } = useSidebar()
   const mobile = useRef(isMobile)
@@ -154,7 +169,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
       setPage("queue")
       if (mobile.current) setOpenMobile(false)
       try {
-        await api.reserve(key)
+        if (works(meRef.current, key)) await api.reserve(key)
         setItem(await api.item(key))
         window.scrollTo?.({ top: 0 })
       } catch (error) {
@@ -196,7 +211,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   useShortcuts({ help: () => setHelp(true) }, item === null || page !== "queue")
 
   async function finish(send: () => Promise<{ message: string }>) {
-    if (!item) return
+    if (!item || !works(me, item.key)) return
     setBusy(true)
     try {
       const finished = await send()
@@ -225,16 +240,20 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
 
   const left = queue?.length ?? 0
   let body: React.ReactNode
-  if (page === "try") {
-    body = <TryQuestion locked={me.role_locked} />
+  const extra = extension.pages.find((p) => `extra:${p.id}` === page)
+  const readOnly = item !== null && !works(me, item.key)
+  if (extra) {
+    body = extra.render(me)
+  } else if (page === "try") {
+    body = <TryQuestion locked={!allows(me, "edit")} />
   } else if (page === "compare") {
-    body = <CompareRuns onHelp={() => setHelp(true)} />
+    body = <CompareRuns onHelp={() => setHelp(true)} canPrefer={allows(me, "compare")} />
   } else if (page === "reports") {
     body = <Reports onOpen={open} />
   } else if (page === "golden") {
     body = (
       <GoldenData
-        locked={me.role_locked}
+        locked={!allows(me, "edit")}
         opened={opened}
         onOpen={setOpened}
         onChanged={() => api.queue().then(({ items }) => setQueue(items)).catch(() => {})}
@@ -287,6 +306,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
             item={item}
             left={left}
             busy={busy}
+            readOnly={readOnly}
             onDraft={saveDraft}
             onHelp={() => setHelp(true)}
             onFinish={(verdicts: GivenVerdict[]) => finish(() => api.finishAnswer(item.key, verdicts))}
@@ -296,6 +316,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
             item={item}
             left={left}
             busy={busy}
+            readOnly={readOnly}
             onDraft={saveDraft}
             onHelp={() => setHelp(true)}
             onFinish={(decision, note) => finish(() => api.finishChange(item.key, decision, note))}
@@ -305,6 +326,7 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
             item={item}
             left={left}
             busy={busy}
+            readOnly={readOnly}
             onDraft={saveDraft}
             onHelp={() => setHelp(true)}
             onFinish={(facts: GivenFact[]) => finish(() => api.finishDraft(item.key, facts))}
@@ -341,6 +363,10 @@ function Workbench({ me, onMe, onLeave }: { me: Me; onMe: (me: Me) => void; onLe
   )
 }
 
+function Passthrough({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
+}
+
 export function App() {
   useDarkMode()
   const [roleLocked, setRoleLocked] = useState(false)
@@ -352,7 +378,8 @@ export function App() {
       const session = await api.session()
       if (!live) return
       setRoleLocked(session.role_locked)
-      if (!storedName()) return setMe(null)
+      // Signed in to a team, the server knows who is calling; locally the person names themselves.
+      if (session.mode !== "team" && !storedName()) return setMe(null)
       try {
         const found = await api.me()
         if (live) setMe(found)
@@ -371,8 +398,10 @@ export function App() {
     setMe(await api.saveMe(name, view))
   }
 
+  const Gate = extension.Gate ?? Passthrough
   return (
     <TooltipProvider>
+      <Gate>
       {me === undefined ? null : me === null ? (
         <Welcome roleLocked={roleLocked} onStart={start} />
       ) : (
@@ -387,6 +416,7 @@ export function App() {
           />
         </SidebarProvider>
       )}
+      </Gate>
       <Toaster position="top-right" offset={{ top: 64, right: 16 }} richColors closeButton />
     </TooltipProvider>
   )

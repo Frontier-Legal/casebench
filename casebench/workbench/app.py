@@ -1,11 +1,11 @@
 """The workbench's API and its web app, served on the loopback address (decision 0050)."""
 
+from collections.abc import Sequence
 from importlib import resources
 from pathlib import Path
 from typing import Annotated, Any, Literal
-from urllib.parse import unquote
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -13,6 +13,17 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from casebench.config import CasebenchConfig
 from casebench.workbench import comparing, golden, harness, items, reports, trying
+from casebench.workbench.access import (
+    ENGINEER,
+    PERSON_HEADER,
+    REVIEWER,
+    ROLES,
+    Access,
+    Caller,
+    Can,
+    LocalAccess,
+    refuse,
+)
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -29,8 +40,7 @@ from casebench.workbench.items import (
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
 
-REVIEWER, ENGINEER = "reviewer", "engineer"
-PERSON_HEADER = "X-Casebench-Person"
+__all__ = ["ENGINEER", "PERSON_HEADER", "REVIEWER", "create_app"]
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 NOT_BUILT = """<!doctype html><meta charset="utf-8"><title>Casebench</title>
 <p>The workbench's web app is not built. Run <code>npm ci && npm run build</code> in
@@ -73,7 +83,9 @@ class Loopback(BaseHTTPMiddleware):
 class Me(BaseModel):
     name: str
     view: Literal["review", "engineering"]
-    role_locked: bool = Field(description="The app serves the review view only.")
+    role_locked: bool = Field(description="The caller may not use the engineering view.")
+    role: str = Field(description="viewer, reviewer, editor, engineer or admin (0058).")
+    can: list[Can] = Field(default_factory=list)
 
 
 class SaveMe(BaseModel):
@@ -83,6 +95,7 @@ class SaveMe(BaseModel):
 
 class Session(BaseModel):
     role_locked: bool
+    mode: str = Field(default="local", description="local, or team with logins (0058).")
 
 
 class Queue(BaseModel):
@@ -130,15 +143,43 @@ class Document(DecisionView):
     highlight: Highlight | None = None
 
 
-def person(named: Annotated[str | None, Header(alias=PERSON_HEADER)] = None) -> str:
-    """Who is asking, as the app sends it, percent-encoded so any name fits a header."""
-    name = unquote(named or "").strip()
-    if not name:
+def caller(request: Request) -> Caller:
+    """Who is calling, by the access the app was built with; 401 when no one is."""
+    access: Access = request.app.state.access
+    found = access.caller(request)
+    if found is None:
         raise HTTPException(401, "say who you are first")
-    return name
+    return found
 
 
-Person = Annotated[str, Depends(person)]
+def _named(request: Request, action: Can) -> str:
+    who = caller(request)
+    refuse(who, action)
+    return who.name
+
+
+def reader(request: Request) -> str:
+    return _named(request, Can.READ)
+
+
+def comparer(request: Request) -> str:
+    return _named(request, Can.COMPARE)
+
+
+def trier(request: Request) -> str:
+    return _named(request, Can.TRY)
+
+
+def editor_name(request: Request) -> str:
+    return _named(request, Can.EDIT)
+
+
+# The caller, and the caller's name once they may take an action (decision 0058).
+Who = Annotated[Caller, Depends(caller)]
+Person = Annotated[str, Depends(reader)]
+Comparer = Annotated[str, Depends(comparer)]
+Trier = Annotated[str, Depends(trier)]
+Editor = Annotated[str, Depends(editor_name)]
 
 
 def create_app(
@@ -149,46 +190,70 @@ def create_app(
     static: Path | None = None,
     config: CasebenchConfig | None = None,
     asker: trying.Asker | None = None,
+    access: Access | None = None,
+    routers: Sequence[APIRouter] = (),
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
-    fields, whatever the browser asks for."""
+    fields, whatever the browser asks for. A team server passes its own `access`, which says
+    who is calling and what they may do, and its own `routers` (decision 0058)."""
     app = FastAPI(title="Casebench workbench", docs_url=None, redoc_url=None)
     app.add_middleware(Loopback, hosts=hosts)
-    locked = role == REVIEWER
+    access = access or LocalAccess(role)
     # Whether a change to golden data waits for a second editor (decision 0053).
     second = bool(config and config.workbench and config.workbench.second_approval)
 
-    def engineering(name: str) -> bool:
-        found = store.person(name)
-        return not locked and found is not None and found.view == "engineering"
+    app.state.access = access
+
+    def engineering(who: Caller) -> bool:
+        found = store.person(who.key)
+        return who.may(Can.ENGINEER) and found is not None and found.view == "engineering"
+
+    def me_of(who: Caller, view: str) -> Me:
+        shown = view if who.may(Can.ENGINEER) else "review"
+        return Me(
+            name=who.name,
+            view=shown,  # type: ignore[arg-type]
+            role_locked=not who.may(Can.ENGINEER),
+            role=who.role,
+            can=sorted(who.can),
+        )
 
     @app.get("/api/session")
     def session() -> Session:
-        return Session(role_locked=locked)
+        locked = isinstance(access, LocalAccess) and access.role == REVIEWER
+        return Session(role_locked=locked, mode=access.mode)
 
     @app.get("/api/me")
-    def me(name: Person) -> Me:
-        found = store.person(name)
+    def me(who: Who) -> Me:
+        found = store.person(who.key)
         if found is None:
-            raise HTTPException(404, "no one by that name yet")
-        view = "review" if locked else found.view
-        return Me(name=found.name, view=view, role_locked=locked)  # type: ignore[arg-type]
+            if access.mode == "local":
+                raise HTTPException(404, "no one by that name yet")
+            found = store.save_person(who.key, "review")
+        return me_of(who, found.view)
 
     @app.put("/api/me")
-    def save_me(body: SaveMe) -> Me:
-        view = "review" if locked else body.view
-        saved = store.save_person(body.name.strip(), view)
-        return Me(name=saved.name, view=view, role_locked=locked)
+    def save_me(body: SaveMe, request: Request) -> Me:
+        """Locally a person names themselves here; signed in, only the view changes."""
+        if isinstance(access, LocalAccess):
+            name = body.name.strip()
+            who = Caller(name=name, key=name, role=access.role, can=ROLES[access.role])
+        else:
+            who = caller(request)
+        view = body.view if who.may(Can.ENGINEER) else "review"
+        store.save_person(who.key, view)
+        return me_of(who, view)
 
-    def editor() -> None:
-        """A reviewer reviews answers and proposes no change to golden data (decision 0052)."""
-        if locked:
-            raise HTTPException(403, "the reviewer role proposes no change to golden data")
+    def editor(who: Caller) -> None:
+        """Only an editor changes golden data and approves others' changes (0052, 0058)."""
+        refuse(who, Can.EDIT)
 
     @app.get("/api/queue")
-    def queue(name: Person) -> Queue:
+    def queue(who: Who) -> Queue:
+        refuse(who, Can.READ)
+        name = who.name
         queued = items.queue(workspace, store, name)
-        if locked:
+        if not who.may(Can.EDIT):
             return Queue(items=queued)
         held = store.held_by_others(name)
         waiting = [
@@ -199,12 +264,13 @@ def create_app(
         return Queue(items=[*queued[:drafts], *waiting, *queued[drafts:]])
 
     @app.get("/api/items/{key}")
-    def item(key: str, name: Person) -> AnswerItem | DraftItem | ChangeItem:
+    def item(key: str, who: Who) -> AnswerItem | DraftItem | ChangeItem:
+        refuse(who, Can.READ)
         try:
             if key.startswith(f"{golden.CHANGE_ITEM}:"):
-                editor()
-                return golden.change_item(store, key, name)
-            return items.item(workspace, store, key, name, engineering(name))
+                editor(who)
+                return golden.change_item(store, key, who.name)
+            return items.item(workspace, store, key, who.name, engineering(who))
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
 
@@ -255,7 +321,7 @@ def create_app(
 
     @app.post("/api/compare/{first}/{second}/{case_id}/{repeat}")
     def prefer(
-        first: str, second: str, case_id: str, repeat: int, body: Prefer, name: Person
+        first: str, second: str, case_id: str, repeat: int, body: Prefer, name: Comparer
     ) -> comparing.Pair:
         try:
             return comparing.prefer(
@@ -268,10 +334,10 @@ def create_app(
 
     @app.get("/api/harness/{run_id}/{case_id}/{repeat}")
     def harness_view(
-        run_id: str, case_id: str, repeat: int, name: Person, against: str | None = None
+        run_id: str, case_id: str, repeat: int, who: Who, against: str | None = None
     ) -> harness.Harness:
         """The engineering view's waterfall; the review view is never served it (0056)."""
-        if not engineering(name):
+        if not engineering(who):
             raise HTTPException(403, "the harness view is for the engineering view")
         try:
             return harness.harness(workspace, run_id, case_id, repeat, against)
@@ -285,7 +351,7 @@ def create_app(
         return trying.budget(config, store)
 
     @app.post("/api/try")
-    async def try_question(body: Ask, name: Person) -> trying.Tried:
+    async def try_question(body: Ask, name: Trier) -> trying.Tried:
         """Asks the configured target within the day's limit; refused, nothing is sent."""
         try:
             return await trying.try_question(
@@ -317,8 +383,7 @@ def create_app(
             raise HTTPException(404, str(missing)) from None
 
     @app.put("/api/golden/{suite_id}/{case_id}")
-    def change_case(suite_id: str, case_id: str, body: SaveCase, name: Person) -> Proposed:
-        editor()
+    def change_case(suite_id: str, case_id: str, body: SaveCase, name: Editor) -> Proposed:
         try:
             return golden.propose_change(
                 workspace, store, suite_id, case_id, body.fields, body.reason, name, second
@@ -329,8 +394,7 @@ def create_app(
             raise HTTPException(422, str(refused)) from None
 
     @app.post("/api/golden/{suite_id}")
-    def add_case(suite_id: str, body: NewCase, name: Person) -> Proposed:
-        editor()
+    def add_case(suite_id: str, body: NewCase, name: Editor) -> Proposed:
         try:
             return golden.create_case(
                 workspace, store, suite_id, body.task, body.fields, name, body.reason, second
@@ -340,15 +404,22 @@ def create_app(
         except Refused as refused:
             raise HTTPException(422, str(refused)) from None
 
+    def worker(key: str, who: Caller) -> str:
+        """Who may work on an item: an answer needs a reviewer, a draft or a change an editor."""
+        refuse(who, Can.REVIEW if key.startswith(f"{items.ANSWER}:") else Can.EDIT)
+        return who.name
+
     @app.post("/api/items/{key}/reserve")
-    def reserve(key: str, name: Person) -> Held:
+    def reserve(key: str, who: Who) -> Held:
+        name = worker(key, who)
         held = store.reserve(key, name)
         if held != name:
             raise HTTPException(409, f"{held} is working on this item")
         return Held(held_by=held)
 
     @app.put("/api/items/{key}/draft")
-    def save_draft(key: str, body: SaveDraft, name: Person) -> Held:
+    def save_draft(key: str, body: SaveDraft, who: Who) -> Held:
+        name = worker(key, who)
         held = store.reserve(key, name)
         if held != name:
             raise HTTPException(409, f"{held} is working on this item")
@@ -356,13 +427,13 @@ def create_app(
         return Held(held_by=held)
 
     @app.post("/api/items/{key}/finish")
-    def finish(key: str, body: Finish, name: Person) -> Finished:
+    def finish(key: str, body: Finish, who: Who) -> Finished:
+        name = worker(key, who)
         holder = store.holder(key)
         if holder is not None and holder != name:
             raise HTTPException(409, f"{holder} is working on this item")
         try:
             if key.startswith(f"{golden.CHANGE_ITEM}:"):
-                editor()
                 if body.decision is None:
                     raise Refused("approve or reject the change")
                 done = golden.finish_change(workspace, store, key, name, body.decision, body.note)
@@ -388,6 +459,9 @@ def create_app(
             text=record.text,
             highlight=found,
         )
+
+    for router in routers:
+        app.include_router(router)
 
     root = static or static_root()
     index = root / "index.html"

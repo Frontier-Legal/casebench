@@ -123,7 +123,7 @@ function AnswerCard({ letter, text }: { letter: string; text: string | null }) {
 
 /** Two runs compared blind: answers as A and B, a preference with a reason, and the later
  * run's wins, losses and ties per practice area (decision 0054). */
-export function CompareRuns({ onHelp }: { onHelp: () => void }) {
+export function CompareRuns({ onHelp, canPrefer = true }: { onHelp: () => void; canPrefer?: boolean }) {
   const [runs, setRuns] = useState<RunRow[] | null>(null)
   const [first, setFirst] = useState<string | null>(null)
   const [second, setSecond] = useState<string | null>(null)
@@ -181,7 +181,7 @@ export function CompareRuns({ onHelp }: { onHelp: () => void }) {
   const left = useMemo(() => comparison?.pairs.filter((p) => !p.given).length ?? 0, [comparison])
 
   const give = useCallback(async () => {
-    if (!first || !second || !current || busy) return
+    if (!first || !second || !current || busy || !canPrefer) return
     if (!choice) return setMissing("Choose A, B or Equal first.")
     if (!reason.trim()) return setMissing("Say why. Your reason is kept with the preference.")
     setBusy(true)
@@ -198,7 +198,7 @@ export function CompareRuns({ onHelp }: { onHelp: () => void }) {
     } finally {
       setBusy(false)
     }
-  }, [first, second, current, busy, choice, reason, load, at])
+  }, [first, second, current, busy, choice, reason, load, at, canPrefer])
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -213,7 +213,7 @@ export function CompareRuns({ onHelp }: { onHelp: () => void }) {
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return
       const picked = CHOICES.find((c) => c.key.toLowerCase() === event.key.toLowerCase())
-      if (picked && pair && !pair.given) {
+      if (picked && pair && !pair.given && canPrefer) {
         event.preventDefault()
         setChoice(picked.value)
         setMissing(null)
@@ -385,6 +385,10 @@ export function CompareRuns({ onHelp }: { onHelp: () => void }) {
                     <p>“{pair.given.reason}”</p>
                   </AlertDescription>
                 </Alert>
+              ) : !canPrefer ? (
+                <p className="text-sm text-muted-foreground">
+                  Your role lets you read the comparison. A reviewer gives the preferences.
+                </p>
               ) : (
                 <Section title="Which answer is better?">
                   <div className="flex flex-col gap-4">
@@ -433,7 +437,7 @@ export function CompareRuns({ onHelp }: { onHelp: () => void }) {
                   </div>
                 </Section>
               )}
-              {!pair.given && (
+              {!pair.given && canPrefer && (
                 <FinishBar
                   summary={choice ? CHOICES.find((c) => c.value === choice)!.label : "Choose A, B or Equal"}
                   left={left}

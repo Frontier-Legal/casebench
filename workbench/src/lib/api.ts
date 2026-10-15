@@ -6,12 +6,17 @@ export type FactChoice = "approve" | "edit" | "reject"
 
 export interface Session {
   role_locked: boolean
+  /** local, or team when people sign in (decision 0058). */
+  mode?: "local" | "team"
 }
 
 export interface Me {
   name: string
   view: View
   role_locked: boolean
+  role?: string
+  /** What the caller may do: read, review, compare, try, edit, engineer, admin. */
+  can?: string[]
 }
 
 export interface QueueItem {
