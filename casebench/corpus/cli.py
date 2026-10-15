@@ -11,6 +11,7 @@ from casebench.corpus.check import SAMPLE_SIZE, CheckReport, check
 from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
 from casebench.corpus.probe_cli import probe
+from casebench.perimeter import enforce
 
 
 @click.group()
@@ -43,6 +44,7 @@ def check_command(
 ) -> None:
     """Fetch a sample by id and report which required fields are present or missing."""
     config = load_config(config_path)
+    enforce(config)
     if not config.corpora:
         raise click.ClickException("the config has no corpus; add one with casebench corpus add")
     try:

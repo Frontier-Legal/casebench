@@ -18,10 +18,11 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import create_mcp_http_client
 from pydantic import Field, model_validator
 
+from casebench import network
 from casebench.core.model import Record
 from casebench.corpus.mapping import record_fields
 from casebench.corpus.results import SearchResult, results_of
-from casebench.targets.placeholders import expand_env
+from casebench.targets.placeholders import expand_headers
 
 Result = TypeVar("Result")
 
@@ -101,6 +102,8 @@ class Connector:
             target = stdio_client(mcp.StdioServerParameters(command=command, args=arguments), log)
         if target is None:
             raise ValueError("an mcp corpus needs a command or a url")
+        if isinstance(target, str):
+            network.check(target)
         self.loop = asyncio.new_event_loop()
         threading.Thread(target=self.loop.run_forever, daemon=True).start()
         self.ready = threading.Event()
@@ -114,7 +117,9 @@ class Connector:
         self.requests = asyncio.Queue()
         async with contextlib.AsyncExitStack() as stack:
             if isinstance(target, str) and self.config.headers:
-                http = create_mcp_http_client(headers=expand_env(self.config.headers))
+                headers = expand_headers(self.config.headers)
+                network.note_credentials(headers)
+                http = create_mcp_http_client(headers=headers)
                 await stack.enter_async_context(http)
                 target = streamable_http_client(target, http_client=http)
             client = await stack.enter_async_context(mcp.Client(target))

@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from casebench.config import DEFAULT_CONFIG, load_config
+from casebench.perimeter import enforce
 from casebench.runs.log import Result
 from casebench.targets.sample import send_sample
 
@@ -44,7 +45,9 @@ def describe(result: Result) -> list[str]:
 def check(config_path: Path, question: str | None) -> None:
     """Send one sample case and show the parsed answer, citations and captured steps."""
     try:
-        result = asyncio.run(send_sample(load_config(config_path), question))
+        config = load_config(config_path)
+        enforce(config)
+        result = asyncio.run(send_sample(config, question))
     except (FileNotFoundError, ValueError, LookupError) as error:
         raise click.ClickException(str(error)) from error
     if result.error:

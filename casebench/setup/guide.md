@@ -131,6 +131,15 @@ casebench check --json
 
 Each part has `passed`, a `reason` and the `next` step. The agent is sent "Hi. How are you?": an answer without an error shows it starts and answers. Setup needs nothing more from it. Fix the adapter or the flags you gave, and run it again. Stop and tell the user only what you cannot fix from here, such as a service that is not reachable from this machine or a key that is refused.
 
+A run calls only the hosts `casebench.yaml` names: the target, the judge, the corpus, and the hosts under `network: allow:`. Every other call is refused, and the run stops. Add under `network: allow:` each host the agent calls on its own, such as its model API or a reranker, as you find it in the agent's code and settings, not by guessing:
+
+```yaml
+network:
+  allow: [api.example-models.com, rerank.example.com]
+```
+
+When the target part says Casebench refused a call to a host, find where the agent's code calls it. Add it only if the code does; otherwise stop and tell the user which host it was.
+
 ## 8. Show the user what changed
 
 Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Then tell the user:
@@ -138,5 +147,6 @@ Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Th
 - what the adapter calls and which settings it loads;
 - the judge you set and that it is billed per run;
 - the corpus you connected;
+- each host under `network: allow:`, and where in the code the agent calls it;
 - the result of `casebench check`;
 - the next step: a lawyer writes a first case with `casebench case new --suite first`, then `casebench run --suite first` asks the agent and grades it.

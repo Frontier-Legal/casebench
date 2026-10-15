@@ -16,6 +16,7 @@ from casebench.extract.estimate import estimate
 from casebench.extract.run import Progress, extract, write
 from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
+from casebench.perimeter import enforce
 from casebench.providers.settings import SETTINGS
 
 DEFAULT_KEYS = Path(".casebench") / "keys"
@@ -105,6 +106,7 @@ def extract_command(
 ) -> None:
     """Two different models read each decision; only the fields they agree on become keys."""
     config = load_config(config_path)
+    enforce(config)
     if not config.corpora or config.extract is None:
         raise ConfigError(
             "extract needs `corpus:` and `extract: {models: [..two..]}` in the config"

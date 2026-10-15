@@ -4,7 +4,7 @@ from typing import Any
 
 import click
 
-from casebench import __version__
+from casebench import __version__, network
 from casebench.capture.cli import proxy
 from casebench.cases.cli import case_group
 from casebench.config import ConfigError
@@ -26,13 +26,16 @@ from casebench.targets.cli import target
 
 
 class _Main(click.Group):
-    """Turns a config problem or an unreadable format into a one-line error, not a traceback."""
+    """Turns a config problem, an unreadable format or a host outside the perimeter into a
+    one-line error, not a traceback. A perimeter a command enforced ends with it."""
 
     def invoke(self, ctx: click.Context) -> Any:
         try:
             return super().invoke(ctx)
-        except (ConfigError, UnreadableFormat) as error:
+        except (ConfigError, UnreadableFormat, network.HostRefused) as error:
             raise click.ClickException(str(error)) from error
+        finally:
+            network.release()
 
 
 @click.group(cls=_Main)

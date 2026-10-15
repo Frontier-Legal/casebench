@@ -16,6 +16,7 @@ from casebench.extract.prompt import OUTCOMES
 from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
 from casebench.judge.resolve import Resolver
+from casebench.perimeter import enforce
 
 # Citations are typed on one line, separated by this; legal citations do not use it.
 SEPARATOR = ";"
@@ -36,7 +37,9 @@ SUITE = click.option(
 
 
 def _config(path: Path) -> CasebenchConfig:
-    return load_config(path) if path.is_file() else CasebenchConfig()
+    config = load_config(path) if path.is_file() else CasebenchConfig()
+    enforce(config)
+    return config
 
 
 def _listed(values: list[str]) -> str:

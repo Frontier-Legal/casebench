@@ -2,14 +2,14 @@
 
 from typing import Any
 
-import httpx2
 from pydantic import Field, model_validator
 
+from casebench import network
 from casebench.core.model import Record
 from casebench.corpus.interface import ListingNotSupported
 from casebench.corpus.mapping import every, record_fields
 from casebench.corpus.results import SearchResult, results_of
-from casebench.targets.placeholders import expand_env
+from casebench.targets.placeholders import expand_env, expand_headers
 
 
 class HttpCorpusConfig(Record):
@@ -43,9 +43,9 @@ class Connector:
     def __init__(self, **options: Any) -> None:
         self.config = HttpCorpusConfig.model_validate(options)
         base_url = expand_env({"base_url": self.config.base_url})["base_url"]
-        self.client = httpx2.Client(
+        self.client = network.client(
             base_url=base_url.rstrip("/"),
-            headers=expand_env(self.config.headers),
+            headers=expand_headers(self.config.headers),
             timeout=self.config.timeout_s,
         )
 

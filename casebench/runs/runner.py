@@ -4,6 +4,7 @@ import asyncio
 import time
 from collections.abc import Callable
 
+from casebench import network
 from casebench.capture.assemble import assemble
 from casebench.capture.context import capturing
 from casebench.capture.otlp.mapping import to_step, without_duplicates
@@ -18,13 +19,17 @@ async def ask(
     target: Target,
     capture: CaptureSession | None = None,
 ) -> Result:
-    """One case, with the steps captured while it ran. A failure is the case's, not the run's."""
+    """One case, with the steps captured while it ran. A failure is the case's, not the run's,
+    except a call outside the perimeter: that stops the run, and the case is not stored, so a
+    resumed run sends it again (decision 0046)."""
     traceparent = capture.recorder.begin(case.id) if capture else None
     with capturing(case.id, traceparent) as captured:
         started = time.perf_counter()
         error: str | None = None
         try:
             answer = await target.answer(case.task.inputs)
+        except network.HostRefused:
+            raise
         except Exception as failure:
             answer, error = None, f"{type(failure).__name__}: {failure}"
         latency_ms = (time.perf_counter() - started) * 1000
@@ -32,6 +37,8 @@ async def ask(
     if capture is not None:
         spans = capture.recorder.take_spans(case.id)
         exchanges = capture.recorder.end(case.id, captured.worker)
+        if capture.recorder.refusals:
+            raise network.HostRefused(capture.recorder.refusals[0])
         proxied = [step for exchange in exchanges for step in capture.parse(exchange)]
         traced = [step for span in spans if (step := to_step(span)) is not None]
         in_process = captured.steps + without_duplicates(traced, proxied)

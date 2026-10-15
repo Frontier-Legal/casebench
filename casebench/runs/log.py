@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from casebench import __version__
+from casebench import __version__, keys
 from casebench.capture.step import Step
 from casebench.core.model import FrozenRecord
 from casebench.core.score import Score
@@ -57,7 +57,8 @@ class ScoringError(FrozenRecord):
 
 
 class RunLog:
-    """Append-only access to one run's folder."""
+    """Append-only access to one run's folder. Every line is scrubbed of keys before it is
+    written (decision 0046)."""
 
     def __init__(self, folder: Path) -> None:
         self.folder = folder
@@ -65,7 +66,8 @@ class RunLog:
     @classmethod
     def create(cls, folder: Path, info: RunInfo) -> "RunLog":
         folder.mkdir(parents=True, exist_ok=False)
-        (folder / RUN_FILE).write_text(info.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        written = keys.scrub(info.model_dump_json(indent=2))
+        (folder / RUN_FILE).write_text(written + "\n", encoding="utf-8")
         return cls(folder)
 
     @property
@@ -75,7 +77,7 @@ class RunLog:
     def append(self, result: Result) -> None:
         """Persist one result before the next case starts."""
         with (self.folder / RESULTS_FILE).open("a", encoding="utf-8") as stream:
-            stream.write(result.model_dump_json() + "\n")
+            stream.write(keys.scrub(result.model_dump_json()) + "\n")
 
     def results(self) -> list[Result]:
         path = self.folder / RESULTS_FILE
@@ -97,11 +99,11 @@ class RunLog:
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         path = directory / f"{stamp}-{uuid.uuid4().hex}.jsonl"
         with path.open("x", encoding="utf-8") as stream:
-            stream.write(json.dumps({PRODUCER: producer.model_dump(mode="json")}) + "\n")
-            for score in scores:
-                stream.write(score.model_dump_json() + "\n")
-            for error in errors:
-                stream.write(json.dumps({SCORING_ERROR: error.model_dump(mode="json")}) + "\n")
+            lines = [json.dumps({PRODUCER: producer.model_dump(mode="json")})]
+            lines += [score.model_dump_json() for score in scores]
+            lines += [json.dumps({SCORING_ERROR: e.model_dump(mode="json")}) for e in errors]
+            for line in lines:
+                stream.write(keys.scrub(line) + "\n")
         return path
 
     def score_sets(self) -> list[Path]:

@@ -11,6 +11,7 @@ import yaml
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
 from casebench.key_record import record_keys
+from casebench.perimeter import enforce
 from casebench.setup import catalog as model_catalog
 from casebench.setup import screen
 from casebench.setup.advice import advice
@@ -412,6 +413,7 @@ def init_command(
         )
         return
     checked = load_config(config_path)
+    enforce(checked)
     # What init already checked live (corpora, judge, extraction models) is not asked again.
     rest = {name: c for name, c in checked.corpora.items() if name not in sources.checked}
     checked = checked.model_copy(update={"corpora": rest, "judges": [], "extract": None})

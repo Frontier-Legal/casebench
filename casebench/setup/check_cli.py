@@ -8,6 +8,7 @@ import click
 
 from casebench import keys
 from casebench.config import DEFAULT_CONFIG, load_config
+from casebench.perimeter import enforce
 from casebench.setup.advice import advice
 from casebench.setup.checks import SETUP_SAMPLE, Check, Status, live, offline
 
@@ -54,6 +55,7 @@ def _part(item: Check) -> dict[str, Any]:
 def check_command(config_path: Path, queries: tuple[str, ...], size: int, as_json: bool) -> None:
     """Check the corpus, the target and the judge from here; fail if any does not pass."""
     config = load_config(config_path)
+    enforce(config)
     checks = offline(config)
     if not checks:
         checks = live(config, list(queries), size)

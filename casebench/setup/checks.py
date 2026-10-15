@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx2
 
+from casebench import network
 from casebench.capture.step import StepKind
 from casebench.config import CasebenchConfig
 from casebench.corpus.check import check
@@ -191,6 +192,9 @@ def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check
 def _target(config: CasebenchConfig) -> Check:
     try:
         result = asyncio.run(send_sample(config))
+    except network.HostRefused as error:
+        # The user decides whether the agent may call the host (decision 0046).
+        return Check("target", Status.FAILED, str(error), "ask the user before allowing it")
     except Exception as error:
         return _failure("target", error, NEXT_TARGET)
     if result.error:
