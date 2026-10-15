@@ -32,7 +32,9 @@ class CorpusConfig(Record):
     `search_filters` are what a search for each kind of citation adds, so a statute is
     searched only among statutes (decision 0037). `keep` is what the provider's terms let
     Casebench keep on disk; left out, documents are kept, and searches when metered (0041).
-    `probe` is the search the corpus was added with, which `casebench check` runs (0044)."""
+    `probe` is the search the corpus was added with, which `casebench check` runs (0044).
+    `link` is where a person reads a document on the provider's site, with `{id}` for its
+    id, so a review sheet links each court fact to its decision (0055)."""
 
     connector: str
     jurisdictions: list[Jurisdiction] = Field(default_factory=list)
@@ -44,6 +46,7 @@ class CorpusConfig(Record):
     search_filters: dict[Cited, dict[str, Any]] = Field(default_factory=dict)
     keep: list[Kept] | None = None
     probe: str | None = None
+    link: str | None = None
 
     @property
     def keeps_documents(self) -> bool:

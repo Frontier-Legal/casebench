@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from casebench.cases.cli import CONFIG, SUITE, _config, _listed, _resolver
+from casebench.cases.cli import CONFIG, _config, _listed, _resolver
 from casebench.cases.resolve import resolve_case, unresolved
 from casebench.cases.rows import row_case
 from casebench.cases.sheet import SheetError, read_rows, task_names, write_template
@@ -12,6 +12,8 @@ from casebench.cases.suite import existing, save
 from casebench.core.case import Case
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
+from casebench.report.review_sheet import run_of
+from casebench.report.review_sheet_cli import import_review_sheet
 
 
 def _unevidenced(case: Case) -> list[str]:
@@ -44,14 +46,42 @@ def lawyer_template(task: str, path: Path | None) -> None:
 
 @click.command(name="import")
 @click.argument("path", type=click.Path(dir_okay=False, path_type=Path))
-@SUITE
-@click.option("--by", "author", required=True, help="The lawyer who wrote the cases.")
+@click.option(
+    "--suite",
+    "suite_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The suite folder cases join; it is created when it does not exist.",
+)
+@click.option(
+    "--by",
+    "author",
+    help="The lawyer who wrote the cases, or who reviewed the rows naming no reviewer.",
+)
 @click.option("--task", type=click.Choice(task_names()), help="The task of a CSV's rows.")
+@click.option(
+    "--runs-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Where the run a review sheet reviews is; .casebench/runs by default.",
+)
+@click.option("--database", help="The workbench's database, whose event log keeps verdicts.")
 @CONFIG
 def import_command(
-    path: Path, suite_dir: Path, author: str, task: str | None, config_path: Path
+    path: Path,
+    suite_dir: Path | None,
+    author: str | None,
+    task: str | None,
+    runs_dir: Path | None,
+    database: str | None,
+    config_path: Path,
 ) -> None:
-    """Add a spreadsheet's rows to a suite as cases approved by the lawyer who wrote them."""
+    """Add a spreadsheet's rows to a suite as cases approved by the lawyer who wrote them, or
+    read a review sheet's verdicts back into its run (decisions 0049, 0055)."""
+    reviewed = run_of(path)
+    if reviewed is not None:
+        import_review_sheet(path, reviewed, runs_dir, author, database)
+        return
+    if suite_dir is None or not author:
+        raise click.ClickException("a sheet of cases needs --suite and --by")
     try:
         rows = read_rows(path, task)
         made = [(row, row_case(row, path, author)) for row in rows]
