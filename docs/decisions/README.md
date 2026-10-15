@@ -69,3 +69,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0053](0053-second-approval-is-opt-in.md) | Until people log in, a lawyer's change to golden data takes effect at once, and a second editor's approval is opt-in | accepted |
 | [0054](0054-compare-blind-and-a-report-for-partners.md) | Lawyers compare two runs blind, and a run's report, with its error rates, is exported for partners by practice area | accepted |
 | [0055](0055-review-in-a-spreadsheet.md) | Lawyers review a run in a spreadsheet when there is no server, and the import writes the same verdicts the workbench writes | accepted |
+| [0056](0056-the-harness-view.md) | Engineers see each answer as a waterfall of its calls, with unaccounted time, the authority funnel and a diff against another run | accepted |
