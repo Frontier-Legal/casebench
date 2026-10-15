@@ -309,6 +309,68 @@ export interface Pair {
   given: Revealed | null
 }
 
+export interface Bar {
+  number: number
+  kind: string
+  name: string | null
+  model: string | null
+  at_ms: number | null
+  duration_ms: number | null
+  input_tokens: number | null
+  output_tokens: number | null
+  cost: number | null
+  arguments: string | null
+  unaccounted: boolean
+}
+
+export interface Total {
+  name: string
+  calls: number
+  input_tokens: number
+  output_tokens: number
+  cost: number | null
+  duration_ms: number
+}
+
+export interface Authority {
+  document_id: string
+  retrieved: number | null
+  kept: number | null
+  read: number | null
+  cited: boolean | null
+  characterised: boolean | null
+  checked: string[]
+}
+
+export interface StepDiff {
+  step: string
+  before_ms: number | null
+  after_ms: number | null
+  before_tokens: number | null
+  after_tokens: number | null
+  changes: string[]
+}
+
+export interface Harness {
+  run_id: string
+  case_id: string
+  repeat: number
+  latency_ms: number | null
+  span_ms: number | null
+  unaccounted_ms: number
+  outside_ms: number
+  bars: Bar[]
+  untimed: number
+  by_step: Total[]
+  by_model: Total[]
+  priced: boolean
+  funnel: Authority[] | null
+  funnel_possible: boolean
+  against: string | null
+  diff: StepDiff[]
+  funnel_before: Authority[] | null
+}
+
 export interface GivenVerdict {
   criterion_id: string
   verdict: Verdict
@@ -428,6 +490,13 @@ export const api = {
     call<Finished>("POST", `${item(key)}/finish`, { decision, note }),
   golden: () => call<Golden>("GET", "/api/golden"),
   runs: () => call<RunRow[]>("GET", "/api/runs"),
+  harness: (run: string, caseId: string, repeat: number, against: string | null) =>
+    call<Harness>(
+      "GET",
+      `/api/harness/${[run, caseId, String(repeat)].map(encodeURIComponent).join("/")}${
+        against ? `?against=${encodeURIComponent(against)}` : ""
+      }`,
+    ),
   comparison: (first: string, second: string) =>
     call<Comparison>("GET", `/api/compare/${encodeURIComponent(first)}/${encodeURIComponent(second)}`),
   pair: (first: string, second: string, caseId: string, repeat: number) =>

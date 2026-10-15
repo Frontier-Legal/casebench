@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from casebench.config import CasebenchConfig
-from casebench.workbench import comparing, golden, items, reports, trying
+from casebench.workbench import comparing, golden, harness, items, reports, trying
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -261,6 +261,20 @@ def create_app(
             return comparing.prefer(
                 workspace, store, first, second, case_id, repeat, body.choice, body.reason, name
             )
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+
+    @app.get("/api/harness/{run_id}/{case_id}/{repeat}")
+    def harness_view(
+        run_id: str, case_id: str, repeat: int, name: Person, against: str | None = None
+    ) -> harness.Harness:
+        """The engineering view's waterfall; the review view is never served it (0056)."""
+        if not engineering(name):
+            raise HTTPException(403, "the harness view is for the engineering view")
+        try:
+            return harness.harness(workspace, run_id, case_id, repeat, against)
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
         except Refused as refused:
