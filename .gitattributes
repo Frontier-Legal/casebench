@@ -1,0 +1,2 @@
+# Released schemas are recorded by the hash of their bytes, so every checkout keeps LF.
+casebench/formats/schemas/** text eol=lf
