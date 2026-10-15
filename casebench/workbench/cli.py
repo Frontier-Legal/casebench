@@ -64,7 +64,7 @@ def ui_command(
     workspace = Workspace(runs_dir, list(suite_dirs) or [Path(".")], corpora, agent_models)
     store = Store(database or url_for(DEFAULT_DATABASE))
     hosts = [f"{LOOPBACK}:{port}", f"localhost:{port}"]
-    app = create_app(workspace, store, hosts, role)
+    app = create_app(workspace, store, hosts, role, config=config)
     url = f"http://{LOOPBACK}:{port}/"
     click.echo(f"the workbench is at {url}; press Ctrl+C to stop it")
     if not no_open:

@@ -136,7 +136,7 @@ function CriterionRow({
   )
 }
 
-function CitationRow({
+export function CitationRow({
   citation,
   open,
   onOpen,

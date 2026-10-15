@@ -31,6 +31,13 @@ CorpusName = Annotated[str, StringConstraints(pattern=NAME)]
 MOST_JUDGES = 2
 
 
+class WorkbenchConfig(Record):
+    """The `workbench:` section: what trying a question in the workbench may spend each day,
+    in US dollars, the agent's and the judge's model calls together (decision 0052)."""
+
+    try_daily_limit_usd: float | None = Field(default=None, ge=0)
+
+
 class CasebenchConfig(Record):
     """`corpora:` names every corpus; `corpus:` is the form for one, read as one named
     `corpus`. Likewise `judges:` and `judge:`."""
@@ -51,6 +58,7 @@ class CasebenchConfig(Record):
         "this file, when the environment does not set it; never a value (decision 0043).",
     )
     network: NetworkConfig | None = None
+    workbench: WorkbenchConfig | None = None
 
     @property
     def judge(self) -> JudgeConfig | None:

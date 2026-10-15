@@ -11,7 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from casebench.workbench import items
+from casebench.config import CasebenchConfig
+from casebench.workbench import golden, items, trying
+from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
     DecisionView,
@@ -98,6 +100,25 @@ class SaveDraft(BaseModel):
 class Finish(BaseModel):
     verdicts: list[GivenVerdict] = Field(default_factory=list)
     facts: list[GivenFact] = Field(default_factory=list)
+    decision: Literal["approve", "reject"] | None = Field(
+        default=None, description="On a change to golden data (decision 0052)."
+    )
+    note: str | None = None
+
+
+class Ask(BaseModel):
+    question: str = Field(max_length=4000)
+
+
+class SaveCase(BaseModel):
+    fields: dict[str, str]
+    reason: str = ""
+
+
+class NewCase(BaseModel):
+    task: str = "qa"
+    fields: dict[str, str]
+    reason: str | None = None
 
 
 class Document(DecisionView):
@@ -121,6 +142,8 @@ def create_app(
     hosts: list[str],
     role: str | None = None,
     static: Path | None = None,
+    config: CasebenchConfig | None = None,
+    asker: trying.Asker | None = None,
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
     fields, whatever the browser asks for."""
@@ -150,16 +173,93 @@ def create_app(
         saved = store.save_person(body.name.strip(), view)
         return Me(name=saved.name, view=view, role_locked=locked)
 
+    def editor() -> None:
+        """A reviewer reviews answers and proposes no change to golden data (decision 0052)."""
+        if locked:
+            raise HTTPException(403, "the reviewer role proposes no change to golden data")
+
     @app.get("/api/queue")
     def queue(name: Person) -> Queue:
-        return Queue(items=items.queue(workspace, store, name))
+        queued = items.queue(workspace, store, name)
+        if locked:
+            return Queue(items=queued)
+        held = store.held_by_others(name)
+        waiting = [
+            QueueItem(key=key, kind="change", title=title, where=where, task=task, flags=[flag])
+            for key, title, where, task, flag in golden.queue_items(store, name, held)
+        ]
+        drafts = next((n for n, i in enumerate(queued) if i.kind == "draft"), len(queued))
+        return Queue(items=[*queued[:drafts], *waiting, *queued[drafts:]])
 
     @app.get("/api/items/{key}")
-    def item(key: str, name: Person) -> AnswerItem | DraftItem:
+    def item(key: str, name: Person) -> AnswerItem | DraftItem | ChangeItem:
         try:
+            if key.startswith(f"{golden.CHANGE_ITEM}:"):
+                editor()
+                return golden.change_item(store, key, name)
             return items.item(workspace, store, key, name, engineering(name))
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
+
+    @app.get("/api/try")
+    def try_budget(name: Person) -> trying.Budget:
+        return trying.budget(config, store)
+
+    @app.post("/api/try")
+    async def try_question(body: Ask, name: Person) -> trying.Tried:
+        """Asks the configured target within the day's limit; refused, nothing is sent."""
+        try:
+            return await trying.try_question(
+                body.question,
+                name,
+                config,
+                store,
+                asker or (trying.ConfiguredAsker(config) if config else None),
+            )
+        except trying.Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+
+    @app.get("/api/golden")
+    def golden_data(name: Person) -> Golden:
+        return golden.golden(workspace, store)
+
+    @app.get("/api/golden/forms/{task}")
+    def blank_form(task: str, name: Person) -> list[Form]:
+        try:
+            return golden.blank_form(task)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+
+    @app.get("/api/golden/{suite_id}/{case_id}")
+    def golden_case(suite_id: str, case_id: str, name: Person) -> CaseDetail:
+        try:
+            return golden.case_detail(workspace, store, suite_id, case_id)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+
+    @app.put("/api/golden/{suite_id}/{case_id}")
+    def change_case(suite_id: str, case_id: str, body: SaveCase, name: Person) -> Proposed:
+        editor()
+        try:
+            return golden.propose_change(
+                workspace, store, suite_id, case_id, body.fields, body.reason, name
+            )
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
+
+    @app.post("/api/golden/{suite_id}")
+    def add_case(suite_id: str, body: NewCase, name: Person) -> Proposed:
+        editor()
+        try:
+            return golden.create_case(
+                workspace, store, suite_id, body.task, body.fields, name, body.reason
+            )
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+        except Refused as refused:
+            raise HTTPException(422, str(refused)) from None
 
     @app.post("/api/items/{key}/reserve")
     def reserve(key: str, name: Person) -> Held:
@@ -182,6 +282,12 @@ def create_app(
         if holder is not None and holder != name:
             raise HTTPException(409, f"{holder} is working on this item")
         try:
+            if key.startswith(f"{golden.CHANGE_ITEM}:"):
+                editor()
+                if body.decision is None:
+                    raise Refused("approve or reject the change")
+                done = golden.finish_change(workspace, store, key, name, body.decision, body.note)
+                return Finished(key=key, message=done)
             if key.startswith(f"{items.ANSWER}:"):
                 return items.finish_answer(workspace, store, key, name, body.verdicts)
             return items.finish_draft(workspace, store, key, name, body.facts)

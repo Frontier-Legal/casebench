@@ -79,6 +79,31 @@ class Event(Base):
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+PENDING, APPROVED, REJECTED = "pending", "approved", "rejected"
+NEW, CHANGE = "new", "change"
+
+
+class Proposal(Base):
+    """A change to golden data, or a new case, waiting for a second editor (decision 0052).
+    `before` and `after` are whole cases; a new case has no `before`."""
+
+    __tablename__ = "proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    suite_id: Mapped[str] = mapped_column(String(200))
+    case_id: Mapped[str] = mapped_column(String(200))
+    before: Mapped[Any] = mapped_column(JSON, nullable=True)
+    after: Mapped[Any] = mapped_column(JSON)
+    author: Mapped[str] = mapped_column(String(200))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default=PENDING)
+    decided_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 def url_for(path: Path) -> str:
     return f"sqlite:///{path.resolve().as_posix()}"
 
@@ -174,6 +199,31 @@ class Store:
             if item is not None:
                 query = query.where(Event.item == item)
             return list(session.scalars(query))
+
+    def propose(self, proposal: Proposal) -> Proposal:
+        with self.session() as session:
+            session.add(proposal)
+            session.flush()
+            return proposal
+
+    def proposal(self, number: int) -> Proposal | None:
+        with self.session() as session:
+            return session.get(Proposal, number)
+
+    def proposals(self, status: str | None = PENDING) -> list[Proposal]:
+        with self.session() as session:
+            query = select(Proposal).order_by(Proposal.id)
+            if status is not None:
+                query = query.where(Proposal.status == status)
+            return list(session.scalars(query))
+
+    def decide(self, number: int, status: str, by: str, note: str | None) -> Proposal:
+        with self.session() as session:
+            found = session.get(Proposal, number)
+            assert found is not None
+            found.status, found.decided_by, found.decided_at = status, by, now()
+            found.note = note
+            return found
 
     def finished(self) -> set[str]:
         """Items someone finished in the workbench."""
