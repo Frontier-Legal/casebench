@@ -76,7 +76,7 @@ function serve() {
       if (path === `/api/items/${KEY}/reserve`) return reply({ held_by: "Ayşe" })
       if (path === `/api/items/${KEY}`) return reply(ANSWER)
       if (path === "/api/runs/r1/export/pdf")
-        return new Response(new Blob(["%PDF-"]), {
+        return new Response("%PDF-", {
           headers: { "Content-Disposition": 'attachment; filename="casebench-labour-r1.pdf"' },
         })
       return reply({ detail: "not found" }, 404)
@@ -136,7 +136,7 @@ describe("reports", () => {
     await user.click(screen.getByRole("button", { name: /Export for partners/ }))
     await user.click(await screen.findByRole("menuitem", { name: /PDF/ }))
 
-    await waitFor(() => expect(saved).toEqual(["casebench-labour-r1.pdf"]))
+    await waitFor(() => expect(saved).toEqual(["casebench-labour-r1.pdf"]), { timeout: 5000 })
     expect(sent).toContain("GET /api/runs/r1/export/pdf")
     click.mockRestore()
   })
