@@ -69,4 +69,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The rules for changing the code are in [
 
 ## Licence
 
-Apache-2.0, except the `ee/` directory, which holds the multi-user team server under its own source-available licence. [LICENSE](LICENSE) states the boundary.
+The `ee/` directory is under the [Elastic License 2.0](ee/LICENSE). Everything else is under Apache-2.0. [LICENSE](LICENSE) states the boundary.

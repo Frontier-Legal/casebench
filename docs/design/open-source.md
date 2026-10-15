@@ -4,9 +4,9 @@
 
 | Item | Choice | Source |
 |---|---|---|
-| Licence | open core: Apache-2.0 for the core (SDK, CLI, metrics, plugins, local UI, report, spreadsheet round-trips); `ee/` (roles, SSO, audit, invites, the push/pull server side) source-available, free for your own organisation, no offering to third parties. The whole project under FSL or ELv2 was rejected: vendors will not adopt a yardstick they cannot fork, and adapter contributors will not build for a product someone else owns | [decision 0004](../decisions/0004-open-core-and-ee-boundary.md) |
+| Licence | `ee/` under the [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license); everything else under Apache-2.0 | [decision 0057](../decisions/0057-ee-under-the-elastic-license.md) |
 | Trademark | a trademark policy: forks may not be called Casebench. Apache-2.0 grants no rights to the name | |
-| Contributions | DCO via the [DCO app](https://github.com/apps/dco), `git commit -s` for the core; a CLA only for `ee/` | DCO is lighter for firm and vendor engineers; the CLA keeps `ee/` relicensable |
+| Contributions | DCO via the [DCO app](https://github.com/apps/dco), `git commit -s`, outside `ee/`; `ee/` takes no outside contributions for now | DCO is lighter for firm and vendor engineers |
 | Code of conduct | [Contributor Covenant 3.0](https://www.contributor-covenant.org/version/3/0/) (Jul 2025) | |
 | Security policy | `SECURITY.md` pointing to [GitHub private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository); 14-day first response | [Best Practices criteria](https://www.bestpractices.dev/en/criteria/0) |
 | Commits and changelog | [Conventional Commits 1.0](https://www.conventionalcommits.org/en/v1.0.0/); release tooling generates the version and CHANGELOG.md from them (default release-please) | |
