@@ -4,6 +4,7 @@ import ast
 import asyncio
 import importlib.util
 import socket
+from collections import Counter
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -189,6 +190,12 @@ def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check
     return Check(label, Status.PASSED, sampled)
 
 
+def _quoted(output: str | None, most: int = 80) -> str:
+    """The start of the agent's parsed answer, on one line (decision 0061)."""
+    text = " ".join((output or "").split())
+    return f'"{text if len(text) <= most else text[: most - 1] + "…"}"'
+
+
 def _target(config: CasebenchConfig) -> Check:
     try:
         result = asyncio.run(send_sample(config))
@@ -205,13 +212,16 @@ def _target(config: CasebenchConfig) -> Check:
     if not [step for step in result.steps if step.kind is not StepKind.GAP]:
         # Answering is what the check needs; the funnel needs the calls (decision 0044).
         quiet = (
-            "answered, but no call was recorded, so a report cannot say where an authority was "
-            "lost; a Python target records calls made through httpx2, httpx or requests"
+            f"answered {_quoted(result.output)}, but no call was recorded, so a report cannot "
+            "say where an authority was lost; a Python target records calls made through "
+            "httpx2, httpx or requests"
         )
         return Check("target", Status.PASSED, quiet)
     calls = [step for step in result.steps if step.kind is not StepKind.GAP]
+    kinds = Counter(step.kind.value for step in calls)
     said = f"{len(calls)} call{'s' if len(calls) != 1 else ''} recorded"
-    return Check("target", Status.PASSED, f"answered, {said}")
+    said += f" ({', '.join(f'{n} {kind}' for kind, n in kinds.items())})"
+    return Check("target", Status.PASSED, f"answered {_quoted(result.output)}, {said}")
 
 
 def _refused(error: BaseException) -> bool:

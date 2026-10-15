@@ -43,10 +43,12 @@ Chosen option 1, because each part works on the user's machine with what they al
 
 ### Init names the search store
 
-- A project's lockfile or dependency list names its search store's client. For the Qdrant client, and the Elasticsearch and OpenSearch clients, init says the store's searches are recorded as retrievals.
-- A Python target's worker already sends every call through the proxy's follow path (0044). A followed call that no route or parser reads is now matched against each known search API by its path: Qdrant's `points/search` and `points/query`, and the `_search` of Elasticsearch and OpenSearch. Its result ids become a retrieval step.
+- A project's lockfile or dependency list names its search store's client. For the Qdrant client, init says the store's searches are recorded as retrievals.
+- A Python target's worker already sends every call through the proxy's follow path (0044). A followed call that no route or parser reads is now matched against each known search API by its path: Qdrant's `points/search` and `points/query`, and their batch forms. Its result ids become a retrieval step.
+- Qdrant is the first known API because its Python client sends REST calls through httpx, which the worker redirects. A store whose client sends through another HTTP library, or through gRPC, is recorded through a route, as before.
 - These ids are the store's own. When the store keeps a document's corpus id in a payload field, a route at the store's host with a `doc_ids` JSONPath reads that field instead, as any backend route does.
 - `casebench.yaml` starts with a `# yaml-language-server: $schema=` line. It points at `.casebench/casebench.schema.json`, which init writes from the installed version's config model, so an editor checks the file against the version that reads it.
+- The greeting init sends the agent (0045) now shows the agent's parsed answer and the kinds of calls recorded for it, such as one model call and one retrieval. A greeting cites nothing, so citations are shown by the first run, which pays for the judge.
 - For an HTTP target, an agent that is already running, init sets a capture port and prints the variables to set in the agent's environment, as `casebench proxy env` does. For a Python or command target, Casebench starts the agent and sets them itself, and init says so.
 
 ### The setup skill
@@ -71,7 +73,7 @@ Chosen option 1, because each part works on the user's machine with what they al
 ## Revisit when
 
 - A user reports that the demo's documents were taken for real decisions.
-- A search store other than these three is used by more than one team that sets Casebench up.
+- A search store other than Qdrant, whose client sends through a library the worker redirects, is used by more than one team that sets Casebench up.
 
 ## More information
 
