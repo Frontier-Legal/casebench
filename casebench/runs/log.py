@@ -31,6 +31,7 @@ class RunInfo(FrozenRecord):
     # Read when a record is made, so the version is no default in the format's schema, which
     # would change with every release.
     casebench_version: str = Field(default_factory=lambda: __version__)
+    commit: str | None = Field(default=None, description="The code's commit (decision 0048).")
 
 
 class Result(FrozenRecord):

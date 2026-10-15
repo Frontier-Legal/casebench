@@ -68,6 +68,9 @@ bedrock = "casebench.providers.builtin.bedrock:Provider"
 google = "casebench.providers.builtin.google:Provider"
 openai = "casebench.providers.builtin.openai:Provider"
 
+[project.entry-points.pytest11]
+casebench = "casebench.pytest_plugin"
+
 [project.entry-points."casebench.targets"]
 command = "casebench.targets.builtin.command:Target"
 http = "casebench.targets.builtin.http:Target"
