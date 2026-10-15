@@ -34,7 +34,8 @@ Chosen option 1, because each part works on the user's machine with what they al
 ### The first run
 
 - `casebench run` with no `--suite` uses the suite at `.casebench/suites/first`. When it is missing, the run builds it: it extracts answer keys from a sample of the corpus with the config's two extraction models, generates the suite from them, and then runs it.
-- Before spending anything it prints what extraction and the run would cost, from the same estimates `extract --dry-run` and `run --dry-run` give, and waits for a yes. `--yes` answers it; with no terminal and no `--yes`, the run stops and names the flag, as 0044 has every command do.
+- Before spending anything it prints what extraction would cost, from the estimate `extract --dry-run` gives, and how many cases the suite will send to the agent, and waits for a yes. `--yes` answers it; with no terminal and no `--yes`, the run stops and names the flag, as 0044 has every command do. The run's own judge calls are counted by `run --dry-run` once the suite exists, as for any suite.
+- With several corpora, the first suite is built from the first one the config names; `casebench extract` and `generate` build a suite that mixes them.
 - Each step keeps what it made. A second `casebench run` skips the extraction when its keys exist, the generation when the suite exists, and resumes the last run of that suite when it stopped before every case was answered.
 - A corpus that cannot list its decisions is sampled through its `probe` search (0044).
 - The sample size and the suite's size default to 20 decisions and 10 cases; `--sample` and `--cases` change them.
