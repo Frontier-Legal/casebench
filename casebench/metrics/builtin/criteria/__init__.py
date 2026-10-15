@@ -6,7 +6,7 @@ from casebench.core.case import Case, Criterion
 from casebench.core.score import CriterionVerdict, ScoreKind
 from casebench.judge import prompts
 from casebench.judge.client import Judge, JudgeReplyUnreadable
-from casebench.metrics.criteria import WeightedCriteria
+from casebench.metrics.criteria import WeightedCriteria, evidence_of
 
 
 class JudgeGrader:
@@ -19,8 +19,10 @@ class JudgeGrader:
 
     def grade(self, case: Case, output: str, criteria: list[Criterion]) -> list[CriterionVerdict]:
         used = {fact_id for c in criteria for fact_id in c.derived_from}
+        # The judge receives each fact's evidence: the court's passage, or what the lawyer
+        # wrote when there is none (decision 0047).
         facts = [
-            {"id": f.id, "kind": f.kind, "value": f.value, "evidence": f.evidence.quote}
+            {"id": f.id, "kind": f.kind, "value": f.value, "evidence": evidence_of(f)}
             for f in case.reference.facts
             if f.id in used
         ]

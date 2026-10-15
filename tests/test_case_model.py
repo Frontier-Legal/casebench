@@ -171,7 +171,9 @@ def test_weighted_criteria():
     )
     case = drafting_case()
 
-    verdict = WeightedCriteria(grader).judge(case, Result(case_id=case.id, output="..."))
+    # The quotes the grader gives are in the answer, so they stand (decision 0047).
+    output = "Clause 9.2 leaves the indemnity uncapped. Clause 4 now reads: ..."
+    verdict = WeightedCriteria(grader).judge(case, Result(case_id=case.id, output=output))
 
     by_id = {item.criterion_id: item for item in verdict.criteria}
     assert by_id["c1"].passed and by_id["c1"].quote == "Clause 9.2 leaves the indemnity uncapped."

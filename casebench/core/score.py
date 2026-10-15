@@ -24,12 +24,24 @@ class Direction(StrEnum):
 
 
 class CriterionVerdict(FrozenRecord):
-    """Whether the output met one criterion, with the quote that shows it."""
+    """Whether the output met one criterion, with the quote of the output that shows it and
+    the evidence the criterion rests on (decision 0047)."""
 
     criterion_id: str
     weight: int
     met: bool
     quote: str | None = None
+    kind: str | None = Field(
+        default=None, description="The kind of fact the criterion comes from, such as outcome."
+    )
+    evidence: list[str] = Field(
+        default_factory=list,
+        description="The court's passage, or the value a lawyer wrote, for each fact the "
+        "criterion comes from.",
+    )
+    note: str | None = Field(
+        default=None, description="Why a verdict the judge gave does not count as given."
+    )
 
     @property
     def passed(self) -> bool:

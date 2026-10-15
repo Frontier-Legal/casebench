@@ -1,13 +1,16 @@
 """Weighted criteria: each criterion passes or fails with quoted evidence."""
 
+import re
+import unicodedata
 from typing import Protocol
 
-from casebench.core.case import Case, Criterion
+from casebench.core.case import Case, Criterion, Fact
 from casebench.core.score import CriterionVerdict, Direction, Disagreement, ScoreKind
 from casebench.metrics.base import Verdict
 from casebench.runs.log import Result
 
 PASSED = {True: "passed", False: "failed"}
+UNQUOTED = "the judge found it met but quoted nothing the answer says, so it does not count"
 
 
 class CriteriaGrader(Protocol):
@@ -33,6 +36,58 @@ def weighted_score(verdicts: list[CriterionVerdict]) -> float:
     return min(1.0, max(0.0, earned / possible))
 
 
+def _plain(text: str) -> str:
+    """NFC, with each run of whitespace as one space, so line breaks do not hide a quote."""
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFC", text)).strip()
+
+
+def held(quote: str | None, output: str) -> bool:
+    """Whether the output holds the quote, word for word."""
+    return bool(quote and _plain(quote)) and _plain(quote or "") in _plain(output)
+
+
+def checked(verdicts: list[CriterionVerdict], output: str) -> list[CriterionVerdict]:
+    """A verdict of met stands only on a quote the output holds; otherwise it counts as not
+    met, and its note says why (decision 0047)."""
+    return [
+        verdict
+        if not verdict.met or held(verdict.quote, output)
+        else verdict.model_copy(update={"met": False, "quote": None, "note": UNQUOTED})
+        for verdict in verdicts
+    ]
+
+
+def evidence_of(fact: Fact) -> str:
+    """The court's passage, or what a lawyer wrote when there is none."""
+    note = f" ({fact.evidence.note})" if fact.evidence.note else ""
+    return fact.evidence.quote or f"{fact.value}{note}"
+
+
+def _kind(case: Case, criterion: Criterion) -> str | None:
+    facts = {fact.id: fact for fact in case.reference.facts}
+    sources = [facts[i].kind for i in criterion.derived_from if i in facts]
+    return criterion.kind or (sources[0] if sources else None)
+
+
+def _grounded(case: Case, verdicts: list[CriterionVerdict]) -> list[CriterionVerdict]:
+    """Each verdict with its criterion's kind and the evidence it rests on."""
+    criteria = {criterion.id: criterion for criterion in case.reference.criteria}
+    facts = {fact.id: fact for fact in case.reference.facts}
+    return [
+        v.model_copy(
+            update={
+                "kind": _kind(case, criteria[v.criterion_id]),
+                "evidence": [
+                    evidence_of(facts[i])
+                    for i in criteria[v.criterion_id].derived_from
+                    if i in facts
+                ],
+            }
+        )
+        for v in verdicts
+    ]
+
+
 class WeightedCriteria:
     """The `criteria` metric."""
 
@@ -51,6 +106,12 @@ class WeightedCriteria:
     def kind(self) -> ScoreKind:
         return self.grader.kind
 
+    @staticmethod
+    def evidenced(case: Case) -> bool:
+        """A case with no criterion to earn is not scored for criteria: it is unevidenced
+        (decision 0047)."""
+        return any(criterion.weight > 0 for criterion in case.reference.criteria)
+
     def judge(self, case: Case, result: Result) -> Verdict:
         criteria = case.reference.criteria
         if result.output is None:
@@ -64,6 +125,7 @@ class WeightedCriteria:
                 raise ValueError(
                     f"the grader did not return one verdict per criterion for {case.id}"
                 )
+        graded = [_grounded(case, checked(verdicts, result.output)) for verdicts in graded]
         verdicts, disagreements = both(*graded) if len(graded) > 1 else (graded[0], [])
         failed = [v.criterion_id for v in verdicts if not v.passed]
         label = "all criteria passed" if not failed else f"failed: {', '.join(failed)}"

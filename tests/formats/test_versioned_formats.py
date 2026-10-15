@@ -16,6 +16,7 @@ from casebench.core.canonical import canonical_json, content_hash
 from casebench.formats.files import SCHEMAS, file_hash, released, schema_path
 from casebench.formats.registry import FORMATS
 from casebench.formats.schema import schema_text
+from casebench.report.record import FORMAT as REPORT
 from casebench.suites.freeze import MANIFEST_FILE, SUITE_FILE, freeze, load
 from tests.report.suites import outcome_case
 
@@ -114,7 +115,7 @@ def test_a_typo_in_a_known_version_fails_loudly(tmp_path: Path):
 
 def test_a_file_at_a_newer_minor_version_is_read_with_its_new_fields_named(tmp_path: Path):
     report = example("report")
-    report["format"] = "casebench.report/1.1"
+    report["format"] = f"casebench.report/1.{REPORT.minor + 1}"
     report["reviewed_by"] = "a lawyer"
 
     ran = validate(written(tmp_path / "report.json", report))

@@ -8,15 +8,19 @@ import click
 from casebench.extract.compare import compare_lines, is_extraction
 from casebench.formats.read import ignored_note, read
 from casebench.formats.version import FormatVersion, UnreadableFormat
+from casebench.report.calibration import calibration, read_reviews
 from casebench.report.comparable import changes
 from casebench.report.compare import compare
 from casebench.report.record import FORMAT, Report
 from casebench.report.render import (
     REPORT_FILE,
+    calibration_lines,
     corpus_lines,
     error_lines,
     lines,
     suite_line,
+    unevidenced_lines,
+    warning_lines,
 )
 from casebench.runs.log import RunLog
 
@@ -52,6 +56,13 @@ def report_command(run_dir: Path) -> None:
         click.echo(line)
     for line in error_lines(report.scoring_errors, run_dir.name):
         click.echo(line)
+    for line in unevidenced_lines(report.unevidenced):
+        click.echo(line)
+    # Lawyers' verdicts given since the run was scored count too (decision 0047).
+    for line in calibration_lines(calibration(report.scores, read_reviews(run_dir))):
+        click.echo(line)
+    for line in warning_lines(report.warnings):
+        click.echo(line, err=True)
 
 
 @click.command(name="compare")

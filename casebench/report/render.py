@@ -7,6 +7,7 @@ from casebench import keys
 from casebench.core.score import Score
 from casebench.corpus.routing import Route
 from casebench.report.agreement import agreement
+from casebench.report.calibration import Calibration, calibration, read_reviews
 from casebench.report.citations import citation_rates
 from casebench.report.funnel import CaseFunnel, FunnelSummary, funnel_lines
 from casebench.report.record import FORMAT, Funnel, Report
@@ -113,6 +114,29 @@ def error_lines(errors: list[ScoringError], run_id: str) -> list[str]:
     return out
 
 
+def warning_lines(warnings: list[str]) -> list[str]:
+    return [f"warning: {warning}" for warning in warnings]
+
+
+def unevidenced_lines(unevidenced: list[str]) -> list[str]:
+    """Cases with no criterion to earn (decision 0047)."""
+    if not unevidenced:
+        return []
+    return [
+        f"unevidenced: {len(unevidenced)} cases have no evidenced fact, so no criterion, and "
+        f"were not scored for criteria: {', '.join(unevidenced)}"
+    ]
+
+
+def calibration_lines(rows: list[Calibration]) -> list[str]:
+    """Lawyers' verdicts against the judge's, per kind of criterion (decision 0047)."""
+    return [
+        f"judge vs lawyers · {row.kind}: {row.agreed} of {row.labelled} agreed, "
+        f"{row.overruled} overruled"
+        for row in rows
+    ]
+
+
 def write(
     folder: Path,
     produced_by: Producer,
@@ -123,8 +147,11 @@ def write(
     summary: FunnelSummary,
     errors: list[ScoringError] | None = None,
     suite: tuple[str, str] | None = None,
+    warnings: list[str] | None = None,
+    unevidenced: list[str] | None = None,
 ) -> Path:
-    """`suite` is the id and hash of the suite the run ran."""
+    """`suite` is the id and hash of the suite the run ran. Lawyers' verdicts already in the
+    run's folder are counted against this score set's."""
     path = folder / REPORT_FILE
     report = Report(
         format=str(FORMAT),
@@ -138,6 +165,9 @@ def write(
         funnel=Funnel(summary=summary, cases=funnels),
         scores=scores,
         scoring_errors=errors or [],
+        warnings=warnings or [],
+        unevidenced=unevidenced or [],
+        calibration=calibration(scores, read_reviews(folder)),
     )
     # Scrubbed of keys like every file a run writes (decision 0046).
     path.write_text(keys.scrub(report.model_dump_json(indent=2)) + "\n", encoding="utf-8")

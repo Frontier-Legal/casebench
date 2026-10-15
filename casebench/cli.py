@@ -15,6 +15,7 @@ from casebench.formats.validate_cli import validate_command
 from casebench.formats.version import UnreadableFormat
 from casebench.plugins.cli import plugin
 from casebench.report.cli import compare_command, report_command
+from casebench.report.review_cli import review_group
 from casebench.runs.cli import run
 from casebench.setup.check_cli import check_command
 from casebench.setup.guide_cli import guide_command
@@ -54,6 +55,7 @@ main.add_command(generate_command)
 main.add_command(case_group)
 main.add_command(report_command)
 main.add_command(compare_command)
+main.add_command(review_group)
 main.add_command(init_command)
 main.add_command(check_command)
 main.add_command(keys_command)

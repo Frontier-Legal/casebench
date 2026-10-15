@@ -14,6 +14,7 @@ from casebench.corpus.guard import refuse_self_check
 from casebench.corpus.ids import NAME
 from casebench.extract.config import ExtractConfig
 from casebench.judge.config import JudgeConfig
+from casebench.judge.families import AgentModel
 from casebench.network import NetworkConfig
 
 DEFAULT_CONFIG = Path("casebench.yaml")
@@ -39,6 +40,11 @@ class CasebenchConfig(Record):
     capture: CaptureConfig | None = None
     judges: list[JudgeConfig] = Field(default_factory=list, max_length=MOST_JUDGES)
     extract: ExtractConfig | None = None
+    agent_models: list[AgentModel] = Field(
+        default_factory=list,
+        description="Each model the agent calls, with its catalog family, so a run can warn "
+        "when a judge shares it (decision 0047).",
+    )
     keys: dict[str, str] = Field(
         default_factory=dict,
         description="Each key's variable name and the .env file it is read from, relative to "

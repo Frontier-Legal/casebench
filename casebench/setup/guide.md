@@ -86,6 +86,13 @@ casebench init --entry .casebench/target.py:answer --corpus none \
 
 This writes `casebench.yaml`: the target, the judge, and under `keys` the name and file of each key, never a value. Model calls need no route for a Python target: Casebench records each call where the agent sends it.
 
+Then add to `casebench.yaml` each model the agent calls, with its family as `casebench models PROVIDER --json` gives it, so every run checks the judge's family against them:
+
+```yaml
+agent_models:
+  - {model: MODEL_ID, family: FAMILY}
+```
+
 ## 6. Connect the document store
 
 Casebench checks every citation against the documents the agent's own search uses. Find, in the agent's code, the store it searches: its base URL, search path, query parameter, fetch path, and the variable and header that carry its key. When the code reads the base URL from a variable, such as `DOCS_URL`, give `--base-url '${DOCS_URL}'` in single quotes; Casebench reads it from the same file as a key, and `casebench.yaml` names it rather than holding it.
