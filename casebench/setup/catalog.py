@@ -101,6 +101,26 @@ def families(catalog: dict[str, Any], names: list[str]) -> dict[str, str]:
     return found
 
 
+def prices(catalog: dict[str, Any], names: list[str]) -> dict[str, dict[str, float]]:
+    """The catalog's price of each model id it knows, per million input and output tokens,
+    found as `families` finds a family (decision 0051)."""
+    known: dict[str, dict[str, float]] = {}
+    for provider in catalog.values():
+        for model_id, model in (provider.get("models") or {}).items():
+            cost = model.get("cost") or {}
+            if cost.get("input") is None or cost.get("output") is None:
+                continue
+            price = {"input": cost["input"], "output": cost["output"]}
+            known.setdefault(model_id, price)
+            known.setdefault(model_id.rsplit("/", 1)[-1], price)
+    found = {}
+    for name in names:
+        price = known.get(name) or known.get(name.rsplit("/", 1)[-1])
+        if price:
+            found[name] = price
+    return found
+
+
 def plugins() -> list[str]:
     return sorted({item.name for item in registry.available(kind_named("provider"))})
 

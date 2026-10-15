@@ -479,6 +479,52 @@
       "title": "MetricUsed",
       "type": "object"
     },
+    "ModelSpend": {
+      "additionalProperties": false,
+      "description": "One model's calls in a run, with their tokens and, when it has a price, their cost.",
+      "properties": {
+        "whose": {
+          "enum": [
+            "agent",
+            "judge"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "calls": {
+          "type": "integer"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "US dollars; none without a price."
+        }
+      },
+      "required": [
+        "whose",
+        "model",
+        "calls",
+        "input_tokens",
+        "output_tokens"
+      ],
+      "title": "ModelSpend",
+      "type": "object"
+    },
     "Producer": {
       "additionalProperties": false,
       "description": "The first line of every score set, and a copy in its report.",
@@ -781,6 +827,41 @@
       "title": "ScoringError",
       "type": "object"
     },
+    "Spend": {
+      "additionalProperties": false,
+      "description": "What a run's model calls cost, per model, the agent's apart from the judge's. A total\nadds only priced calls; `unpriced` names every model it leaves out.",
+      "properties": {
+        "models": {
+          "items": {
+            "$ref": "#/$defs/ModelSpend"
+          },
+          "type": "array"
+        },
+        "agent": {
+          "type": "number"
+        },
+        "judge": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "unpriced": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "models",
+        "agent",
+        "judge",
+        "total"
+      ],
+      "title": "Spend",
+      "type": "object"
+    },
     "Table": {
       "additionalProperties": false,
       "properties": {
@@ -897,6 +978,18 @@
         "$ref": "#/$defs/Calibration"
       },
       "type": "array"
+    },
+    "spend": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Spend"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the run's model calls cost, the agent's and the judge's (0051)."
     },
     "extensions": {
       "additionalProperties": false,

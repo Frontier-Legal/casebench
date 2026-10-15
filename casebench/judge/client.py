@@ -81,5 +81,11 @@ class Judge:
             self.output_tokens += completion.output_tokens or 0
         reply = read_json(completion.text)
         if self.memo is not None:
-            self.memo.put(key, reply)
+            usage = {
+                "provider": self.config.provider,
+                "model": self.config.model,
+                "input_tokens": completion.input_tokens,
+                "output_tokens": completion.output_tokens,
+            }
+            self.memo.put(key, reply, usage)
         return reply

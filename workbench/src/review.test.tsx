@@ -18,6 +18,7 @@ const ENGINEERING: Engineering = {
   latency_ms: 1840,
   input_tokens: 812,
   output_tokens: 95,
+  cost: 0.0036,
   steps: [{ kind: "llm", name: "draft answer", model: "agent-model", duration_ms: 1700, input_tokens: 812, output_tokens: 95 }],
   raw: { result: { output: "…" } },
 }
@@ -179,6 +180,7 @@ describe("the review queue", () => {
     const card = await screen.findByTestId("engineering")
     expect(within(card).getByText("Input tokens")).toBeInTheDocument()
     expect(within(card).getByText("agent-model")).toBeInTheDocument()
+    expect(within(card).getByText("$0.0036")).toBeInTheDocument()
   })
 
   test("citations coloured by what the corpus says", async () => {

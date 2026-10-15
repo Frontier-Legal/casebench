@@ -14,6 +14,7 @@ from casebench.report.record import FORMAT, Funnel, Report
 from casebench.report.tables import Table
 from casebench.runs.log import ScoringError
 from casebench.runs.producer import Producer
+from casebench.runs.spend import NOT_COUNTED, Spend
 
 REPORT_FILE = "report.json"
 ROUTED = {
@@ -118,6 +119,34 @@ def warning_lines(warnings: list[str]) -> list[str]:
     return [f"warning: {warning}" for warning in warnings]
 
 
+def _dollars(value: float) -> str:
+    return f"${value:,.2f}" if value >= 0.01 or value == 0 else f"${value:.4f}"
+
+
+def spend_lines(spend: Spend | None) -> list[str]:
+    """What the run's model calls cost, per model, the agent's and the judge's (0051)."""
+    if spend is None or not spend.models:
+        return []
+    out = [
+        f"spend: {_dollars(spend.total)} · agent {_dollars(spend.agent)} · "
+        f"judge {_dollars(spend.judge)}"
+    ]
+    width = max(len(row.model) for row in spend.models)
+    for row in spend.models:
+        cost = _dollars(row.cost) if row.cost is not None else "no price"
+        out.append(
+            f"  {row.whose:<5} {row.model:<{width}}  {row.calls:>6,} calls  "
+            f"{row.input_tokens:>11,} in  {row.output_tokens:>10,} out  {cost}"
+        )
+    if spend.unpriced:
+        out.append(
+            f"  without a price, not counted: {', '.join(spend.unpriced)}; give each a price "
+            "in casebench.yaml"
+        )
+    out.append(f"  {NOT_COUNTED[0].lower()}{NOT_COUNTED[1:]}")
+    return out
+
+
 def unevidenced_lines(unevidenced: list[str]) -> list[str]:
     """Cases with nothing to earn in a metric they name, such as no criterion (0047, 0049)."""
     if not unevidenced:
@@ -149,6 +178,7 @@ def write(
     suite: tuple[str, str] | None = None,
     warnings: list[str] | None = None,
     unevidenced: list[str] | None = None,
+    spend: Spend | None = None,
 ) -> Path:
     """`suite` is the id and hash of the suite the run ran. Lawyers' verdicts already in the
     run's folder are counted against this score set's."""
@@ -168,6 +198,7 @@ def write(
         warnings=warnings or [],
         unevidenced=unevidenced or [],
         calibration=calibration(scores, read_reviews(folder)),
+        spend=spend,
     )
     # Scrubbed of keys like every file a run writes (decision 0046).
     path.write_text(keys.scrub(report.model_dump_json(indent=2)) + "\n", encoding="utf-8")

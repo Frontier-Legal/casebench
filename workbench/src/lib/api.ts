@@ -92,6 +92,7 @@ export interface Engineering {
   latency_ms: number | null
   input_tokens: number | null
   output_tokens: number | null
+  cost: number | null
   steps: StepView[]
   raw: Record<string, unknown>
 }

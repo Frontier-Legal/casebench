@@ -16,6 +16,11 @@ function number(value: number | null | undefined, unit = ""): string {
   return value == null ? "–" : `${Math.round(value).toLocaleString()}${unit}`
 }
 
+function dollars(value: number | null | undefined): string {
+  if (value == null) return "No price"
+  return value >= 0.01 || value === 0 ? `$${value.toFixed(2)}` : `$${value.toFixed(4)}`
+}
+
 /** What only the engineering view shows: the agent's steps, tokens, latency and raw records. */
 export function EngineeringCard({
   engineering,
@@ -37,7 +42,8 @@ export function EngineeringCard({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Tile label="Agent cost" value={dollars(engineering.cost)} caption="At the prices in casebench.yaml" />
           <Tile label="Latency" value={number(engineering.latency_ms, " ms")} />
           <Tile label="Input tokens" value={number(engineering.input_tokens)} />
           <Tile label="Output tokens" value={number(engineering.output_tokens)} />

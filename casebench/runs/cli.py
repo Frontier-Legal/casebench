@@ -174,6 +174,8 @@ def run(
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):
         click.echo(line)
+    for line in render.spend_lines(scored.spend):
+        click.echo(line)
     for line in render.unevidenced_lines(scored.unevidenced):
         click.echo(line)
     for line in render.warning_lines(scored.warnings):

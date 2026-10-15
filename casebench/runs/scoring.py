@@ -25,6 +25,7 @@ from casebench.report.tables import Table, build_tables
 from casebench.runs.log import RunLog, ScoringError
 from casebench.runs.producer import JudgeUsed, Producer, producer_for
 from casebench.runs.rescore import evidenced, rescore
+from casebench.runs.spend import Spend, run_spend
 
 
 @dataclass
@@ -37,6 +38,7 @@ class Scored:
     errors: list[ScoringError] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     unevidenced: list[str] = field(default_factory=list)
+    spend: Spend | None = None
 
 
 def context_for(config: CasebenchConfig, memo: Memo | None = None) -> dict[str, Any]:
@@ -154,6 +156,7 @@ def score(
     }
     warnings = family_warnings(judges, config.agent_models, called)
     unevidenced = [case.id for case in cases if not evidenced(case, metrics)]
+    spend = run_spend(log, config.agent_models, config.judges)
     report = render.write(
         log.folder,
         produced_by,
@@ -166,5 +169,6 @@ def score(
         (log.info.suite_id, log.info.suite_hash),
         warnings,
         unevidenced,
+        spend,
     )
-    return Scored(path, scores, tables, summary, report, errors, warnings, unevidenced)
+    return Scored(path, scores, tables, summary, report, errors, warnings, unevidenced, spend)
