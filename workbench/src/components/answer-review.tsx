@@ -4,6 +4,7 @@ import { BookOpenIcon, CheckIcon, ChevronRightIcon, SparklesIcon, XIcon } from "
 import { AnswerText } from "@/components/answer-text"
 import { Choices } from "@/components/choices"
 import { EngineeringCard } from "@/components/engineering-card"
+import { HarnessView } from "@/components/harness-view"
 import { FinishBar } from "@/components/finish-bar"
 import { InputsCard } from "@/components/inputs-card"
 import { Overline, Section, Status } from "@/components/section"
@@ -386,6 +387,7 @@ export function AnswerReview({
           </SheetContent>
         </Sheet>
       )}
+      {item.engineering && <HarnessView itemKey={item.key} />}
       <FinishBar
         left={left}
         busy={busy}
