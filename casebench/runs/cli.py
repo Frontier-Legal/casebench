@@ -15,6 +15,7 @@ from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
 from casebench.perimeter import enforce
 from casebench.report import render
+from casebench.runs.commit import current_commit
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.progress import Progress
@@ -93,6 +94,10 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
 )
 @click.option("--no-capture", is_flag=True, help="Do not start the recording proxy.")
 @click.option("--dry-run", is_flag=True, help="Count what the run would send; send nothing.")
+@click.option(
+    "--commit",
+    help="The commit the agent's code is at; else GITHUB_SHA, else the folder's checkout.",
+)
 def run(
     suite_dir: Path,
     config_path: Path,
@@ -102,6 +107,7 @@ def run(
     runs_dir: Path,
     no_capture: bool,
     dry_run: bool,
+    commit: str | None,
 ) -> None:
     """Send every case of a frozen suite to the target, store each result and score the run."""
     config = _config(config_path, python)
@@ -132,6 +138,7 @@ def run(
             "suite_id": manifest.suite_id,
             "suite_hash": manifest.content_hash,
             "target": str(target_config.get("type")),
+            "commit": current_commit(commit),
         },
     )
     # A terminal shows the summary; a log file gets a line per case as it finishes (0038).

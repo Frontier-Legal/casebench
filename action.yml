@@ -1,0 +1,71 @@
+name: Casebench gate
+description: Run a Casebench suite, gate it against a saved baseline run, and comment on the pull request (decision 0048).
+inputs:
+  suite:
+    description: The frozen suite's folder.
+    required: true
+  baseline:
+    description: The saved baseline run's folder, committed or restored from an artifact.
+    required: true
+  config:
+    description: The casebench.yaml to run with.
+    default: casebench.yaml
+  include-unreviewed:
+    description: Gate the cases no lawyer has approved yet too.
+    default: "false"
+  casebench:
+    description: The command that runs Casebench; a Python agent's project runs it in its own environment, such as "uv run --with casebench casebench".
+    default: uvx casebench
+outputs:
+  code:
+    description: The gate's exit code; 0 passed, 1 a significant drop, 2 cannot judge.
+    value: ${{ steps.gate.outputs.code }}
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      with:
+        enable-cache: false
+    - name: Run the suite
+      shell: bash
+      env:
+        CASEBENCH: ${{ inputs.casebench }}
+        SUITE: ${{ inputs.suite }}
+        CONFIG: ${{ inputs.config }}
+      run: $CASEBENCH run --suite "$SUITE" --config "$CONFIG" --run-id "gate-$GITHUB_SHA"
+    - name: Gate against the baseline
+      id: gate
+      shell: bash
+      env:
+        CASEBENCH: ${{ inputs.casebench }}
+        BASELINE: ${{ inputs.baseline }}
+        UNREVIEWED: ${{ inputs.include-unreviewed }}
+      run: |
+        flags=()
+        if [ "$UNREVIEWED" = "true" ]; then flags+=(--include-unreviewed); fi
+        set +e
+        $CASEBENCH gate "$BASELINE" ".casebench/runs/gate-$GITHUB_SHA" \
+          --markdown "$RUNNER_TEMP/casebench-gate.md" "${flags[@]}"
+        echo "code=$?" >> "$GITHUB_OUTPUT"
+    - name: Comment on the pull request
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        body="$RUNNER_TEMP/casebench-gate.md"
+        # A gate that could not judge writes no comment; its log says why.
+        if [ ! -f "$body" ]; then exit 0; fi
+        found=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+          --jq '[.[] | select(.body | startswith("<!-- casebench-gate -->"))][0].id // empty')
+        if [ -n "$found" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$found" -F "body=@$body" > /dev/null
+        else
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$body" > /dev/null
+        fi
+    - name: Fail when the gate failed
+      shell: bash
+      env:
+        CODE: ${{ steps.gate.outputs.code }}
+      run: exit "$CODE"
