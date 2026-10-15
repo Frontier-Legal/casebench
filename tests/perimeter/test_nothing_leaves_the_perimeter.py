@@ -4,6 +4,8 @@ redirect to another host, writes no key, and treats output as data (decision 004
 import json
 import os
 import socket
+from asyncio.proactor_events import BaseProactorEventLoop as ProactorLoop
+from asyncio.selector_events import BaseSelectorEventLoop as SelectorLoop
 from pathlib import Path
 from typing import Any
 
@@ -70,6 +72,17 @@ def python_agent(project: Path, body: str) -> dict[str, str]:
     return {"type": "python", "entry": "agent.py:answer"}
 
 
+def recording(connect: Any, connected: list[tuple[str, int]]) -> Any:
+    """`connect` or an event loop's `sock_connect`, noting each address it is given."""
+
+    def recorded(self: Any, *arguments: Any) -> Any:
+        address = arguments[-1]
+        connected.append((address[0], address[1]))
+        return connect(self, *arguments)
+
+    return recorded
+
+
 def written(folder: Path) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8") for path in folder.rglob("*") if path.is_file()
@@ -117,17 +130,17 @@ def test_no_telemetry(project: Path, monkeypatch: pytest.MonkeyPatch):
     named = suite(project, metrics=["citation_integrity"])
     connected: list[tuple[str, int]] = []
     looked_up: list[str] = []
-    connect, getaddrinfo = socket.socket.connect, socket.getaddrinfo
-
-    def recorded_connect(self: socket.socket, address: Any) -> None:
-        connected.append((address[0], address[1]))
-        return connect(self, address)
+    getaddrinfo = socket.getaddrinfo
 
     def recorded_lookup(host: Any, *rest: Any, **options: Any) -> Any:
         looked_up.append(str(host))
         return getaddrinfo(host, *rest, **options)
 
-    monkeypatch.setattr(socket.socket, "connect", recorded_connect)
+    # Blocking clients connect through the socket; an event loop through its own sock_connect,
+    # which on Windows never calls the socket's connect.
+    for owner in (socket.socket, SelectorLoop, ProactorLoop):
+        name = "connect" if owner is socket.socket else "sock_connect"
+        monkeypatch.setattr(owner, name, recording(getattr(owner, name), connected))
     monkeypatch.setattr(socket, "getaddrinfo", recorded_lookup)
     try:
         ran = invoke("run", "--suite", named, "--run-id", "r")
@@ -137,10 +150,11 @@ def test_no_telemetry(project: Path, monkeypatch: pytest.MonkeyPatch):
             server.shutdown()
 
     assert ran.exit_code == 0, ran.output
-    # The run called the target, the judge and the corpus, and nothing else.
     assert FakeJudge.calls and DocumentApi.searches
+    # The run called the target, the judge and the corpus. Every connection stayed on this
+    # machine; on Windows the event loop's own wake-up socket pair is one of them.
     called = {port for _, port in connected}
-    assert called == {agent.server_port, judged.server_port, documents.server_port}
+    assert {agent.server_port, judged.server_port, documents.server_port} <= called
     assert {host for host, _ in connected} <= {"127.0.0.1"}
     assert set(looked_up) <= {"127.0.0.1", "localhost"}
 
