@@ -75,3 +75,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0059](0059-push-invite-pull.md) | An engineer pushes runs and suites to a team server, invites lawyers, and pulls their decisions back; the server never scores | accepted |
 | [0060](0060-hosting-seams.md) | The hosted service builds on the team server through two seams, a seat check and erasing a team, and the public server needs neither | accepted |
 | [0061](0061-the-first-ten-minutes.md) | The first ten minutes: a demo with no key, a first run that builds its own suite, the search store named by init, a setup skill, and answers from a tool Casebench cannot reach | accepted |
+| [0064](0064-the-team-server-in-setup.md) | Setup asks whether lawyers review on a team server, names it, and checks that it takes the engineer's key; it never installs one | accepted |
