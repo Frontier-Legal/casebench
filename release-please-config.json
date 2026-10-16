@@ -14,6 +14,15 @@
           "type": "toml",
           "path": "uv.lock",
           "jsonpath": "$.package[?(@.name.value=='casebench')].version"
+        },
+        {
+          "type": "generic",
+          "path": "ee/pyproject.toml"
+        },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='casebench-ee')].version"
         }
       ]
     }
