@@ -72,3 +72,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0056](0056-the-harness-view.md) | Engineers see each answer as a waterfall of its calls, with unaccounted time, the authority funnel and a diff against another run | accepted |
 | [0057](0057-ee-under-the-elastic-license.md) | `ee/` is under the Elastic License 2.0, and the rest of the repository under Apache-2.0 | accepted |
 | [0058](0058-the-team-server.md) | The team server: the workbench with logins, five roles and an append-only audit log, from one image | accepted |
+| [0059](0059-push-invite-pull.md) | An engineer pushes runs and suites to a team server, invites lawyers, and pulls their decisions back; the server never scores | accepted |

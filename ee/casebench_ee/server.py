@@ -19,6 +19,7 @@ from casebench_ee.access import TeamAccess
 from casebench_ee.mail import Mailer, NoMail
 from casebench_ee.oidc import Provider
 from casebench_ee.routes import Settings, team_routes
+from casebench_ee.sync import sync_routes
 from casebench_ee.team import Team
 
 # Letters a person reads off a log and types without confusing them.
@@ -64,6 +65,9 @@ def build(
 ) -> Server:
     """A team with no one yet gets a one-time setup code, which the caller prints."""
     store = Store(database_url(database))
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    for folder in suite_dirs:
+        folder.mkdir(parents=True, exist_ok=True)
     team = Team(store)
     code = setup_code() if team.setup_needed() else None
     settings = Settings(public_url=public_url, setup_code=code, config=config)
@@ -85,7 +89,10 @@ def build(
         static=static_root(),
         config=config,
         access=TeamAccess(team),
-        routers=[team_routes(team, mailer or NoMail(), providers or {}, settings)],
+        routers=[
+            team_routes(team, mailer or NoMail(), providers or {}, settings, workspace),
+            sync_routes(workspace, store),
+        ],
         limits=limits,
     )
     return Server(app=app, team=team, setup_code=code, settings=settings)

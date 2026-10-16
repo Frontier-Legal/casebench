@@ -8,6 +8,7 @@ from casebench import __version__, network
 from casebench.capture.cli import proxy
 from casebench.cases.cli import case_group
 from casebench.cases.sheet_cli import import_command, template_group
+from casebench.cloud.cli import invite_command, pull_command, push_command
 from casebench.config import ConfigError
 from casebench.corpus.cli import corpus
 from casebench.extract.cli import extract_command
@@ -72,3 +73,6 @@ main.add_command(guide_command)
 main.add_command(models_command)
 main.add_command(schema)
 main.add_command(validate_command)
+main.add_command(push_command)
+main.add_command(pull_command)
+main.add_command(invite_command)

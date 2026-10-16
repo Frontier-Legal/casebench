@@ -31,6 +31,14 @@ CorpusName = Annotated[str, StringConstraints(pattern=NAME)]
 MOST_JUDGES = 2
 
 
+class CloudConfig(Record):
+    """The `cloud:` section: the team server `casebench push` and `pull` talk to. Its API key
+    is read from `key_env`, in the environment or a .env file, and never written (0059)."""
+
+    url: str
+    key_env: str = "CASEBENCH_CLOUD_KEY"
+
+
 class WorkbenchConfig(Record):
     """The `workbench:` section: what trying a question in the workbench may spend each day,
     in US dollars, the agent's and the judge's model calls together (decision 0052), and
@@ -61,6 +69,7 @@ class CasebenchConfig(Record):
     )
     network: NetworkConfig | None = None
     workbench: WorkbenchConfig | None = None
+    cloud: CloudConfig | None = None
 
     @property
     def judge(self) -> JudgeConfig | None:

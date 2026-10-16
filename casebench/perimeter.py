@@ -45,6 +45,8 @@ def hosts_of(config: CasebenchConfig) -> list[str]:
     for route in config.capture.routes if config.capture else []:
         if isinstance(route.get("upstream"), str):
             urls.append(_expanded(route["upstream"]))
+    if config.cloud is not None:
+        urls.append(_expanded(config.cloud.url))
     named = [network.host_of(url) for url in urls if url]
     return [*named, *(config.network.allow if config.network else [])]
 
@@ -60,6 +62,8 @@ def name_keys(config: CasebenchConfig) -> None:
         named = getattr(Judge(model).provider, "api_key_env", None)
         if named:
             names.append(named)
+    if config.cloud is not None:
+        names.append(config.cloud.key_env)
     for name in names:
         keys.name(name)
 

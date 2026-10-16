@@ -256,6 +256,9 @@ def create_app(
         name = who.name
         queued = items.queue(workspace, store, name)
         if not who.may(Can.EDIT):
+            # A reviewer's queue holds what they act on: answers. A viewer reads everything.
+            if who.may(Can.REVIEW):
+                queued = [i for i in queued if i.kind == items.ANSWER]
             return Queue(items=queued)
         held = store.held_by_others(name)
         waiting = [

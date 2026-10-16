@@ -16,8 +16,11 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from casebench.config import CasebenchConfig
-from casebench.workbench.access import ADMIN, Can, refuse
+from casebench.workbench import golden, items
+from casebench.workbench.access import ADMIN, ENGINEER, ROLES, Can, refuse
 from casebench.workbench.app import Who
+from casebench.workbench.sources import Workspace
+from casebench.workbench.store import Store
 from casebench_ee.access import COOKIE
 from casebench_ee.mail import Mailer, NoMail
 from casebench_ee.models import Key, User
@@ -28,6 +31,8 @@ from casebench_ee.team import SESSION, Team, TeamError
 # Failed password attempts per email, in this process: five within 15 minutes lock it out.
 ATTEMPTS, WINDOW = 5, 15 * 60
 AUDIT_PAGE = 200
+# Minutes an answer to review, and a court draft or change to approve, take (0059).
+ANSWER_MINUTES, DRAFT_MINUTES = 2, 3
 
 
 @dataclass
@@ -107,6 +112,8 @@ class Invited(BaseModel):
     link: str | None = Field(
         default=None, description="Shown when this server sends no email, to pass on."
     )
+    waiting: int = Field(default=0, description="Items in the queue the person's role acts on.")
+    minutes: int = Field(default=0, description="About how long they take (decision 0059).")
 
 
 class KeyView(BaseModel):
@@ -165,8 +172,25 @@ def key_view(key: Key) -> KeyView:
     )
 
 
+def waiting_for(workspace: Workspace, store: Store, email: str, role: str) -> tuple[int, int]:
+    """The items a role acts on, and about how many minutes they take: an answer two, a court
+    draft or a change three (decision 0059)."""
+    can = ROLES[role]
+    found = items.queue(workspace, store, email) if Can.REVIEW in can else []
+    answers = sum(1 for i in found if i.kind == "answer")
+    others = 0
+    if Can.EDIT in can:
+        others = sum(1 for i in found if i.kind != "answer")
+        others += len(golden.queue_items(store, email, set()))
+    return answers + others, answers * ANSWER_MINUTES + others * DRAFT_MINUTES
+
+
 def team_routes(
-    team: Team, mailer: Mailer, providers: dict[str, Provider], settings: Settings
+    team: Team,
+    mailer: Mailer,
+    providers: dict[str, Provider],
+    settings: Settings,
+    workspace: Workspace,
 ) -> APIRouter:
     router = APIRouter()
     failures: dict[str, list[float]] = defaultdict(list)
@@ -182,11 +206,20 @@ def team_routes(
             path="/",
         )
 
-    def mail_link(user: User, by: str | None = None) -> tuple[bool, str]:
+    def mail_link(
+        user: User, by: str | None = None, work: tuple[int, int] = (0, 0)
+    ) -> tuple[bool, str]:
         link = settings.at(f"/auth/link?token={team.link(user)}")
         inviter = f"{by} invited you to" if by else "Sign in to"
+        waiting, minutes = work
+        queue = (
+            f"{waiting} item{'' if waiting == 1 else 's'} wait for you in the queue, about "
+            f"{minutes} minutes of work.\n\n"
+            if waiting
+            else ""
+        )
         text = (
-            f"{inviter} Casebench, where your team reviews its legal AI.\n\n"
+            f"{inviter} Casebench, where your team reviews its legal AI.\n\n{queue}"
             f"Open this link to sign in. It works once, within 15 minutes:\n\n{link}\n\n"
             "If you did not expect this email, ignore it.\n"
         )
@@ -301,13 +334,23 @@ def team_routes(
 
     @router.post("/api/team/users")
     def invite(body: Invite, who: Who) -> Invited:
-        refuse(who, Can.ADMIN)
+        """An engineer invites viewers, reviewers and editors; an admin invites anyone."""
+        refuse(who, Can.ENGINEER)
+        if body.role in (ENGINEER, ADMIN):
+            refuse(who, Can.ADMIN)
         try:
             user = team.add(body.email, body.name, body.role, who.name)
         except TeamError as refused:
             raise HTTPException(422, str(refused)) from None
-        emailed, link = mail_link(user, who.name)
-        return Invited(person=person_view(user), emailed=emailed, link=None if emailed else link)
+        work = waiting_for(workspace, team.store, user.email, user.role)
+        emailed, link = mail_link(user, who.name, work)
+        return Invited(
+            person=person_view(user),
+            emailed=emailed,
+            link=None if emailed else link,
+            waiting=work[0],
+            minutes=work[1],
+        )
 
     @router.post("/api/team/users/{user_id}/link")
     def new_link(user_id: int, who: Who) -> Invited:

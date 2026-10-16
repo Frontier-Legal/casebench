@@ -51,6 +51,13 @@ To see whether a new version of the agent is better, lawyers compare two runs of
 
 A team can run the workbench on one server, so several lawyers and engineers work on the same runs and suites. The first admin sets the server up with a one-time code from its log, then invites each person by email with a role: viewer, reviewer, editor, engineer or admin. People sign in with the emailed link, or with Google or Microsoft, with no password to remember. Every verdict, change to golden data and team event is in an audit log no one can change. It lives in `ee/` and ships as one Docker image; [ee/README.md](ee/README.md) says how to run it.
 
+The engineer's machine stays where runs happen. `casebench push` sends runs and the suites they ran, `casebench invite ayse@firm.example --role reviewer` emails a lawyer how many items wait and about how long they take, and `casebench pull` brings back the drafts lawyers approved and the verdicts they gave, so CI scores on them. The agent, the corpus, full decision texts, the judge's replies and keys never leave the machine, and the server never computes a score:
+
+```yaml
+cloud:
+  url: https://casebench.firm.example   # its API key is read from CASEBENCH_CLOUD_KEY
+```
+
 ## Jurisdictions
 
 Casebench works in any country with no country-specific code. Models read the decisions and the answers, and your corpus resolves every citation, whatever its format. A data provider that serves several countries needs one connector. [PLUGINS.md](PLUGINS.md) explains how to add a data provider or a model API.

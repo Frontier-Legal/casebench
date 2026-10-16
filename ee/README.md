@@ -32,6 +32,10 @@ The first start prints a one-time setup code to the log. Open the public URL, en
 
 Register the Google or Microsoft client with `<public URL>/auth/google/callback` or `<public URL>/auth/microsoft/callback` as its redirect address.
 
+## From an engineer's machine
+
+Create an API key with the engineer role on the Team page, set it as `CASEBENCH_CLOUD_KEY` on the engineer's machine, and name the server in `casebench.yaml` under `cloud: url:`. Then `casebench push`, `casebench invite` and `casebench pull` work against it ([decision 0059](../docs/decisions/0059-push-invite-pull.md)).
+
 ## Develop
 
 `uv sync` installs `casebench-ee` with the core. `npm run build:team` in `workbench/` builds the team's web app into `ee/casebench_ee/static/`. `uv run pytest ee/team_tests` runs its tests; set `CASEBENCH_TEST_POSTGRES` to a Postgres server's URL to run the Postgres ones too.
