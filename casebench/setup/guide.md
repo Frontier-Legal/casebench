@@ -157,4 +157,19 @@ Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Th
 - the corpus you connected;
 - each host under `network: allow:`, and where in the code the agent calls it;
 - the result of `casebench check`;
+- whether lawyers will review on a team server: ask it only after a first evaluation, as "A team server" below says;
 - the next step: `casebench run` builds a first suite from the corpus, after it shows what that costs and the user agrees, then asks the agent and grades it; or a lawyer writes a first case with `casebench case new --suite first`, or many in the spreadsheet `casebench template lawyer` writes, which `casebench import cases-qa.xlsx --suite first --by NAME` adds, and `casebench run --suite first` asks the agent and grades it. `casebench ui` then opens the results.
+
+## A team server
+
+After a first evaluation, ask the user once: **will lawyers review on a team server?** A team server is the workbench on a machine lawyers can reach, with sign-in; this machine keeps running the evaluations and sends their results to it. Without one, lawyers review here with `casebench ui`.
+
+- **Not now.** Change nothing.
+- **They have one.** Ask its address, then name it:
+
+  ```
+  casebench init --team-server URL --no-routes --yes
+  ```
+
+  This writes only `cloud: url:` to `casebench.yaml`. Ask the user to set `CASEBENCH_CLOUD_KEY` themselves, in the environment or a `.env` file, to an API key with the engineer role that an admin makes on the server's Team page. Never ask for the key, and never read, print or write it. Then run `casebench check --json`: its `team server` part says whether the server took the key. When it passes, run `casebench push`, and offer `casebench invite EMAIL --role reviewer` for each lawyer the user names.
+- **They want one.** Tell them what to run on a machine lawyers can reach: `pip install casebench-ee`, then `casebench-team serve` with `CASEBENCH_DATABASE_URL` and `CASEBENCH_PUBLIC_URL` set, or the container image; https://github.com/Frontier-Legal/casebench/blob/main/ee/README.md has both. Its first start prints a one-time setup code for the first admin, who then makes the engineer key. Install it yourself only if the user asks you to and you have access to that machine; this project needs only `casebench`.

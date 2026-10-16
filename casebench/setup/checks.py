@@ -13,7 +13,9 @@ import httpx2
 
 from casebench import network
 from casebench.capture.step import StepKind
-from casebench.config import CasebenchConfig
+from casebench.cloud.client import CloudError, connect
+from casebench.cloud.server_guide import GUIDE
+from casebench.config import CasebenchConfig, CloudConfig
 from casebench.corpus.check import check
 from casebench.corpus.corpora import Corpora
 from casebench.corpus.interface import ListingNotSupported
@@ -56,6 +58,10 @@ NEXT_TARGET = (
 NEXT_MODEL = "check the model's id and the key casebench.yaml names for it under `keys`"
 NEXT_REACH = "run this where the service is reachable"
 NEXT_PLUGIN = "install the package that provides it"
+TEAM_SERVER = "team server"
+# What an engineer's machine asks the team server for, with nothing named: the cheapest call
+# an engineer key may make, which says whether the key is accepted (decision 0064).
+TEAM_PROBE = "/api/sync/state"
 
 
 @dataclass(frozen=True)
@@ -257,6 +263,30 @@ def model_check(name: str, model: JudgeConfig) -> Check:
     return Check(name, Status.PASSED, f"{model.provider} {model.model} answered{accepted}")
 
 
+def team_server_check(cloud: CloudConfig) -> Check:
+    """The team server answers, and takes the key as an engineer's (decision 0064)."""
+    key_step = (
+        f"ask the team server's admin for an API key with the engineer role, made on its Team "
+        f"page, and set it as {cloud.key_env} here, in the environment or a .env file"
+    )
+    try:
+        with connect(cloud) as http:
+            response = http.post(TEAM_PROBE, json={"suites": [], "runs": []})
+    except CloudError as error:
+        return Check(TEAM_SERVER, Status.FAILED, str(error), key_step)
+    except Exception as error:
+        return _failure(TEAM_SERVER, error, f"check the address under `cloud: url:`; {GUIDE}")
+    if response.status_code == 401:
+        return Check(TEAM_SERVER, Status.FAILED, f"{cloud.url} refused the key", key_step)
+    if response.status_code == 403:
+        refused = f"{cloud.url} took the key, but its role cannot push runs"
+        return Check(TEAM_SERVER, Status.FAILED, refused, key_step)
+    if response.status_code >= 400:
+        answered = f"{cloud.url} answered {response.status_code}: it is not a Casebench team server"
+        return Check(TEAM_SERVER, Status.FAILED, answered, f"check the address; {GUIDE}")
+    return Check(TEAM_SERVER, Status.PASSED, f"{cloud.url} took the key as an engineer's")
+
+
 def _probe(probe: str | None) -> list[str]:
     """The search a corpus was added with, run when no other is given (decision 0044)."""
     return [probe] if probe else []
@@ -265,7 +295,8 @@ def _probe(probe: str | None) -> list[str]:
 def live(
     config: CasebenchConfig, queries: list[str] | None = None, size: int = SETUP_SAMPLE
 ) -> list[Check]:
-    """One check for each part the config names: the corpus, the target, each model."""
+    """One check for each part the config names: the corpus, the target, each model and the
+    team server."""
     checks = []
     corpora = Corpora(config.corpora)
     checks += [
@@ -275,4 +306,6 @@ def live(
     if config.target is not None:
         checks.append(_target(config))
     checks += [model_check(name, model) for name, model in models_of(config)]
+    if config.cloud is not None:
+        checks.append(team_server_check(config.cloud))
     return checks

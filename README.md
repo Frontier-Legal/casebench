@@ -63,7 +63,20 @@ To see whether a new version of the agent is better, lawyers compare two runs of
 
 ## Team server
 
-A team can run the workbench on one server, so several lawyers and engineers work on the same runs and suites. The first admin sets the server up with a one-time code from its log, then invites each person by email with a role: viewer, reviewer, editor, engineer or admin. People sign in with the emailed link, or with Google or Microsoft, with no password to remember. Every verdict, change to golden data and team event is in an audit log no one can change. It lives in `ee/` and ships as one Docker image; [ee/README.md](ee/README.md) says how to run it.
+A team can run the workbench on one server, so several lawyers and engineers work on the same runs and suites. The first admin sets the server up with a one-time code from its log, then invites each person by email with a role: viewer, reviewer, editor, engineer or admin. People sign in with the emailed link, or with Google or Microsoft, with no password to remember. Every verdict, change to golden data and team event is in an audit log no one can change.
+
+The team server is the `casebench-ee` package, installed on a machine lawyers can reach; the engineer's machine needs only `casebench`. Install it from PyPI, or run its container image:
+
+```bash
+pip install casebench-ee
+CASEBENCH_DATABASE_URL=postgresql://casebench:secret@db.internal/casebench \
+CASEBENCH_PUBLIC_URL=https://casebench.firm.example \
+casebench-team serve --host 0.0.0.0
+
+docker build -f ee/Dockerfile -t casebench-team .    # or the image, from the repository's root
+```
+
+[ee/README.md](ee/README.md) has every setting. `casebench init` asks whether lawyers review on a team server, and `casebench init --team-server URL` names one in an existing setup; `casebench check` then says whether the server takes the engineer's key.
 
 The engineer's machine stays where runs happen. `casebench push` sends runs and the suites they ran, `casebench invite ayse@firm.example --role reviewer` emails a lawyer how many items wait and about how long they take, and `casebench pull` brings back the drafts lawyers approved and the verdicts they gave, so CI scores on them. The agent, the corpus, full decision texts, the judge's replies and keys never leave the machine, and the server never computes a score:
 

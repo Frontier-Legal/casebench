@@ -10,7 +10,8 @@ import yaml
 
 from casebench.capture.config import routes_for
 from casebench.capture.proxy.routes import environment
-from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
+from casebench.cloud.server_guide import set_up
+from casebench.config import DEFAULT_CONFIG, CloudConfig, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
 from casebench.key_record import record_keys
 from casebench.perimeter import enforce
@@ -28,9 +29,11 @@ from casebench.setup.routes import offers
 from casebench.setup.scan import Scan, scan
 from casebench.setup.summary import details as scan_details
 from casebench.setup.summary import summary
+from casebench.setup.team_question import TeamServer, ask, cloud_block, team_server_addition
 from casebench.setup.update import missing_from_models, model_additions, route_additions
 
 CAPTURE_PORT = 7463
+CLOUD_KEY = CloudConfig.model_fields["key_env"].default
 HEADER = LINE + (
     "# Written by casebench init. It holds no secrets: API keys are read from the\n"
     "# environment variables named here, or from the .env files `keys:` names for them,\n"
@@ -134,12 +137,22 @@ def _same_family(judge: dict[str, Any], found: Scan, catalog: dict[str, Any]) ->
     )
 
 
-def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: bool | None) -> None:
+def _update(
+    config_path: Path,
+    found: Scan,
+    catalog_path: Path | None,
+    routes: bool | None,
+    team_server: str | None,
+    yes: bool,
+) -> None:
     """Only what this version adds and the config lacks, offered and then written; every
-    setting already there stays as written (decision 0042)."""
+    setting already there stays as written (decision 0042). `--team-server` names the
+    server lawyers review on (decision 0064)."""
     config = load_config(config_path)
     data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     additions = [] if routes is False else route_additions(data, config, found)
+    if team_server is not None:
+        additions += team_server_addition(data, ask(team_server).url or "")
     if missing_from_models(data):
         try:
             additions += model_additions(data, model_catalog.load(catalog_path))
@@ -158,7 +171,7 @@ def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: b
     for addition in additions:
         screen.line(f"add {addition.said}")
     asked = f"Add these to {config_path}? Its settings stay; comments other than its header do not"
-    if routes is None and not confirm(asked):
+    if not yes and routes is None and not confirm(asked):
         raise click.Abort()
     for addition in additions:
         addition.apply(data)
@@ -167,7 +180,34 @@ def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: b
     )
     load_config(config_path)
     write_schema(config_path.resolve().parent)
-    screen.outro([f"Updated {config_path}.", "Next: casebench check, where it runs"])
+    cloud = data.get("cloud") or {}
+    screen.outro(
+        [f"Updated {config_path}.", "Next: casebench check, where it runs"]
+        + (
+            _team_lines(TeamServer(url=cloud.get("url")), cloud.get("key_env"))
+            if team_server
+            else []
+        )
+    )
+
+
+def _team_lines(team: TeamServer, key_env: str | None = None) -> list[str]:
+    """What follows the answer about a team server: the key to set, the steps to set one up,
+    or how to name one later (decision 0064). No line carries a key."""
+    if team.url:
+        named = key_env or CLOUD_KEY
+        return [
+            f"Lawyers review on {team.url}. Set {named} here, in the environment or a .env "
+            "file, to the engineer key an admin makes on its Team page; casebench.yaml never "
+            "holds it.",
+            "      casebench check                      reaches the team server with the key",
+            "      casebench push                       sends your runs to it",
+            "      casebench invite EMAIL               asks a lawyer to review them",
+        ]
+    if team.set_up:
+        return set_up()
+    later = "Lawyers review on this machine: casebench ui. Name a team server later with "
+    return [later + "casebench init --team-server URL"]
 
 
 def _environment(data: dict[str, Any], config_path: Path) -> None:
@@ -229,6 +269,8 @@ def _review(data: dict[str, Any]) -> list[tuple[str, str]]:
         rows.append(("capture", ", ".join(routes)))
     for name, file in keys.items():
         rows.append(("key", f"{name}, read from {file}"))
+    if "cloud" in data:
+        rows.append(("team server", f"{data['cloud']['url']} · key {CLOUD_KEY}, set by you"))
     return rows
 
 
@@ -294,6 +336,11 @@ def _review(data: dict[str, Any]) -> list[tuple[str, str]]:
     metavar="NAME=FILE",
     help="The .env file a key is read from, relative to the config; give it once for each.",
 )
+@click.option(
+    "--team-server",
+    metavar="URL",
+    help="The team server lawyers review on; its key is read from CASEBENCH_CLOUD_KEY.",
+)
 @click.option("--yes", is_flag=True, help="Write casebench.yaml without asking after the review.")
 @click.option("--details", is_flag=True, help="List everything the code scan found.")
 def init_command(
@@ -316,6 +363,7 @@ def init_command(
     routes: bool | None,
     custom: bool | None,
     key_files: tuple[str, ...],
+    team_server: str | None,
     yes: bool,
     details: bool,
 ) -> None:
@@ -334,7 +382,7 @@ def init_command(
     if updating:
         for name, file in record_keys(config_path, given_files(checkout)).items():
             screen.ok(f"key {name}: read from {file}, by name")
-        _update(config_path, found, catalog_path, routes)
+        _update(config_path, found, catalog_path, routes, team_server, yes)
         return
     choose_all = _lane(custom)
     screen.step("Your agent")
@@ -424,6 +472,11 @@ def init_command(
         screen.line("test cases from many decisions can come later: casebench extract", "dim")
     if found_keys := {**_keys(keys, checkout), **given_files(checkout)}:
         data["keys"] = found_keys
+    if team_server is None and interactive():
+        screen.step("Lawyers' review")
+    team = ask(team_server)
+    if team.url:
+        data["cloud"] = cloud_block(team.url)
     screen.review(f"{config_path.name} will hold", _review(data))
     if not yes and not confirm(f"Write {config_path}?"):
         screen.outro(["Nothing was written."])
@@ -447,14 +500,18 @@ def init_command(
             [
                 f"Wrote {config_path}.",
                 "Next: casebench check, where the corpus, the agent and the judge are reachable",
+                *_team_lines(team),
             ]
         )
         return
     checked = load_config(config_path)
     enforce(checked)
-    # What init already checked live (corpora, judge, extraction models) is not asked again.
+    # What init already checked live (corpora, judge, extraction models) is not asked again,
+    # and the team server waits for the key the user sets after this (decision 0064).
     rest = {name: c for name, c in checked.corpora.items() if name not in sources.checked}
-    checked = checked.model_copy(update={"corpora": rest, "judges": [], "extract": None})
+    checked = checked.model_copy(
+        update={"corpora": rest, "judges": [], "extract": None, "cloud": None}
+    )
     with screen.working("checking your agent answers"):
         checks = live(checked)
     for item in checks:
@@ -473,5 +530,6 @@ def init_command(
                 if failed
                 else []
             ),
+            *_team_lines(team),
         ]
     )
