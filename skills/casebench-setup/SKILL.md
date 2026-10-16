@@ -33,7 +33,7 @@ The guide ends when `casebench check` passes, or when you can say in plain words
 Setup is done; the guide's rule against running `casebench run` covered setup only. A first evaluation needs a suite of cases. Without one, `casebench run` builds it from the corpus: two models read a sample of decisions, and their agreed findings become cases.
 
 1. Run `casebench run` with no `--suite`. It prints what extraction will cost and how many cases it will send, then stops, because nothing answers its question.
-2. Show the user that estimate and ask whether to go on. This is the only other question you ask.
+2. Show the user that estimate and ask whether to go on. Apart from the team server question in step 4, this is the only other question you ask.
 3. When the user agrees, run `casebench run --yes`. It extracts, generates the suite, sends each case to the agent and scores the answers. If it stops partway, run `casebench run` again: it resumes.
 
 When the user would rather start from lawyer-written cases, use `casebench case new --suite first` or the spreadsheet `casebench template lawyer` writes, and then `casebench run --suite first`.
@@ -48,6 +48,14 @@ Then tell the user:
 - the corpus and the judge that are set;
 - what the run found: its error rates, and the first failed answer;
 - that `git status --short` shows only `casebench.yaml` and `.casebench/` as changed.
+
+## 4. Ask about a team server
+
+Lawyers who review on another machine need a team server: the workbench with sign-in, on a machine they can reach. Ask the user once: **will lawyers review on a team server?** Then follow "A team server" at the end of the guide:
+
+- **Not now:** change nothing; lawyers review here with `casebench ui`.
+- **They have one:** ask its address and run `casebench init --team-server URL --no-routes --yes`. Ask the user to set `CASEBENCH_CLOUD_KEY` themselves, to an engineer key an admin makes on the server's Team page; never ask for it or handle it. Run `casebench check`, then `casebench push`, and offer `casebench invite` for each lawyer they name.
+- **They want one:** give them the commands the guide lists for the machine lawyers reach. Install it only if the user asks you to and you have access to that machine.
 
 ## Without a project of its own
 

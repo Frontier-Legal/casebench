@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 
 from casebench.cloud.client import Cloud, CloudError, connect
+from casebench.cloud.server_guide import GUIDE
 from casebench.cloud.sync import pull, push
 from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config
 from casebench.runs.cli import DEFAULT_RUNS
@@ -37,7 +38,9 @@ def _cloud(config_path: Path) -> tuple[CasebenchConfig, Cloud]:
     config = load_config(config_path)
     if config.cloud is None:
         raise click.ClickException(
-            f"{config_path} names no team server; add cloud: url: https://... to it"
+            f"{config_path} names no team server; name one with casebench init --team-server "
+            f"URL. A team server is casebench-ee, installed on a machine lawyers reach; your "
+            f"machine needs only casebench. {GUIDE} says how to run it"
         )
     try:
         return config, Cloud(connect(config.cloud))
