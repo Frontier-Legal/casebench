@@ -8,6 +8,8 @@ import click
 import httpx2
 import yaml
 
+from casebench.capture.config import routes_for
+from casebench.capture.proxy.routes import environment
 from casebench.config import DEFAULT_CONFIG, ConfigError, load_config
 from casebench.corpus.binding import CorpusConfig
 from casebench.key_record import record_keys
@@ -17,6 +19,7 @@ from casebench.setup import screen
 from casebench.setup.advice import advice
 from casebench.setup.catalog import families, prices
 from casebench.setup.checks import Status, live, offline
+from casebench.setup.config_schema import LINE, SCHEMA_FILE, write_schema
 from casebench.setup.corpus_question import corpus_for_init
 from casebench.setup.judge_question import ask_model
 from casebench.setup.key_question import KeyFound, given_files, given_keys, preset
@@ -27,7 +30,8 @@ from casebench.setup.summary import details as scan_details
 from casebench.setup.summary import summary
 from casebench.setup.update import missing_from_models, model_additions, route_additions
 
-HEADER = (
+CAPTURE_PORT = 7463
+HEADER = LINE + (
     "# Written by casebench init. It holds no secrets: API keys are read from the\n"
     "# environment variables named here, or from the .env files `keys:` names for them,\n"
     "# so this file can be committed and deployed.\n"
@@ -144,6 +148,9 @@ def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: b
     for line in advice(config):
         if line.startswith("corpus"):
             screen.line(f"could use {line}", "yellow")
+    if config_path.read_text(encoding="utf-8").startswith(LINE):
+        # The schema an editor reads is this version's (decision 0061).
+        write_schema(config_path.resolve().parent)
     if not additions:
         screen.outro([f"{config_path} has everything this version adds; nothing to change"])
         return
@@ -159,7 +166,23 @@ def _update(config_path: Path, found: Scan, catalog_path: Path | None, routes: b
         HEADER + yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
     load_config(config_path)
+    write_schema(config_path.resolve().parent)
     screen.outro([f"Updated {config_path}.", "Next: casebench check, where it runs"])
+
+
+def _environment(data: dict[str, Any], config_path: Path) -> None:
+    """The variables that point the agent at the proxy: printed for an agent that is already
+    running, and set by Casebench for one it starts (decision 0061)."""
+    if (data.get("target") or {}).get("type") != "http":
+        screen.line("Casebench points your agent at its recorder itself when it starts it", "dim")
+        return
+    capture = load_config(config_path).capture
+    if capture is None or not capture.port:
+        return
+    screen.step("Your agent's environment")
+    screen.line("set these where your agent runs, so its calls are recorded:")
+    for name, value in environment(routes_for(capture), capture.port).items():
+        click.echo(f"{name}={value}")
 
 
 def _options(pairs: tuple[str, ...]) -> dict[str, Any]:
@@ -329,7 +352,11 @@ def init_command(
         accept = routes if routes is not None or choose_all else True
         chosen_routes = _routes(found, sources.corpora, accept)
         if chosen_routes:
-            data["capture"] = {"routes": chosen_routes}
+            capture: dict[str, Any] = {"routes": chosen_routes}
+            data["capture"] = capture
+            if data["target"].get("type") == "http":
+                # An agent that is already running reaches the proxy at a port it knows.
+                capture["port"] = CAPTURE_PORT
     catalog: dict[str, Any] | None = None
 
     def listed() -> dict[str, Any]:
@@ -412,7 +439,9 @@ def init_command(
     if problems:
         config_path.unlink()
         raise click.ClickException("; ".join(p.line() for p in problems))
-    screen.ok(f"wrote {config_path}")
+    write_schema(checkout)
+    screen.ok(f"wrote {config_path}, checked by editors against {SCHEMA_FILE}")
+    _environment(data, config_path)
     if no_live:
         screen.outro(
             [

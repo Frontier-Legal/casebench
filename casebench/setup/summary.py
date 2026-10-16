@@ -4,9 +4,12 @@ import os
 from collections import Counter
 from pathlib import Path
 
+from packaging.utils import canonicalize_name
+
 from casebench import envfiles
+from casebench.capture.searches import SEARCH_APIS
 from casebench.setup.scan import Scan, Source
-from casebench.setup.sdks import detect
+from casebench.setup.sdks import detect, packages
 
 
 def _where_key(name: str, root: Path, files: list[Path]) -> str:
@@ -29,11 +32,28 @@ def sdks(root: Path) -> tuple[str, str]:
     )
 
 
+def stores(root: Path) -> tuple[str, str] | None:
+    """The search stores the dependency files name whose searches the proxy reads (0061)."""
+    named = packages(root)
+    found = [api for api in SEARCH_APIS if canonicalize_name(api.package) in named]
+    if not found:
+        return None
+    return (
+        "search",
+        " · ".join(
+            f"{api.name} ({api.package}), its searches recorded as retrievals" for api in found
+        ),
+    )
+
+
 def summary(found: Scan, root: Path, entry: str | None = None) -> list[tuple[str, str]]:
     """The functions Casebench could call as the agent, or the one given, the model clients
     and names, and where their keys are. Nothing is suggested from names: a function is
     listed because a case's inputs fit its signature and it reaches a model call (0043)."""
     rows = [sdks(root)]
+    searched = stores(root)
+    if searched is not None:
+        rows.append(searched)
     if entry is not None:
         rows.append(("agent", f"{entry}, as given; {len(found.entries)} could be called"))
     elif len(found.entries) == 1:

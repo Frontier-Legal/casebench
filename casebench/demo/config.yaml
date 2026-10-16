@@ -1,0 +1,25 @@
+# The demo's config; `casebench demo` sets the corpus's path to its own copy.
+target:
+  type: python
+  entry: casebench.demo.agent:answer
+corpus:
+  connector: folder
+  options:
+    path: corpus
+# A judge no question reaches: every reply is in the run's memo, and a missed one fails on
+# this machine instead of calling a model.
+judge:
+  provider: anthropic
+  model: demo-judge
+  options:
+    base_url: http://127.0.0.1:9
+    family: demo
+    max_tokens: 2048
+  price: {input: 0, output: 0}
+# The agent calls no model; it is named so the run checks the judge's family against it.
+agent_models:
+  - model: recorded-answers
+    family: echo
+    price: {input: 0, output: 0}
+network:
+  allow: []

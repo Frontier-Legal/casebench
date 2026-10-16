@@ -50,9 +50,10 @@ Also create `.casebench/.gitignore` containing exactly:
 *
 !.gitignore
 !target.py
+!casebench.schema.json
 ```
 
-This keeps runs and caches out of git and keeps the adapter in it.
+This keeps runs and caches out of git, and keeps the adapter and the schema an editor checks `casebench.yaml` against in it.
 
 ## 3. Locate what Casebench reads itself
 
@@ -156,4 +157,4 @@ Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Th
 - the corpus you connected;
 - each host under `network: allow:`, and where in the code the agent calls it;
 - the result of `casebench check`;
-- the next step: a lawyer writes a first case with `casebench case new --suite first`, or many in the spreadsheet `casebench template lawyer` writes, which `casebench import cases-qa.xlsx --suite first --by NAME` adds; then `casebench run --suite first` asks the agent and grades it.
+- the next step: `casebench run` builds a first suite from the corpus, after it shows what that costs and the user agrees, then asks the agent and grades it; or a lawyer writes a first case with `casebench case new --suite first`, or many in the spreadsheet `casebench template lawyer` writes, which `casebench import cases-qa.xlsx --suite first --by NAME` adds, and `casebench run --suite first` asks the agent and grades it. `casebench ui` then opens the results.

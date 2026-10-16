@@ -16,12 +16,13 @@ from casebench.metrics.loading import MetricNeeds
 from casebench.perimeter import enforce
 from casebench.report import render
 from casebench.report.errors import error_rates
+from casebench.runs import first
 from casebench.runs.commit import current_commit
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
-from casebench.runs.scoring import prepare, score
+from casebench.runs.scoring import Scored, prepare, score
 from casebench.suites.freeze import load
 from casebench.suites.qualify import as_qualified
 from casebench.targets.interface import TargetDidNotStart
@@ -65,8 +66,8 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
 @click.option(
     "--suite",
     "suite_dir",
-    required=True,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help=f"The frozen suite; without it, {first.FIRST}, built on the first run (decision 0061).",
 )
 @click.option(
     "--config",
@@ -99,8 +100,26 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--commit",
     help="The commit the agent's code is at; else GITHUB_SHA, else the folder's checkout.",
 )
+@click.option(
+    "--sample",
+    type=click.IntRange(min=1),
+    default=20,
+    show_default=True,
+    help="With no suite yet: how many decisions the first run reads.",
+)
+@click.option(
+    "--cases",
+    "case_count",
+    type=click.IntRange(min=1),
+    default=10,
+    show_default=True,
+    help="With no suite yet: how many cases the first run makes.",
+)
+@click.option("--yes", is_flag=True, help="With no suite yet: build it without asking.")
+@click.pass_context
 def run(
-    suite_dir: Path,
+    ctx: click.Context,
+    suite_dir: Path | None,
     config_path: Path,
     python: str | None,
     max_concurrency: int | None,
@@ -109,9 +128,26 @@ def run(
     no_capture: bool,
     dry_run: bool,
     commit: str | None,
+    sample: int,
+    case_count: int,
+    yes: bool,
 ) -> None:
-    """Send every case of a frozen suite to the target, store each result and score the run."""
+    """Send every case of a frozen suite to the target, store each result and score the run.
+    With no --suite, the first run builds one from the corpus, and a later run resumes it."""
     config = _config(config_path, python)
+    if suite_dir is None:
+        suite_dir = first.FIRST
+        if not first.is_built(suite_dir) and not dry_run:
+            first.build(ctx, config, config_path, suite_dir, sample, case_count, yes)
+        if not first.is_built(suite_dir):
+            raise click.ClickException(f"no suite at {suite_dir}; run without --dry-run first")
+        if run_id is None:
+            stopped = load(suite_dir)[0]
+            run_id = first.unfinished(
+                runs_dir, stopped.suite_id, stopped.content_hash, stopped.case_count
+            )
+            if run_id is not None:
+                click.echo(f"resuming run {run_id}, which stopped before every case was answered")
     manifest, cases = load(suite_dir)
     cases = as_qualified(cases, list(config.corpora))
     if dry_run:
@@ -168,6 +204,11 @@ def run(
         concurrency,
         on_scored=progress.scored_one if progress else None,
     )
+    show_scored(log, scored, manifest.suite_id, runs_dir)
+
+
+def show_scored(log: RunLog, scored: Scored, suite_id: str, runs_dir: Path) -> None:
+    """What `casebench run` prints once a run is scored, and where to open it."""
     click.echo(render.suite_line(log.info.suite_id, log.info.suite_hash))
     for line in render.lines(scored.tables, scored.scores, scored.funnel):
         click.echo(line)
@@ -175,7 +216,7 @@ def run(
         click.echo(line)
     for line in render.error_lines(scored.errors, log.folder.name):
         click.echo(line)
-    for line in render.error_rate_lines(error_rates(scored.scores, manifest.suite_id)):
+    for line in render.error_rate_lines(error_rates(scored.scores, suite_id)):
         click.echo(line)
     for line in render.spend_lines(scored.spend):
         click.echo(line)
@@ -184,3 +225,4 @@ def run(
     for line in render.warning_lines(scored.warnings):
         click.echo(line, err=True)
     click.echo(str(scored.report))
+    click.echo(f"open it in the workbench: casebench ui --runs-dir {runs_dir}")
