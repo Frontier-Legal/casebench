@@ -1,12 +1,23 @@
 # casebench-ee
 
-Casebench's team server: the workbench with sign-in, five roles, an audit log and admin pages, from one container image ([decision 0058](../docs/decisions/0058-the-team-server.md)).
+Casebench's team server: the workbench with sign-in, five roles, an audit log and admin pages ([decision 0058](https://github.com/Frontier-Legal/casebench/blob/main/docs/decisions/0058-the-team-server.md)).
 
-Licensed under the [Elastic License 2.0](LICENSE). Everything outside `ee/` is Apache-2.0.
+Licensed under the [Elastic License 2.0](https://github.com/Frontier-Legal/casebench/blob/main/ee/LICENSE). Everything outside `ee/` is Apache-2.0.
 
 ## Run it
 
-Build the image from the repository's root, and run it with Postgres and a folder holding your runs, suites and `casebench.yaml`:
+Install it from PyPI, with the `casebench` release of the same version, and start it in a folder holding your runs, suites and `casebench.yaml`:
+
+```bash
+pip install casebench-ee
+CASEBENCH_DATABASE_URL=postgresql://casebench:secret@db.internal/casebench \
+CASEBENCH_PUBLIC_URL=https://casebench.firm.example \
+casebench-team serve --host 0.0.0.0
+```
+
+Without `CASEBENCH_DATABASE_URL` it keeps the team in `.casebench/team.db`, SQLite, which is enough for a trial.
+
+Or build the container image from the repository's root, and run it with Postgres and a folder holding your runs, suites and `casebench.yaml`:
 
 ```bash
 docker build -f ee/Dockerfile -t casebench-team .
@@ -38,7 +49,7 @@ Register the Google or Microsoft client with `<public URL>/auth/google/callback`
 
 ## From an engineer's machine
 
-Create an API key with the engineer role on the Team page, set it as `CASEBENCH_CLOUD_KEY` on the engineer's machine, and name the server in `casebench.yaml` under `cloud: url:`. Then `casebench push`, `casebench invite` and `casebench pull` work against it ([decision 0059](../docs/decisions/0059-push-invite-pull.md)).
+Create an API key with the engineer role on the Team page, set it as `CASEBENCH_CLOUD_KEY` on the engineer's machine, and name the server in `casebench.yaml` under `cloud: url:`. Then `casebench push`, `casebench invite` and `casebench pull` work against it ([decision 0059](https://github.com/Frontier-Legal/casebench/blob/main/docs/decisions/0059-push-invite-pull.md)).
 
 ## Develop
 

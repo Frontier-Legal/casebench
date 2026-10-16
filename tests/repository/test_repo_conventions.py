@@ -3,6 +3,7 @@
 import re
 import subprocess
 import sys
+import tomllib
 
 import pytest
 
@@ -60,8 +61,19 @@ def test_a_release_is_a_tag():
     assert any("release-please-action" in action for action in uses(jobs["release-please"]))
     assert jobs["build"]["needs"] == "release-please"
     assert jobs["publish"]["needs"] == "build"
-    assert "uv build" in run_lines(jobs["build"])
+    builds = run_lines(jobs["build"]).splitlines()
+    assert {"uv build --package casebench", "uv build --package casebench-ee"} <= set(builds)
     assert any("pypa/gh-action-pypi-publish" in action for action in uses(jobs["publish"]))
+
+    # The team server is released with the core, at its version, and requires exactly it.
+    core = tomllib.loads(text("pyproject.toml"))["project"]
+    team = tomllib.loads(text("ee/pyproject.toml"))["project"]
+    assert team["version"] == core["version"]
+    assert f"casebench=={core['version']}" in team["dependencies"]
+    bumped = {extra["path"] for extra in package["extra-files"]}
+    assert {"ee/pyproject.toml", "uv.lock"} <= bumped
+    marked = [line for line in text("ee/pyproject.toml").splitlines() if core["version"] in line]
+    assert marked and all("x-release-please-version" in line for line in marked)
 
     # Only the publish job may mint an OIDC token for Trusted Publishing.
     for name, job in jobs.items():
