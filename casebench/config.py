@@ -1,5 +1,6 @@
 """Read casebench.yaml."""
 
+import copy
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -124,6 +125,18 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
         raise ConfigError(f"{path} does not exist; run casebench init or pass --config")
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     base = path.resolve().parent
+    config = config_from(data, base, str(path))
+    # Keys the team keeps in .env files are read by name, for every command (decision 0043).
+    envfiles.load(config.keys, base)
+    return config
+
+
+def config_from(data: Any, base: Path, where: str) -> CasebenchConfig:
+    """The settings as written in a file in `base`, validated as every command reads them;
+    `where` names the file in the error."""
+    if not isinstance(data, dict):
+        raise ConfigError(f"{where}: the file must hold settings by name, such as `judge:`")
+    data = copy.deepcopy(data)
     target = data.get("target") or {}
     if isinstance(target.get("entry"), str):
         target["entry"] = relative_to(base, target["entry"])
@@ -134,7 +147,7 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
         if isinstance(function, dict) and isinstance(function.get("function"), str):
             function["function"] = relative_to(base, function["function"])
     try:
-        config = CasebenchConfig.model_validate(data)
+        return CasebenchConfig.model_validate(data)
     except ValidationError as error:
         problems = "; ".join(
             ".".join(str(part) for part in e["loc"]) + ": " + e["msg"].removeprefix("Value error, ")
@@ -142,10 +155,7 @@ def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
             else e["msg"].removeprefix("Value error, ")
             for e in error.errors()
         )
-        raise ConfigError(f"{path}: {problems}") from error
-    # Keys the team keeps in .env files are read by name, for every command (decision 0043).
-    envfiles.load(config.keys, base)
-    return config
+        raise ConfigError(f"{where}: {problems}") from error
 
 
 def target_of(config: CasebenchConfig) -> dict[str, Any]:

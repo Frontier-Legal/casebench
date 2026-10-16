@@ -64,6 +64,20 @@ def offer(plugin_name: str, provider: dict[str, Any], model: dict[str, Any]) -> 
     return Serving(plugin_name, options, missing, tuple(getattr(plugin, "packages", ())))
 
 
+def model_block(plugin: str, model: dict[str, Any], options: dict[str, Any]) -> dict[str, Any]:
+    """The config block for a catalog model served by a plugin, with the options it takes."""
+    block: dict[str, Any] = {"provider": plugin, "model": model["id"], "options": options}
+    # A matching call is split only when it would not fit this window (decision 0037).
+    window = (model.get("limit") or {}).get("context")
+    if window:
+        block["context_window"] = window
+    # So a run can say what it cost; without a price it counts tokens only (decision 0038).
+    cost = model.get("cost") or {}
+    if cost.get("input") is not None and cost.get("output") is not None:
+        block["price"] = {"input": cost["input"], "output": cost["output"]}
+    return block
+
+
 def speakers(provider: dict[str, Any]) -> list[str]:
     """The installed plugins that name this entry's API as theirs."""
     kind = kind_named("provider")

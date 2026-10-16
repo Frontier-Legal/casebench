@@ -5,7 +5,7 @@ from typing import Any
 import click
 
 from casebench import keys
-from casebench.setup.catalog import installed, offer, plugins, speakers
+from casebench.setup.catalog import installed, model_block, offer, plugins, speakers
 from casebench.setup.picker import pick
 
 ANOTHER = "\0another"
@@ -56,13 +56,4 @@ def choose(
             notes.append(f"it uses this project's {package} and the credentials it finds")
         else:
             notes.append(f"{package} is not installed here; add it to the project first")
-    block: dict[str, Any] = {"provider": plugin, "model": model_id, "options": options}
-    # A matching call is split only when it would not fit this window (decision 0037).
-    window = (model.get("limit") or {}).get("context")
-    if window:
-        block["context_window"] = window
-    # So a run can say what it cost; without a price it counts tokens only (decision 0038).
-    cost = model.get("cost") or {}
-    if cost.get("input") is not None and cost.get("output") is not None:
-        block["price"] = {"input": cost["input"], "output": cost["output"]}
-    return block, notes
+    return model_block(plugin, model, options), notes

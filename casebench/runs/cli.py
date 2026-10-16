@@ -103,7 +103,7 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
 @click.option(
     "--sample",
     type=click.IntRange(min=1),
-    default=20,
+    default=first.SAMPLE,
     show_default=True,
     help="With no suite yet: how many decisions the first run reads.",
 )
@@ -111,7 +111,7 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--cases",
     "case_count",
     type=click.IntRange(min=1),
-    default=10,
+    default=first.CASES,
     show_default=True,
     help="With no suite yet: how many cases the first run makes.",
 )

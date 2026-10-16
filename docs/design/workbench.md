@@ -38,7 +38,9 @@
 | Judge agreement | engineer, lead lawyer | human vs judge per criterion and Cohen's κ; overruled verdicts become calibration data |
 | Harness view | engineer | per case per run, a waterfall: each model call and tool call a bar with model, latency, input and output tokens and cost; a table per step and per model; the same case diffed across two runs; the authority funnel ([harness-eval.md](harness-eval.md)); time no span accounts for shown as a gap; cost an estimate at the configured prices; hidden from reviewer roles ([decision 0056](../decisions/0056-the-harness-view.md)) |
 | Report | lawyer lead | per run, the rates of fabricated citations, unsupported claims, wrong outcomes and wrong statutes, each opening its failing answers beside their evidence; a report for partners, exported per run as PDF, DOCX or one HTML file that opens with no server: metrics by task and practice area with intervals, the error rates, worked examples beside their evidence, who approved the golden data ([decision 0054](../decisions/0054-compare-blind-and-a-report-for-partners.md)) |
-| Settings | admin | targets, corpus, judge model and key, users and roles, spend limits |
+| Settings | engineer, on their own machine | what each part of the setup is for and costs: the agent and its models, the corpora, the judges and extraction models with their family, output limit, price and key; spend today and per recent run; every section of `casebench.yaml` edited and saved back to it, or the whole file; keys set into a git-ignored file and never shown; `casebench check` on request ([decision 0063](../decisions/0063-the-workbench-sets-up-and-runs.md)) |
+| Run | engineer, on their own machine | choose a suite or build the first one, read what the run will send and cost, start `casebench run`, follow it as it answers and scores, stop it, score what it missed, and open its report ([decision 0063](../decisions/0063-the-workbench-sets-up-and-runs.md)) |
+| Team admin | admin, on a team server | people and roles, API keys, spend limits, the audit log ([decision 0058](../decisions/0058-the-team-server.md)) |
 
 ## Interaction rules
 
