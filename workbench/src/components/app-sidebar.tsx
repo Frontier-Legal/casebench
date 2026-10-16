@@ -12,7 +12,9 @@ import {
   KeyboardIcon,
   LogOutIcon,
   MessageSquareTextIcon,
+  PlayIcon,
   ScaleIcon,
+  SettingsIcon,
 } from "lucide-react"
 
 import { Status } from "@/components/section"
@@ -48,7 +50,15 @@ import type { Me, QueueItem, View } from "@/lib/api"
 
 type Filter = "all" | "answer" | "approve"
 // A team build adds its own pages, named extra:<id> (decision 0058).
-export type Page = "queue" | "golden" | "try" | "compare" | "reports" | `extra:${string}`
+export type Page =
+  | "queue"
+  | "golden"
+  | "try"
+  | "compare"
+  | "reports"
+  | "run"
+  | "settings"
+  | `extra:${string}`
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -142,6 +152,20 @@ export function AppSidebar({
                   <ChartColumnIcon /> Reports
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {me.setup && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive={page === "run"} onClick={() => onPage("run")}>
+                      <PlayIcon /> Run
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive={page === "settings"} onClick={() => onPage("settings")}>
+                      <SettingsIcon /> Settings
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
               {extension.pages
                 .filter((extra) => me.can?.includes(extra.needs) ?? false)
                 .map((extra) => (

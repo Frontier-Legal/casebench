@@ -39,6 +39,8 @@ A tool Casebench cannot call, such as a research product used through its web pa
 
 `casebench ui` opens the review queue on this machine. Lawyers confirm or overrule the judge on each criterion of an answer, read every citation's source passage, and approve, edit or reject the facts of cases drawn from court decisions. Their verdicts replace the judge's in the report and in the gate. `casebench ui --role reviewer` shows only legal text, citations and passages.
 
+On the engineer's own machine the workbench also sets Casebench up and runs it. Settings shows what each part is for and what it costs: the agent and its models, the corpus, each judge and extraction model with its family, output limit, price and key, what trying questions spent today, and what each recent run cost. Every setting there is editable and saved back to `casebench.yaml`, which the command line and CI read too. A key typed there goes to a `.env` file git ignores and is never shown again. Run shows what a run will send and cost before anything is sent, then starts `casebench run` and follows it until its report opens.
+
 Lawyers also keep the answer key there. Every change to a case carries its author, the time and the reason, and a team that wants two eyes on each change can have it wait for a second editor's approval. A lawyer can try a question on the team's agent, read the answer with its citations checked, and keep it as a case. What trying questions may spend each day is set in `casebench.yaml`, and nothing is sent without it:
 
 ```yaml

@@ -17,6 +17,137 @@ export interface Me {
   role?: string
   /** What the caller may do: read, review, compare, try, edit, engineer, admin. */
   can?: string[]
+  /** An engineer at a workbench on their own machine: settings and runs are theirs (0063). */
+  setup?: boolean
+}
+
+// The Settings page (decision 0063).
+
+export interface ModelView {
+  role: string
+  used_for: string
+  provider: string
+  model: string
+  family: string | null
+  max_tokens: number | null
+  context_window: number | null
+  price_input: number | null
+  price_output: number | null
+  settings: Record<string, unknown>
+  key: string | null
+  base_url: string | null
+}
+
+export interface KeyView {
+  name: string
+  /** Whether a value is found, never what it is. */
+  where: "shell" | "file" | "missing"
+  file: string | null
+  used_by: string[]
+}
+
+export interface RunSpend {
+  run_id: string
+  suite_id: string
+  scored: boolean
+  agent: number | null
+  judge: number | null
+  total: number | null
+  unpriced: string[]
+}
+
+export interface Plugins {
+  targets: string[]
+  connectors: string[]
+  providers: string[]
+}
+
+export type Sections = Record<string, unknown>
+
+export interface SettingsView {
+  file: string | null
+  exists: boolean
+  editable: boolean
+  problem: string | null
+  has_comments: boolean
+  sections: Sections
+  text: string
+  models: ModelView[]
+  keys: KeyView[]
+  budget: Budget | null
+  runs: RunSpend[]
+  plugins: Plugins
+}
+
+export interface CheckView {
+  part: string
+  status: string
+  passed: boolean
+  reason: string
+  next: string
+}
+
+export interface CatalogProvider {
+  id: string
+  name: string
+  models: number
+}
+
+export interface CatalogModel {
+  id: string
+  name: string
+  family: string | null
+  price_input: number | null
+  price_output: number | null
+  context_window: number | null
+  max_output: number | null
+}
+
+export interface Picked {
+  block: Record<string, unknown> | null
+  missing: string[]
+  plugins: string[]
+}
+
+// The Run page (decision 0063).
+
+export interface SuiteChoice {
+  suite_id: string
+  folder: string
+  cases: number
+  first: boolean
+}
+
+export interface RunPlan {
+  lines: string[]
+  can_start: boolean
+  why_not: string | null
+}
+
+export interface RunAsked {
+  suite_id: string | null
+  sample?: number
+  cases?: number
+  /** A run to resume: only what it misses is answered and scored. */
+  run_id?: string | null
+}
+
+export interface JobView {
+  id: string
+  title: string
+  suite_id: string | null
+  state: "running" | "finished" | "failed" | "stopped"
+  started_at: string
+  finished_at: string | null
+  exit_code: number | null
+  run_id: string | null
+  answered: number
+  scored: number
+  total: number | null
+  /** Results the judge could not score this time. */
+  unscored: number
+  line_count: number
+  lines: string[]
 }
 
 export interface QueueItem {
@@ -527,4 +658,21 @@ export const api = {
       "GET",
       `/api/documents/${encodeURIComponent(id)}${quote ? `?quote=${encodeURIComponent(quote)}` : ""}`,
     ),
+  settings: () => call<SettingsView>("GET", "/api/settings"),
+  saveSection: (section: string, value: unknown) =>
+    call<SettingsView>("PUT", `/api/settings/sections/${encodeURIComponent(section)}`, { value }),
+  saveFile: (text: string) => call<SettingsView>("PUT", "/api/settings/file", { text }),
+  setKey: (name: string, value: string) =>
+    call<SettingsView>("PUT", `/api/settings/keys/${encodeURIComponent(name)}`, { value }),
+  check: () => call<CheckView[]>("POST", "/api/settings/check"),
+  catalog: () => call<CatalogProvider[]>("GET", "/api/settings/catalog"),
+  catalogModels: (provider: string) =>
+    call<CatalogModel[]>("GET", `/api/settings/catalog/${encodeURIComponent(provider)}`),
+  pickModel: (provider: string, model: string, plugin?: string | null) =>
+    call<Picked>("POST", "/api/settings/catalog/model", { provider, model, plugin: plugin ?? null }),
+  runSuites: () => call<SuiteChoice[]>("GET", "/api/run/suites"),
+  runPlan: (asked: RunAsked) => call<RunPlan>("POST", "/api/run/plan", asked),
+  runStart: (asked: RunAsked) => call<JobView>("POST", "/api/run/start", asked),
+  runCurrent: (since: number) => call<JobView | null>("GET", `/api/run/current?since=${since}`),
+  runStop: (id: string) => call<JobView>("POST", `/api/run/${encodeURIComponent(id)}/stop`),
 }

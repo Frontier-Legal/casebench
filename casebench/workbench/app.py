@@ -13,7 +13,17 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from casebench.config import CasebenchConfig
-from casebench.workbench import comparing, golden, harness, items, reports, trying
+from casebench.corpus.corpora import Corpora
+from casebench.workbench import (
+    comparing,
+    golden,
+    harness,
+    items,
+    reports,
+    run_routes,
+    settings_routes,
+    trying,
+)
 from casebench.workbench.access import (
     ENGINEER,
     PERSON_HEADER,
@@ -38,6 +48,8 @@ from casebench.workbench.items import (
     QueueItem,
     Refused,
 )
+from casebench.workbench.jobs import Jobs
+from casebench.workbench.settings import Settings
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
 
@@ -87,6 +99,11 @@ class Me(BaseModel):
     role_locked: bool = Field(description="The caller may not use the engineering view.")
     role: str = Field(description="viewer, reviewer, editor, engineer or admin (0058).")
     can: list[Can] = Field(default_factory=list)
+    setup: bool = Field(
+        default=False,
+        description="The caller may change settings and start runs here: an engineer at a "
+        "workbench on their own machine (0063).",
+    )
 
 
 class SaveMe(BaseModel):
@@ -175,6 +192,10 @@ def editor_name(request: Request) -> str:
     return _named(request, Can.EDIT)
 
 
+def engineer_name(request: Request) -> str:
+    return _named(request, Can.ENGINEER)
+
+
 # The caller, and the caller's name once they may take an action (decision 0058).
 Who = Annotated[Caller, Depends(caller)]
 Person = Annotated[str, Depends(reader)]
@@ -194,15 +215,31 @@ def create_app(
     access: Access | None = None,
     routers: Sequence[APIRouter] = (),
     limits: Callable[[], trying.Limits] | None = None,
+    config_path: Path | None = None,
+    folder: Path | None = None,
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
     fields, whatever the browser asks for. A team server passes its own `access`, which says
-    who is calling and what they may do, and its own `routers` (decision 0058)."""
+    who is calling and what they may do, and its own `routers` (decision 0058). Locally,
+    `config_path` names the casebench.yaml the Settings page edits, and `folder` is where a run
+    started from the Run page runs (decision 0063)."""
     app = FastAPI(title="Casebench workbench", docs_url=None, redoc_url=None)
     app.add_middleware(Loopback, hosts=hosts)
     access = access or LocalAccess(role)
-    # Whether a change to golden data waits for a second editor (decision 0053).
-    second = bool(config and config.workbench and config.workbench.second_approval)
+
+    def changed(new: CasebenchConfig | None) -> None:
+        """A save on the Settings page takes effect at once."""
+        workspace.corpora = Corpora(new.corpora) if new and new.corpora else None
+        workspace.agent_models = new.agent_models if new else []
+
+    # Settings and runs are an engineer's, on their own machine; a team server's never are.
+    local = isinstance(access, LocalAccess) and config_path is not None
+    settings = Settings(config_path if local else None, config, changed)
+
+    def second() -> bool:
+        """Whether a change to golden data waits for a second editor (decision 0053)."""
+        current = settings.config
+        return bool(current and current.workbench and current.workbench.second_approval)
 
     app.state.access = access
 
@@ -218,6 +255,7 @@ def create_app(
             role_locked=not who.may(Can.ENGINEER),
             role=who.role,
             can=sorted(who.can),
+            setup=local and who.may(Can.ENGINEER),
         )
 
     @app.get("/api/session")
@@ -353,18 +391,19 @@ def create_app(
 
     @app.get("/api/try")
     def try_budget(name: Person) -> trying.Budget:
-        return trying.budget(config, store, name, limits() if limits else None)
+        return trying.budget(settings.config, store, name, limits() if limits else None)
 
     @app.post("/api/try")
     async def try_question(body: Ask, name: Trier) -> trying.Tried:
         """Asks the configured target within the day's limit; refused, nothing is sent."""
+        current = settings.config
         try:
             return await trying.try_question(
                 body.question,
                 name,
-                config,
+                current,
                 store,
-                asker or (trying.ConfiguredAsker(config) if config else None),
+                asker or (trying.ConfiguredAsker(current) if current else None),
                 limits() if limits else None,
             )
         except trying.Refused as refused:
@@ -372,7 +411,7 @@ def create_app(
 
     @app.get("/api/golden")
     def golden_data(name: Person) -> Golden:
-        return golden.golden(workspace, store, second)
+        return golden.golden(workspace, store, second())
 
     @app.get("/api/golden/forms/{task}")
     def blank_form(task: str, name: Person) -> list[Form]:
@@ -392,7 +431,7 @@ def create_app(
     def change_case(suite_id: str, case_id: str, body: SaveCase, name: Editor) -> Proposed:
         try:
             return golden.propose_change(
-                workspace, store, suite_id, case_id, body.fields, body.reason, name, second
+                workspace, store, suite_id, case_id, body.fields, body.reason, name, second()
             )
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
@@ -403,7 +442,7 @@ def create_app(
     def add_case(suite_id: str, body: NewCase, name: Editor) -> Proposed:
         try:
             return golden.create_case(
-                workspace, store, suite_id, body.task, body.fields, name, body.reason, second
+                workspace, store, suite_id, body.task, body.fields, name, body.reason, second()
             )
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
@@ -466,6 +505,11 @@ def create_app(
             highlight=found,
         )
 
+    if local:
+        app.include_router(settings_routes.router(settings, workspace, store, engineer_name))
+        jobs = Jobs()
+        here = folder or Path.cwd()
+        app.include_router(run_routes.router(settings, workspace, jobs, here, engineer_name))
     for router in routers:
         app.include_router(router)
 
