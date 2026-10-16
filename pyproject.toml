@@ -1,6 +1,6 @@
 [project]
 name = "casebench"
-version = "0.2.0"
+version = "0.3.0"
 description = "Measure the legal accuracy of an AI system against court decisions and lawyer-written references."
 readme = "README.md"
 license = "Apache-2.0"

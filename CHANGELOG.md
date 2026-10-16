@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/Frontier-Legal/casebench/compare/v0.2.0...v0.3.0) (2026-10-16)
+
+
+### Features
+
+* a demo with no key, a first run that builds its suite, a setup skill, and answers from a closed tool ([#82](https://github.com/Frontier-Legal/casebench/issues/82)) ([7f1381d](https://github.com/Frontier-Legal/casebench/commit/7f1381df2bface3c43a2df44780c2fb9f1c5205c))
+* **cloud:** casebench push, invite and pull: runs reach lawyers on the team server, and their decisions come back to CI ([#81](https://github.com/Frontier-Legal/casebench/issues/81)) ([93d7dd8](https://github.com/Frontier-Legal/casebench/commit/93d7dd890ee8de2984812138a34846ad165c9ffe))
+* **team:** a seat check before invitations and erasing a team, the two seams a hosted service builds on ([#83](https://github.com/Frontier-Legal/casebench/issues/83)) ([ac7fe18](https://github.com/Frontier-Legal/casebench/commit/ac7fe181aeeb093b0f9d19ea6cfc56a03b4c7ff2))
+* **team:** the team server: sign-in without IT, five roles, an audit log nothing changes, and one image ([#80](https://github.com/Frontier-Legal/casebench/issues/80)) ([7f0c1c5](https://github.com/Frontier-Legal/casebench/commit/7f0c1c5d43886c293815645a8b0f77bb6b9d3c25))
+* **workbench:** every route checks what the caller may do, the event log is append-only, and a team build can add its screens ([#79](https://github.com/Frontier-Legal/casebench/issues/79)) ([afda3f4](https://github.com/Frontier-Legal/casebench/commit/afda3f42f2f5bfb3bd6fa39885a68acedd83f3fc))
+
+
+### Bug Fixes
+
+* **formats:** record the schemas 0.2.0 released, so they never change ([#77](https://github.com/Frontier-Legal/casebench/issues/77)) ([a4b2c22](https://github.com/Frontier-Legal/casebench/commit/a4b2c22a213380b80ffc3ce2c48340025a43ca25))
+
 ## [0.2.0](https://github.com/Frontier-Legal/casebench/compare/v0.1.1...v0.2.0) (2026-10-15)
 
 
