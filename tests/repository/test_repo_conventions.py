@@ -4,8 +4,6 @@ import re
 import subprocess
 import sys
 
-import pytest
-
 from tests.repository.files import (
     ROOT,
     all_workflows,
@@ -76,7 +74,6 @@ def test_versioning_says_what_breaks():
     assert "0.x any minor release may break" in text("README.md")
 
 
-@pytest.mark.xfail(strict=True, reason="one maintainer: a required review would block every merge")
 def test_main_is_protected():
     ruleset = load_json(".github/rulesets/main.json")
     assert ruleset["enforcement"] == "active"
@@ -84,7 +81,9 @@ def test_main_is_protected():
     assert ruleset["conditions"]["ref_name"]["include"] == ["~DEFAULT_BRANCH"]
 
     rules = {rule["type"]: rule.get("parameters", {}) for rule in ruleset["rules"]}
-    assert rules["pull_request"]["required_approving_review_count"] >= 1
+    # Every change goes through a pull request. While there is one maintainer it needs no
+    # approving review, which its author could never give (decision 0011).
+    assert "pull_request" in rules
     required = {
         check["context"] for check in rules["required_status_checks"]["required_status_checks"]
     }
