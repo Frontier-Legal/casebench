@@ -73,4 +73,5 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0057](0057-ee-under-the-elastic-license.md) | `ee/` is under the Elastic License 2.0, and the rest of the repository under Apache-2.0 | accepted |
 | [0058](0058-the-team-server.md) | The team server: the workbench with logins, five roles and an append-only audit log, from one image | accepted |
 | [0059](0059-push-invite-pull.md) | An engineer pushes runs and suites to a team server, invites lawyers, and pulls their decisions back; the server never scores | accepted |
+| [0060](0060-hosting-seams.md) | The hosted service builds on the team server through two seams, a seat check and erasing a team, and the public server needs neither | accepted |
 | [0061](0061-the-first-ten-minutes.md) | The first ten minutes: a demo with no key, a first run that builds its own suite, the search store named by init, a setup skill, and answers from a tool Casebench cannot reach | accepted |

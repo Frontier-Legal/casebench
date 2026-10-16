@@ -7,9 +7,10 @@ from pathlib import Path
 import click
 
 from casebench.config import load_config
+from casebench_ee import hosting
 from casebench_ee.mail import NoMail, Smtp
 from casebench_ee.oidc import GOOGLE, MICROSOFT, Provider
-from casebench_ee.server import build
+from casebench_ee.server import build, database_url
 
 
 def env(name: str) -> str | None:
@@ -45,6 +46,29 @@ def providers() -> dict[str, Provider]:
 @click.group()
 def main() -> None:
     """Casebench's team server (decision 0058)."""
+
+
+@main.command()
+@click.option("--database", envvar="CASEBENCH_DATABASE_URL", required=True)
+@click.option(
+    "--runs-dir", envvar="CASEBENCH_RUNS", type=click.Path(file_okay=False, path_type=Path)
+)
+@click.option("--suites", envvar="CASEBENCH_SUITES", default="")
+@click.option(
+    "--confirm", help="The database's name, typed back: what is erased cannot be restored."
+)
+def erase(database: str, runs_dir: Path | None, suites: str, confirm: str | None) -> None:
+    """Remove everything this team has: its tables, runs and suites (decision 0060)."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine import make_url
+
+    url = make_url(database_url(database))
+    name = url.database or ""
+    if confirm != name:
+        raise click.ClickException(f"to erase it, pass --confirm {name}")
+    folders = ([runs_dir] if runs_dir else []) + [Path(p) for p in suites.split(os.pathsep) if p]
+    removed = hosting.erase(create_engine(url), folders)
+    click.echo(f"erased {len(removed)} tables and {len(folders)} folders' contents of {name}")
 
 
 @main.command()
