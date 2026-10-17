@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/Frontier-Legal/casebench/compare/v0.3.0...v0.4.0) (2026-10-16)
+
+
+### Features
+
+* **setup:** init asks whether lawyers review on a team server and names it, check reaches it with the engineer's key, and push says where a server comes from ([#88](https://github.com/Frontier-Legal/casebench/issues/88)) ([6edb222](https://github.com/Frontier-Legal/casebench/commit/6edb2229d5545dc7a93a0b9f8ef9db40d9948a3e))
+* **workbench:** a Settings page that shows what each part is for and costs and edits every setting, and a Run page that starts and follows casebench run ([#89](https://github.com/Frontier-Legal/casebench/issues/89)) ([65c5012](https://github.com/Frontier-Legal/casebench/commit/65c50120035eaa20aef2b7eb3844e042d4ec53a2))
+
 ## [0.3.0](https://github.com/Frontier-Legal/casebench/compare/v0.2.0...v0.3.0) (2026-10-16)
 
 
