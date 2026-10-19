@@ -23,7 +23,7 @@ Changelog = "https://github.com/Frontier-Legal/casebench/blob/main/CHANGELOG.md"
 casebench-team = "casebench_ee.cli:main"
 
 [build-system]
-requires = ["uv_build>=0.9.8,<0.13"]
+requires = ["uv_build>=0.9.8,<0.14"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
