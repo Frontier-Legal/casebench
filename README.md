@@ -65,6 +65,8 @@ A firm that runs no server can review in a spreadsheet instead: `casebench expor
 
 Engineers open any answer in the engineering view to see its harness. Each model call and tool call is a bar in time order, with its model, duration, tokens and estimated cost, and time no step accounts for is shown as unaccounted. A funnel follows each of the court's authorities to the step that retrieved, kept or read it, and a diff against another run shows which step got slower, used more tokens or disappeared.
 
+History charts every error rate and metric of a suite run by run, with its interval, by practice area, so a suite run every night shows how each measure moved and which runs changed a setting, such as the judge, that makes them not comparable.
+
 To see whether a new version of the agent is better, lawyers compare two runs of one suite in the workbench. They read the two answers to each case as A and B, not knowing which run wrote which, and choose one or call them equal, with a reason. The later run's wins, losses and ties are summed per practice area and marked significant or not; `casebench compare` prints them too.
 
 ## Team server
