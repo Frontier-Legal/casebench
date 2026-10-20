@@ -23,6 +23,15 @@ import { HowItWorks } from "@/components/how-it-works"
 import { Section } from "@/components/section"
 import { TestResult } from "@/components/setup/test-result"
 import { Button } from "@/components/ui/button"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
@@ -55,21 +64,19 @@ function Step({
 }) {
   const mark = MARKS[tone]
   return (
-    <li aria-label={title} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-primary">
-          <Icon className="size-4.5" />
-        </div>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{title}</span>
-            <mark.icon aria-label={mark.label} className={cn("size-4", mark.className)} />
-          </div>
-          <div className="text-sm text-muted-foreground">{children}</div>
-        </div>
-      </div>
-      <div className="shrink-0 sm:pl-4">{action}</div>
-    </li>
+    <Item role="listitem" aria-label={title} variant="outline">
+      <ItemMedia variant="icon">
+        <Icon />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>
+          {title}
+          <mark.icon aria-label={mark.label} className={cn("size-4", mark.className)} />
+        </ItemTitle>
+        <ItemDescription>{children}</ItemDescription>
+      </ItemContent>
+      <ItemActions>{action}</ItemActions>
+    </Item>
   )
 }
 
@@ -125,11 +132,7 @@ export function HomePage({
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-brand-soft via-background to-background p-6 md:p-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-primary/10 blur-3xl"
-        />
+      <section className="rounded-xl border bg-brand-soft p-6 md:p-8">
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="flex max-w-2xl flex-col gap-2">
             <h1 className="font-serif text-3xl font-medium tracking-tight md:text-4xl">Welcome, {first}</h1>
@@ -158,7 +161,7 @@ export function HomePage({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Section title="Your setup" description="What Casebench needs, and what is done.">
-          <ol className="flex flex-col divide-y">
+          <ItemGroup role="list" className="gap-2">
             <Step
               icon={BotIcon}
               title="Your agent"
@@ -229,7 +232,7 @@ export function HomePage({
             >
               Calls the agent, each source and each model once, and says what to fix.
             </Step>
-          </ol>
+          </ItemGroup>
           {checks && (
             <div className="mt-4 flex flex-col gap-2">
               {checks.map((item) => (
@@ -261,19 +264,18 @@ export function HomePage({
                 page: "try" as Page,
               },
             ].map((next) => (
-              <button
-                key={next.title}
-                type="button"
-                onClick={() => onPage(next.page)}
-                className="group flex items-center gap-3 rounded-lg border p-3 text-left transition hover:border-primary/40 hover:bg-accent/40"
-              >
-                <next.icon className="size-4.5 text-primary" />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-sm font-medium">{next.title}</span>
-                  <span className="truncate text-xs text-muted-foreground">{next.text}</span>
-                </span>
-                <ArrowRightIcon className="size-4 text-muted-foreground transition group-hover:translate-x-0.5" />
-              </button>
+              <Item key={next.title} variant="outline" asChild>
+                <button type="button" onClick={() => onPage(next.page)}>
+                  <ItemMedia variant="icon">
+                    <next.icon />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{next.title}</ItemTitle>
+                    <ItemDescription>{next.text}</ItemDescription>
+                  </ItemContent>
+                  <ArrowRightIcon className="size-4 text-muted-foreground" />
+                </button>
+              </Item>
             ))}
           </div>
         </Section>

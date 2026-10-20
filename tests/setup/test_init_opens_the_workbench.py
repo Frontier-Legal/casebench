@@ -114,3 +114,13 @@ def test_a_taken_port_is_not_fought_over():
         assert free_port(busy) != busy
     # Once nothing listens on it, the preferred port is the one used.
     assert free_port(busy) == busy
+
+
+def test_the_workbench_says_how_to_open_it_again(
+    project: Path, served: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+):
+    # Run through uvx, Casebench is not installed, so there is no casebench command.
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    made = CliRunner().invoke(main, ["init", *FLAGS, "--ui"])
+
+    assert "run `uvx casebench ui` in this folder" in made.output

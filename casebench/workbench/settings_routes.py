@@ -16,6 +16,7 @@ from casebench.perimeter import enforce
 from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import Status, live, offline
 from casebench.workbench import keyfile, settings_view
+from casebench.workbench.catalog_cache import CatalogCache
 from casebench.workbench.settings import Refused, Settings
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
@@ -74,10 +75,10 @@ def router(
     workspace: Workspace,
     store: Store,
     engineer: Callable[..., str],
+    catalog: CatalogCache,
 ) -> APIRouter:
     """`engineer` is the dependency that names a caller who may use the engineering view."""
     routes = APIRouter()
-    held: dict[str, dict[str, Any]] = {}
 
     def shown(name: str) -> settings_view.SettingsView:
         return settings_view.view(settings, workspace, store, name)
@@ -146,15 +147,16 @@ def router(
         ]
 
     def entries() -> dict[str, Any]:
-        """The public model catalog, fetched once, when the picker first opens (0032)."""
-        if "catalog" not in held:
-            try:
-                held["catalog"] = model_catalog.load()
-            except httpx2.HTTPError as error:
-                raise HTTPException(
-                    502, f"the model catalog could not be fetched: {error}"
-                ) from None
-        return held["catalog"]
+        """The public model catalog, fetched once and shared with the setup pages (0032)."""
+        try:
+            return catalog.get()
+        except httpx2.HTTPError as error:
+            raise HTTPException(502, f"the model catalog could not be fetched: {error}") from None
+
+    @routes.post("/api/settings/catalog/warm", status_code=202)
+    def warm(name: str = Depends(engineer)) -> None:
+        """A setup page opened: fetch the catalog now, so the picker opens with it (0065)."""
+        catalog.warm()
 
     @routes.get("/api/settings/catalog")
     def providers(name: str = Depends(engineer)) -> list[CatalogProvider]:

@@ -19,9 +19,6 @@ let sent: Sent[]
 
 beforeEach(() => {
   window.localStorage.setItem("casebench.person", "Deniz Kaya")
-  // Radix's select reads pointer capture, which jsdom does not have.
-  Element.prototype.hasPointerCapture ??= () => false
-  Element.prototype.releasePointerCapture ??= () => {}
 })
 afterEach(() => {
   vi.unstubAllGlobals()

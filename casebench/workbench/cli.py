@@ -1,5 +1,6 @@
 """`casebench ui`: the workbench on this machine, with no login (decision 0050)."""
 
+import shutil
 import socket
 import webbrowser
 from pathlib import Path
@@ -15,6 +16,12 @@ from casebench.workbench.store import DEFAULT_DATABASE, Store, url_for
 
 LOOPBACK = "127.0.0.1"
 PORT = 7462
+
+
+def again() -> str:
+    """How this machine starts the workbench: as an installed command, or through uvx, which
+    runs Casebench without installing it."""
+    return "casebench ui" if shutil.which("casebench") else "uvx casebench ui"
 
 
 def free_port(preferred: int = PORT) -> int:
@@ -81,6 +88,7 @@ def ui_command(
     )
     url = f"http://{LOOPBACK}:{port}/"
     click.echo(f"the workbench is at {url}; press Ctrl+C to stop it")
+    click.echo(f"to open it again later, run `{again()}` in this folder")
     if not no_open:
         webbrowser.open(url)
     uvicorn.run(app, host=LOOPBACK, port=port, log_level="warning")

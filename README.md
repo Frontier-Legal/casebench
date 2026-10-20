@@ -35,7 +35,7 @@ A new jurisdiction is a few choices on the workbench's Jurisdictions page and no
 
 A coding agent that reads skills from a folder can take the same steps as a skill: copy [`skills/casebench-setup`](skills/casebench-setup/SKILL.md) into its skills folder and ask it to set up Casebench for this agent and run the first evaluation. The skill follows the guide, then runs the first evaluation and opens the workbench.
 
-Then `casebench run` evaluates the agent. With no suite yet, the first run builds one from your corpus: it says what that costs and waits for a yes, then extracts, generates and runs. Run it again after an interruption and it resumes. `casebench ui` opens the results.
+Then `casebench run` evaluates the agent. With no suite yet, the first run builds one from your corpus: it says what that costs and waits for a yes, then extracts, generates and runs. Run it again after an interruption and it resumes. `casebench ui` opens the results; run through `uvx`, without installing Casebench, that is `uvx casebench ui`.
 
 A tool Casebench cannot call, such as a research product used through its web page, is measured the same way by hand: `casebench export --suite DIR --format csv` writes the questions, someone pastes each into the tool and writes its answer in the sheet, and `casebench import answers.csv --suite DIR` scores the answers as a connected run's are.
 

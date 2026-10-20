@@ -26,3 +26,7 @@ window.ResizeObserver = window.ResizeObserver ?? (NoResize as unknown as typeof 
 if (!("escape" in CSS)) {
   Object.assign(CSS, { escape: (value: string) => value.replace(/["\\]/g, "\\$&") })
 }
+
+// Radix's select reads pointer capture, which jsdom does not have.
+Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false)
+Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {})

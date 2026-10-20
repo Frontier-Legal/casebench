@@ -3,42 +3,26 @@
 import { useState } from "react"
 import { CircleCheckIcon, CircleXIcon, PlugZapIcon, WifiOffIcon } from "lucide-react"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import type { Tested } from "@/lib/api"
 import { message } from "@/lib/use-settings"
-import { cn } from "@/lib/utils"
 
-export function TestResult({ tested, className }: { tested: Tested; className?: string }) {
+export function TestResult({ tested }: { tested: Tested }) {
   const unreachable = tested.status === "not reachable from here"
   const Icon = tested.passed ? CircleCheckIcon : unreachable ? WifiOffIcon : CircleXIcon
   return (
-    <div
-      role="status"
-      className={cn(
-        "flex gap-2.5 rounded-lg border p-3 text-sm",
-        tested.passed
-          ? "border-success/30 bg-success/8"
-          : unreachable
-            ? "border-warning/40 bg-warning/10"
-            : "border-destructive/30 bg-destructive/8",
-        className,
-      )}
-    >
-      <Icon
-        className={cn(
-          "mt-0.5 size-4 shrink-0",
-          tested.passed ? "text-success" : unreachable ? "text-warning" : "text-destructive",
-        )}
-      />
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="font-medium">
-          {tested.passed ? "It works" : unreachable ? "Not reachable from this machine" : "It did not work"}
-        </span>
-        {tested.reason && <span className="break-words text-muted-foreground">{tested.reason}</span>}
-        {tested.next && <span className="break-words">Next: {tested.next}</span>}
-      </div>
-    </div>
+    <Alert variant={tested.passed || unreachable ? "default" : "destructive"}>
+      <Icon />
+      <AlertTitle>
+        {tested.passed ? "It works" : unreachable ? "Not reachable from this machine" : "It did not work"}
+      </AlertTitle>
+      <AlertDescription>
+        {tested.reason && <p className="break-words">{tested.reason}</p>}
+        {tested.next && <p className="break-words">Next: {tested.next}</p>}
+      </AlertDescription>
+    </Alert>
   )
 }
 

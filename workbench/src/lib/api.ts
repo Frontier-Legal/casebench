@@ -692,6 +692,11 @@ export function storeName(name: string | null): void {
   }
 }
 
+function personHeader(): Record<string, string> {
+  const name = storedName()
+  return name ? { "X-Casebench-Person": encodeURIComponent(name) } : {}
+}
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
   const name = storedName()
@@ -805,6 +810,8 @@ export const api = {
     call<SettingsView>("PUT", `/api/settings/keys/${encodeURIComponent(name)}`, { value }),
   check: () => call<CheckView[]>("POST", "/api/settings/check"),
   catalog: () => call<CatalogProvider[]>("GET", "/api/settings/catalog"),
+  /** Asks the server to fetch the model catalog now, so the picker opens with it (0065). */
+  warmCatalog: () => fetch("/api/settings/catalog/warm", { method: "POST", headers: personHeader() }).then(() => undefined),
   catalogModels: (provider: string) =>
     call<CatalogModel[]>("GET", `/api/settings/catalog/${encodeURIComponent(provider)}`),
   pickModel: (provider: string, model: string, plugin?: string | null) =>

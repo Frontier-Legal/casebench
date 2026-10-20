@@ -216,7 +216,9 @@ export function CatalogDialog({
           </DialogDescription>
         </DialogHeader>
         {!providers ? (
-          <Skeleton className="h-9" />
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner /> Loading the model catalog: every provider's models, prices and limits.
+          </p>
         ) : (
           <ChoiceField
             label="Provider"

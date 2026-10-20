@@ -1,7 +1,7 @@
 // The Models page: each model Casebench calls itself, what it is for, and a way to change it,
 // test it and set its key, for a judge, a second judge and the two extraction models (0065).
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { BookOpenTextIcon, GavelIcon, ScanSearchIcon, ScaleIcon } from "lucide-react"
 
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { api } from "@/lib/api"
 import { agentModelsFromCode, message, useSettings, type Settings } from "@/lib/use-settings"
 
 type Extract = { models: ModelBlock[] }
@@ -164,6 +165,10 @@ function ReadFromCode({ settings, again }: { settings: Settings; again: boolean 
 
 export function ModelsPage() {
   const settings = useSettings()
+  // Changing a model picks from the catalog; it is fetched as the page opens.
+  useEffect(() => {
+    api.warmCatalog().catch(() => {})
+  }, [])
   const view = settings.view
   if (!view) {
     return (

@@ -77,6 +77,29 @@ def test_the_agents_models_are_read_from_its_code(fresh: Path, monkeypatch: pyte
     ]
 
 
+def test_the_catalog_is_fetched_once_for_every_setup_page(
+    fresh: Path, monkeypatch: pytest.MonkeyPatch
+):
+    saved = json.loads(CATALOG.read_text(encoding="utf-8"))
+    fetched: list[str] = []
+
+    def load(path: Path | None = None) -> dict:
+        fetched.append("catalog")
+        return saved
+
+    monkeypatch.setattr(model_catalog, "load", load)
+    client = workbench(fresh)
+
+    warmed = client.post("/api/settings/catalog/warm", headers=ME)
+    providers = client.get("/api/settings/catalog", headers=ME)
+    priced = client.get("/api/setup/agent-models", headers=ME)
+
+    assert warmed.status_code == 202
+    assert providers.status_code == 200 and priced.status_code == 200
+    # The guide asks for it as it opens; the picker and the agent's models share that one fetch.
+    assert fetched == ["catalog"]
+
+
 def test_a_jurisdiction_is_added_in_a_few_choices(fresh: Path):
     (fresh / "fr").mkdir()
     (fresh / "fr" / "cass-soc.json").write_text(json.dumps(DECISION), encoding="utf-8")

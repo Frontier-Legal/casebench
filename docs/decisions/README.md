@@ -80,3 +80,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0065](0065-setting-up-in-the-workbench.md) | Setup starts in the workbench: init opens it, a guide walks a first-time user through each part, and jurisdictions and models get their own pages | accepted |
 | [0066](0066-one-shared-cloud.md) | Casebench Cloud is one shared service for every organisation, and the database enforces which organisation a request reaches | accepted |
 | [0067](0067-run-history.md) | Run history: nightly runs from a team's CI land in the cloud's tables, which chart every metric over time | accepted |
+| [0068](0068-stock-components.md) | The workbench is built from shadcn's own components, and charts with shadcn's chart | accepted |

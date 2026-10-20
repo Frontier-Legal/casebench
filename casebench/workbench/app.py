@@ -38,6 +38,7 @@ from casebench.workbench.access import (
     LocalAccess,
     refuse,
 )
+from casebench.workbench.catalog_cache import CatalogCache
 from casebench.workbench.golden import CaseDetail, ChangeItem, Form, Golden, Proposed
 from casebench.workbench.items import (
     AnswerItem,
@@ -532,11 +533,14 @@ def create_app(
         )
 
     if local:
-        app.include_router(settings_routes.router(settings, workspace, store, engineer_name))
+        catalog = CatalogCache()
+        app.include_router(
+            settings_routes.router(settings, workspace, store, engineer_name, catalog)
+        )
         jobs = Jobs()
         here = folder or Path.cwd()
         app.include_router(run_routes.router(settings, workspace, jobs, here, engineer_name))
-        app.include_router(setup_routes.router(settings, here, engineer_name))
+        app.include_router(setup_routes.router(settings, here, engineer_name, catalog))
         app.include_router(source_routes.router(settings, here, engineer_name))
     for router in routers:
         app.include_router(router)

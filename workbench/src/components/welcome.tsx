@@ -71,14 +71,6 @@ export function Welcome({
   return (
     <div className="grid min-h-svh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 p-10 text-primary-foreground lg:flex">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-40 -right-40 size-[32rem] rounded-full bg-white/10 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-48 -left-32 size-[28rem] rounded-full bg-white/8 blur-3xl"
-        />
         <div className="relative">
           <Brand light />
         </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CircleCheckBigIcon, CircleHelpIcon } from "lucide-react"
 
@@ -6,7 +6,6 @@ import { AppSidebar, type Page } from "@/components/app-sidebar"
 import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
 import { Guide } from "@/components/guide/guide"
-import { HistoryPage } from "@/components/history-page"
 import { HomePage } from "@/components/home-page"
 import { JurisdictionsPage } from "@/components/jurisdictions-page"
 import { ModelsPage } from "@/components/models-page"
@@ -58,6 +57,9 @@ import {
 } from "@/lib/api"
 import { useShortcuts } from "@/lib/keys"
 import { plural } from "@/lib/words"
+
+// The chart library loads only when History opens, not with the review queue.
+const HistoryPage = lazy(() => import("@/components/history-page").then((m) => ({ default: m.HistoryPage })))
 
 // An open item's reservation is renewed this often; it lapses after 15 minutes.
 const RENEW_MS = 5 * 60 * 1000
@@ -284,7 +286,11 @@ function Workbench({
   } else if (page === "compare") {
     body = <CompareRuns onHelp={() => setHelp(true)} canPrefer={allows(me, "compare")} />
   } else if (page === "history") {
-    body = <HistoryPage />
+    body = (
+      <Suspense fallback={<Skeleton className="h-96" />}>
+        <HistoryPage />
+      </Suspense>
+    )
   } else if (page === "reports") {
     body = <Reports onOpen={open} />
   } else if (page === "settings" && me.setup) {

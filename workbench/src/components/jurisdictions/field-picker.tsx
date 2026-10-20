@@ -1,12 +1,12 @@
 // One search, its first result's fields picked by a person from their values, then one
 // document fetched and its fields suggested: shared by a document API and an MCP server (0065).
 
-import { useId, useState } from "react"
+import { useState } from "react"
 import { CircleAlertIcon, FileSearchIcon, SearchIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { ChoiceField } from "@/components/settings/fields"
 import { Spinner } from "@/components/ui/spinner"
 import type { Connected, Leaf, Picks } from "@/lib/api"
 import { message } from "@/lib/use-settings"
@@ -25,7 +25,8 @@ const DOCUMENT_FIELDS = [
   { name: "jurisdiction", label: "Jurisdiction" },
   { name: "level", label: "Court level" },
 ]
-const NONE = ""
+// A field a response does not hold; no JSONPath is written so.
+const NONE = "none"
 
 export type Found = { name: string; block: Record<string, unknown> } | null
 
@@ -42,25 +43,18 @@ function FieldPick({
   onChange: (path: string) => void
   hint?: string
 }) {
-  const id = useId()
+  const shown = (text: string) => (text.length > 60 ? `${text.slice(0, 59)}…` : text)
   return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <option value={NONE}>Not in it</option>
-        {choices.map((leaf) => (
-          <option key={leaf.path} value={leaf.path}>
-            {leaf.value.length > 70 ? `${leaf.value.slice(0, 69)}…` : leaf.value} — {leaf.path}
-          </option>
-        ))}
-      </select>
-      {hint && <FieldDescription>{hint}</FieldDescription>}
-    </Field>
+    <ChoiceField
+      label={label}
+      description={hint}
+      value={value || NONE}
+      choices={[
+        { value: NONE, label: "Not in it" },
+        ...choices.map((leaf) => ({ value: leaf.path, label: `${shown(leaf.value)} — ${leaf.path}` })),
+      ]}
+      onChange={(path) => onChange(path === NONE ? "" : path)}
+    />
   )
 }
 
@@ -127,7 +121,7 @@ export function FieldPicker({
                 key={field.name}
                 label={field.label}
                 choices={found.result_choices}
-                value={resultFields[field.name] ?? NONE}
+                value={resultFields[field.name] ?? ""}
                 onChange={(path) => setResultFields({ ...resultFields, [field.name]: path })}
               />
             ))}
@@ -158,7 +152,7 @@ export function FieldPicker({
                 key={field.name}
                 label={field.label}
                 choices={found.document_choices}
-                value={fields[field.name] ?? NONE}
+                value={fields[field.name] ?? ""}
                 hint={found.missing.includes(field.name) ? "Not found yet: checks will name it." : undefined}
                 onChange={(path) => {
                   const next = only({ ...fields, [field.name]: path })
