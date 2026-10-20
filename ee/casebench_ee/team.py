@@ -19,8 +19,20 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from casebench.workbench.access import ADMIN, ROLES
 from casebench.workbench.store import Event, Store
+from casebench.workbench.tenancy import as_organisation, current
 from casebench.workbench.trying import Limits
-from casebench_ee.models import Handshake, Key, Link, Setting, SignedIn, User, aware, now
+from casebench_ee import rls
+from casebench_ee.models import (
+    Handshake,
+    Key,
+    Link,
+    Organisation,
+    Setting,
+    SignedIn,
+    User,
+    aware,
+    now,
+)
 
 SESSION = timedelta(days=14)
 LINK = timedelta(minutes=15)
@@ -51,6 +63,8 @@ class Team:
         self.store = store
         migrate(store.engine)
         self.sessions = sessionmaker(store.engine, expire_on_commit=False)
+        # Each transaction, the workbench's and the team's, is for one organisation (0066).
+        rls.scope(store.engine, self.sessions, store.sessions)
 
     @contextmanager
     def session(self) -> Iterator[Session]:
@@ -59,6 +73,26 @@ class Team:
 
     def log(self, by: str, action: str, subject: str, **fields: Any) -> None:
         self.store.log([Event(by=by, action=action, item=TEAM_ITEM, subject=subject, **fields)])
+
+    # Organisations: the hosted service adds them; a self-hosted server has the one.
+
+    def organisations(self) -> list[Organisation]:
+        """Only the request's own, where Postgres keeps organisations apart."""
+        with self.session() as session:
+            return list(session.scalars(select(Organisation).order_by(Organisation.created_at)))
+
+    def add_organisation(self, name: str) -> Organisation:
+        """Refused where organisations would not be kept apart: on SQLite, or for a database
+        role that skips row-level security (decision 0066)."""
+        if rls.bypassed(self.store.engine):
+            raise TeamError(
+                "this database does not keep organisations apart: use Postgres, connected as "
+                "a role that is not a superuser and has no BYPASSRLS"
+            )
+        made = Organisation(id=secrets.token_hex(8), name=name.strip() or "Organisation")
+        with as_organisation(made.id), self.session() as session:
+            session.add(made)
+        return made
 
     # People.
 
@@ -75,7 +109,8 @@ class Team:
             return session.get(User, user_id)
 
     def by_email(self, email: str) -> User | None:
-        with self.session() as session:
+        """Across organisations: an email names one person on the whole server."""
+        with rls.signing_in(), self.session() as session:
             return session.scalar(select(User).where(User.email == email.strip().lower()))
 
     def add(
@@ -141,22 +176,26 @@ class Team:
     # Sessions.
 
     def start(self, user: User, how: str) -> str:
+        """In the person's organisation, whichever the request came in for."""
         token = secrets.token_urlsafe(32)
-        with self.session() as session:
-            session.add(SignedIn(token=digest(token), user_id=user.id, expires=now() + SESSION))
-        self.seen(user.id)
-        self.log(user.name, "signed in", user.email, after={"with": how})
+        with as_organisation(user.organisation):
+            with self.session() as session:
+                session.add(SignedIn(token=digest(token), user_id=user.id, expires=now() + SESSION))
+            self.seen(user.id)
+            self.log(user.name, "signed in", user.email, after={"with": how})
         return token
 
     def signed_in(self, token: str | None) -> User | None:
         if not token:
             return None
-        with self.session() as session:
+        with rls.signing_in(), self.session() as session:
             found = session.get(SignedIn, digest(token))
             if found is None or aware(found.expires) <= now():
                 return None
             user = session.get(User, found.user_id)
-            return user if user is not None and user.active else None
+            if user is None or not user.active or user.organisation != found.organisation:
+                return None
+            return user
 
     def end(self, token: str | None) -> None:
         if not token:
@@ -175,15 +214,20 @@ class Team:
 
     def link(self, user: User) -> str:
         token = secrets.token_urlsafe(32)
-        with self.session() as session:
+        with as_organisation(user.organisation), self.session() as session:
             session.add(Link(token=digest(token), user_id=user.id, expires=now() + LINK))
         return token
 
     def use_link(self, token: str) -> User | None:
-        """Once, before it expires, by an active person."""
-        with self.session() as session:
+        """Once, before it expires, by an active person; used up in the link's organisation."""
+        with rls.signing_in(), self.session() as session:
             found = session.get(Link, digest(token))
             if found is None or found.used_at is not None or aware(found.expires) <= now():
+                return None
+            organisation = found.organisation
+        with as_organisation(organisation), self.session() as session:
+            found = session.get(Link, digest(token))
+            if found is None or found.used_at is not None:
                 return None
             found.used_at = now()
             user = session.get(User, found.user_id)
@@ -208,7 +252,7 @@ class Team:
     def key(self, token: str | None) -> Key | None:
         if not token or not token.startswith(KEY_PREFIX):
             return None
-        with self.session() as session:
+        with rls.signing_in(), self.session() as session:
             found = session.scalar(select(Key).where(Key.token == digest(token)))
             return found if found is not None and found.revoked_at is None else None
 
@@ -225,7 +269,7 @@ class Team:
 
     def setting(self, name: str) -> Any:
         with self.session() as session:
-            found = session.get(Setting, name)
+            found = session.get(Setting, (current(), name))
             return found.value if found is not None else None
 
     def limits(self) -> Limits:
@@ -235,7 +279,7 @@ class Team:
         before = self.limits()
         with self.session() as session:
             for name, value in ((TEAM_LIMIT, team), (PERSON_LIMIT, person)):
-                session.merge(Setting(name=name, value=value))
+                session.merge(Setting(organisation=current(), name=name, value=value))
         self.log(
             by,
             "changed limits",
@@ -260,7 +304,12 @@ class Team:
 
     def finish(self, state: str, provider: str) -> Handshake | None:
         """Once, within ten minutes, for the provider it began with."""
-        with self.session() as session:
+        with rls.signing_in(), self.session() as session:
+            begun = session.get(Handshake, state)
+            if begun is None:
+                return None
+            organisation = begun.organisation
+        with as_organisation(organisation), self.session() as session:
             found = session.get(Handshake, state)
             if found is None:
                 return None

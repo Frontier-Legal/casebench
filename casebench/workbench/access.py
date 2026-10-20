@@ -11,6 +11,8 @@ from urllib.parse import unquote
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
+from casebench.workbench.tenancy import LOCAL as LOCAL_ORGANISATION
+
 PERSON_HEADER = "X-Casebench-Person"
 
 
@@ -56,6 +58,7 @@ class Caller(BaseModel):
     key: str
     role: str
     can: frozenset[Can] = Field(default_factory=frozenset)
+    organisation: str = Field(default=LOCAL_ORGANISATION, description="Decision 0066.")
 
     def may(self, action: Can) -> bool:
         return action in self.can

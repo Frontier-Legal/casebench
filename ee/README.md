@@ -47,6 +47,10 @@ Register the Google or Microsoft client with `<public URL>/auth/google/callback`
 
 `casebench-team erase --database URL --runs-dir DIR --suites DIR --confirm NAME` removes every table in the team's database, with the audit log, and everything in its run and suite folders. `NAME` is the database's name, typed back. What is erased cannot be restored.
 
+## Organisations
+
+A server keeps each organisation's rows apart in Postgres itself, with row-level security, and each organisation's runs and suites in folders of its own ([decision 0066](../docs/decisions/0066-one-shared-cloud.md)). A self-hosted server has one organisation and needs nothing set. A service serving several adds them with `Team.add_organisation`, and must connect as a Postgres role that is no superuser and has no `BYPASSRLS`; otherwise the server refuses a second organisation. `casebench_ee.hosting.erase_organisation` removes one organisation's rows and folders and leaves the others.
+
 ## From an engineer's machine
 
 Create an API key with the engineer role on the Team page, set it as `CASEBENCH_CLOUD_KEY` on the engineer's machine, and name the server in `casebench.yaml` under `cloud: url:`. Then `casebench push`, `casebench invite` and `casebench pull` work against it ([decision 0059](https://github.com/Frontier-Legal/casebench/blob/main/docs/decisions/0059-push-invite-pull.md)).

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from team_tests.helpers import POSTGRES, fresh_postgres
+from team_tests.helpers import POSTGRES, fresh_postgres, service_postgres
 
 
 @pytest.fixture
@@ -26,4 +26,14 @@ def database(tmp_path: Path) -> Iterator[str]:
         yield f"sqlite:///{tmp_path / 'team.db'}"
         return
     with fresh_postgres() as url:
+        yield url
+
+
+@pytest.fixture
+def service() -> Iterator[str]:
+    """Postgres as the shared service connects to it, keeping organisations apart; skipped
+    where there is none."""
+    if not POSTGRES:
+        pytest.skip("needs Postgres: set CASEBENCH_TEST_POSTGRES to a server's URL")
+    with service_postgres() as url:
         yield url
