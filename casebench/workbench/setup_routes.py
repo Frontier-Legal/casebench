@@ -1,14 +1,15 @@
 """The routes the workbench's setup guide and its Models page call, besides its sources'.
 
-They read the project as `casebench init` reads it, list the jurisdiction codes casebench.yaml
-takes, and test one model alone. Saving goes through the Settings page's sections (decisions
-0063, 0065).
+They read the project as `casebench init` reads it, with the agent's models priced from the
+model catalog, list the jurisdiction codes casebench.yaml takes, and test one model alone.
+Saving goes through the Settings page's sections (decisions 0063, 0065).
 """
 
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import httpx2
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -16,6 +17,7 @@ from casebench import keys, network
 from casebench.config import CasebenchConfig, ConfigError, config_from
 from casebench.core.jurisdiction import COUNTRIES, EU
 from casebench.perimeter import enforce
+from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import SETUP_SAMPLE, live
 from casebench.setup.scan import scan
 from casebench.workbench.settings import Settings
@@ -31,6 +33,14 @@ class ScanView(BaseModel):
     models: list[str] = Field(description="Model names written in the code.")
 
 
+class AgentModel(BaseModel):
+    model: str
+    family: str
+    price: dict[str, float] | None = Field(
+        default=None, description="US dollars per million input and output tokens."
+    )
+
+
 class ModelTry(BaseModel):
     block: dict[str, Any] = Field(description="A judge or extraction model's block.")
 
@@ -43,6 +53,7 @@ def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> AP
     """`folder` is the project the workbench was started in; `engineer` names a caller who may
     use the engineering view."""
     routes = APIRouter()
+    held: dict[str, dict[str, Any]] = {}
 
     def config_of(data: dict[str, Any]) -> CasebenchConfig:
         """A part read as casebench.yaml would read it, its paths relative to the file."""
@@ -72,6 +83,21 @@ def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> AP
             clients=[f"{client.kind} at {client.where}" for client in found.clients],
             models=sorted({model.name for model in found.models}),
         )
+
+    @routes.get("/api/setup/agent-models")
+    def agent_models(name: str = Depends(engineer)) -> list[AgentModel]:
+        """The models the agent's code names, with the family and price the catalog gives
+        them, as `casebench init` writes them (decisions 0047, 0051)."""
+        names = [model.name for model in scan(folder).models]
+        if not names:
+            return []
+        if "catalog" not in held:
+            try:
+                held["catalog"] = model_catalog.load()
+            except httpx2.HTTPError as error:
+                said = f"the model catalog could not be fetched: {error}"
+                raise HTTPException(502, said) from None
+        return [AgentModel(**found) for found in model_catalog.agent_models(held["catalog"], names)]
 
     @routes.get("/api/setup/jurisdictions")
     def jurisdictions(name: str = Depends(engineer)) -> list[str]:

@@ -123,6 +123,13 @@ export interface ScanView {
 
 export type Tested = CheckView
 
+/** A model the agent's code names, with its catalog family and price (0047, 0051). */
+export interface AgentModelRow {
+  model: string
+  family: string
+  price?: { input: number; output: number } | null
+}
+
 export interface Leaf {
   path: string
   value: string
@@ -751,6 +758,7 @@ export const api = {
   pickModel: (provider: string, model: string, plugin?: string | null) =>
     call<Picked>("POST", "/api/settings/catalog/model", { provider, model, plugin: plugin ?? null }),
   scan: () => call<ScanView>("GET", "/api/setup/scan"),
+  agentModels: () => call<AgentModelRow[]>("GET", "/api/setup/agent-models"),
   jurisdictionCodes: () => call<string[]>("GET", "/api/setup/jurisdictions"),
   testSource: (block: Record<string, unknown>, probe?: string | null) =>
     call<Tested>("POST", "/api/setup/sources/test", { block, probe: probe ?? null }),

@@ -2,15 +2,18 @@
 // test it and set its key, for a judge, a second judge and the two extraction models (0065).
 
 import { useState } from "react"
-import { BookOpenTextIcon, GavelIcon, ScaleIcon } from "lucide-react"
+import { toast } from "sonner"
+import { BookOpenTextIcon, GavelIcon, ScanSearchIcon, ScaleIcon } from "lucide-react"
 
 import { Section } from "@/components/section"
 import type { ModelBlock } from "@/components/settings/model-editor"
 import { EmptyRole, ModelCard } from "@/components/setup/model-card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useSettings, type Settings } from "@/lib/use-settings"
+import { agentModelsFromCode, message, useSettings, type Settings } from "@/lib/use-settings"
 
 type Extract = { models: ModelBlock[] }
 
@@ -133,6 +136,32 @@ function ExtractionRoles({ settings }: { settings: Settings }) {
   )
 }
 
+function ReadFromCode({ settings, again }: { settings: Settings; again: boolean }) {
+  const [busy, setBusy] = useState(false)
+  async function read() {
+    setBusy(true)
+    try {
+      const found = await agentModelsFromCode()
+      if (!found.length) {
+        toast.info("No model the catalog knows is named in your agent's code")
+        return
+      }
+      if (await settings.save("agent_models", found)) {
+        toast.success(`${found.length} ${found.length === 1 ? "model" : "models"} read from your code`)
+      }
+    } catch (error) {
+      toast.error(message(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={read} disabled={busy}>
+      {busy ? <Spinner /> : <ScanSearchIcon />} {again ? "Read them again" : "Read them from your code"}
+    </Button>
+  )
+}
+
 export function ModelsPage() {
   const settings = useSettings()
   const view = settings.view
@@ -175,6 +204,7 @@ export function ModelsPage() {
       <Section
         title={(<RoleTitle icon={ScaleIcon}>Your agent's models</RoleTitle>)}
         description="What your agent calls, with the price a run uses to say what it spent. A judge of the same family would favour their answers, so a run warns."
+        action={<ReadFromCode settings={settings} again={agentModels.length > 0} />}
       >
         {agentModels.length ? (
           <Table>
@@ -199,7 +229,8 @@ export function ModelsPage() {
           </Table>
         ) : (
           <p className="text-sm text-muted-foreground">
-            None listed. casebench init reads them from your agent's code; Settings, under Agent, adds one by hand.
+            None listed yet. Read them from your agent's code: each model the public catalog knows comes with its
+            family and price. Settings, under Agent, adds one by hand.
           </p>
         )}
       </Section>

@@ -11,11 +11,12 @@ import yaml
 
 from casebench import keys
 from casebench.config import load_config
+from casebench.setup import catalog as model_catalog
 from casebench.workbench.settings import SECTIONS
 from tests.corpus.document_api import KEY as DOC_KEY
 from tests.corpus.document_api import start_document_api
 from tests.corpus.profiles import http_options, profile
-from tests.workbench.test_settings import JUDGE, ME, SECOND, project, workbench
+from tests.workbench.test_settings import CATALOG, JUDGE, ME, SECOND, project, workbench
 
 DECISION = {
     "id": "cass-soc-2024-03-12",
@@ -49,6 +50,31 @@ def test_a_first_visit_is_guided(fresh: Path):
     assert written["entry"].endswith("agent.py:answer")
     # Once the guide has saved a part, the workbench opens on Home, not on the guide.
     assert client.get("/api/session").json()["setting_up"] is False
+
+
+def test_the_agents_models_are_read_from_its_code(fresh: Path, monkeypatch: pytest.MonkeyPatch):
+    code = 'client.chat.completions.create(model="accounts/fireworks/models/qwen-x")\n'
+    (fresh / "agent.py").write_text(
+        "from openai import OpenAI\n\nclient = OpenAI()\n\n\ndef answer(question):\n"
+        f"    return {code}",
+        encoding="utf-8",
+    )
+    saved = json.loads(CATALOG.read_text(encoding="utf-8"))
+    qwen = saved["fireworks-ai"]["models"]["accounts/fireworks/models/qwen-x"]
+    qwen["cost"] = {"input": 0.2, "output": 0.6}
+    monkeypatch.setattr(model_catalog, "load", lambda path=None: saved)
+    client = workbench(fresh)
+
+    found = client.get("/api/setup/agent-models", headers=ME)
+
+    assert found.status_code == 200, found.text
+    assert found.json() == [
+        {
+            "model": "accounts/fireworks/models/qwen-x",
+            "family": "qwen",
+            "price": {"input": 0.2, "output": 0.6},
+        }
+    ]
 
 
 def test_a_jurisdiction_is_added_in_a_few_choices(fresh: Path):

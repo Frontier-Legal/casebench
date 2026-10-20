@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { api, type CheckView } from "@/lib/api"
 import { progress, type Target } from "@/lib/setup-progress"
-import { message, useSettings } from "@/lib/use-settings"
+import { agentModelsFromCode, message, useSettings } from "@/lib/use-settings"
 import { cn } from "@/lib/utils"
 
 const STEPS = [
@@ -87,7 +87,17 @@ export function Guide({ name, onDone }: { name: string; onDone: (page?: Page) =>
   async function next() {
     if (step === "agent" && draft && complete(draft) && JSON.stringify(draft) !== JSON.stringify(saved)) {
       setBusy(true)
+      const listed = Boolean((view?.sections.agent_models as unknown[] | undefined)?.length)
       const ok = await save("target", draft)
+      // The agent's own models, priced, so a run says what they cost, as init writes them.
+      if (ok && !listed) {
+        try {
+          const found = await agentModelsFromCode()
+          if (found.length) await save("agent_models", found)
+        } catch {
+          // The catalog is out of reach: the Models page reads them again later.
+        }
+      }
       setBusy(false)
       if (!ok) return
     }

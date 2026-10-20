@@ -135,6 +135,17 @@ def prices(catalog: dict[str, Any], names: list[str]) -> dict[str, dict[str, flo
     return found
 
 
+def agent_models(catalog: dict[str, Any], names: list[str]) -> list[dict[str, Any]]:
+    """Each model the agent's code names that the catalog knows, with its family and its price
+    when listed, as `agent_models:` holds them (decisions 0047, 0051)."""
+    named = families(catalog, names)
+    priced = prices(catalog, list(named))
+    return [
+        {"model": model, "family": family} | ({"price": priced[model]} if model in priced else {})
+        for model, family in sorted(named.items())
+    ]
+
+
 def plugins() -> list[str]:
     return sorted({item.name for item in registry.available(kind_named("provider"))})
 

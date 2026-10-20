@@ -31,6 +31,8 @@ test("a first visit is guided", async () => {
       view = settingsView({ target: (body as { value: unknown }).value as Record<string, unknown> })
       return view
     },
+    "/api/setup/agent-models": () => [{ model: "gpt-4.1", family: "gpt", price: { input: 2, output: 8 } }],
+    "PUT /api/settings/sections/agent_models": () => view,
     "/api/queue": () => ({ items: [] }),
   })
   const user = userEvent.setup()
@@ -54,6 +56,9 @@ test("a first visit is guided", async () => {
   expect(await screen.findByRole("heading", { name: "Jurisdictions" })).toBeInTheDocument()
   const saved = sent.find((r) => r.method === "PUT" && r.path === "/api/settings/sections/target")
   expect(saved?.body).toEqual({ value: { type: "python", entry: "agent.py:answer" } })
+  // The agent's own models are read from its code and priced, as init writes them.
+  const models = sent.find((r) => r.method === "PUT" && r.path === "/api/settings/sections/agent_models")
+  expect(models?.body).toEqual({ value: [{ model: "gpt-4.1", family: "gpt", price: { input: 2, output: 8 } }] })
   expect(screen.getByRole("button", { name: /Skip for now/ })).toBeInTheDocument()
 })
 

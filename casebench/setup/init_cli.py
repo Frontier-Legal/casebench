@@ -18,7 +18,7 @@ from casebench.perimeter import enforce
 from casebench.setup import catalog as model_catalog
 from casebench.setup import screen
 from casebench.setup.advice import advice
-from casebench.setup.catalog import families, prices
+from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.config_schema import LINE, SCHEMA_FILE, write_schema
 from casebench.setup.corpus_question import corpus_for_init
@@ -473,15 +473,11 @@ def init_command(
         if warning:
             screen.warn(warning)
             click.echo(warning, err=True)
-        # Each run checks the judge's family against these again (decision 0047).
-        named = families(listed(), [m.name for m in found.models])
-        priced = prices(listed(), list(named))
+        # Each run checks the judge's family against these again (decision 0047), and prices
+        # them so it can say what the agent's calls cost (decision 0051).
+        named = model_catalog.agent_models(listed(), [m.name for m in found.models])
         if named:
-            # With each price, so a run can say what the agent's calls cost (decision 0051).
-            data["agent_models"] = [
-                {"model": m, "family": f} | ({"price": priced[m]} if m in priced else {})
-                for m, f in sorted(named.items())
-            ]
+            data["agent_models"] = named
     asks_extract = choose_all and not no_extract
     wants_extract = bool(extract_models) or (
         asks_extract

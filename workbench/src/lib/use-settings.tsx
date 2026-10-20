@@ -13,10 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { api, type SettingsView } from "@/lib/api"
+import { api, type AgentModelRow, type SettingsView } from "@/lib/api"
 
 export function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/** The models the agent's code names, priced from the catalog, as an `agent_models:` value. */
+export async function agentModelsFromCode(): Promise<AgentModelRow[]> {
+  const found = await api.agentModels()
+  return found.map(({ model, family, price }) => ({ model, family, ...(price ? { price } : {}) }))
 }
 
 export interface Settings {
