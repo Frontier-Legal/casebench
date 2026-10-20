@@ -18,6 +18,7 @@ from casebench.workbench import (
     comparing,
     golden,
     harness,
+    history,
     items,
     reports,
     run_routes,
@@ -333,6 +334,21 @@ def create_app(
         """The run's error rates, each with its failing answers (decision 0054)."""
         try:
             return reports.run_report(workspace, run_id)
+        except NotFound as missing:
+            raise HTTPException(404, str(missing)) from None
+
+    histories = history.Histories(workspace)
+
+    @app.get("/api/history")
+    def suite_histories(name: Person) -> list[history.SuiteHistory]:
+        """Each suite with scored runs, the most recently scored first (decision 0067)."""
+        return histories.suites()
+
+    @app.get("/api/history/{suite_id}")
+    def suite_history(suite_id: str, name: Person) -> history.History:
+        """Each metric and error rate of the suite, run by run (decision 0067)."""
+        try:
+            return histories.history(suite_id)
         except NotFound as missing:
             raise HTTPException(404, str(missing)) from None
 

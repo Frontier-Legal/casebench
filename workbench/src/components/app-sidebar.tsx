@@ -1,6 +1,7 @@
 import { useState } from "react"
 import {
   ChartColumnIcon,
+  ChartLineIcon,
   ChevronsUpDownIcon,
   CodeIcon,
   DatabaseIcon,
@@ -63,6 +64,7 @@ export type Page =
   | "try"
   | "compare"
   | "reports"
+  | "history"
   | "run"
   | "settings"
   | `extra:${string}`
@@ -158,6 +160,11 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "reports"} onClick={() => onPage("reports")}>
                   <ChartColumnIcon /> Reports
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === "history"} onClick={() => onPage("history")}>
+                  <ChartLineIcon /> History
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {me.setup && (

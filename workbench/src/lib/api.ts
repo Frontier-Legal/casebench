@@ -196,6 +196,58 @@ export interface Connected {
   block: Record<string, unknown> | null
 }
 
+// A suite's history, run by run (decision 0067).
+
+export interface SuiteHistory {
+  suite_id: string
+  runs: number
+  last: string | null
+}
+
+export interface HistoryRun {
+  run_id: string
+  scored_at: string | null
+  target: string
+  commit: string | null
+  /** Settings that differ from the run before, by name. */
+  changed: string[]
+}
+
+export interface HistoryPoint {
+  run_id: string
+  n: number
+  mean: number
+  low: number
+  high: number
+}
+
+export interface HistorySeries {
+  task_type: string
+  metric: string
+  name: string
+  direction: "higher" | "lower" | string
+  reference_source: string
+  approval: string
+  /** null is every practice area together. */
+  practice_area: string | null
+  points: HistoryPoint[]
+  /** Runs whose settings moved this metric. */
+  moved: string[]
+}
+
+export interface RateSeries {
+  error: string
+  meaning: string
+  points: HistoryPoint[]
+}
+
+export interface History {
+  suite_id: string
+  runs: HistoryRun[]
+  series: HistorySeries[]
+  rates: RateSeries[]
+}
+
 // The Run page (decision 0063).
 
 export interface SuiteChoice {
@@ -769,6 +821,8 @@ export const api = {
   connectProfile: (given: string, jurisdictions: string[]) =>
     call<FromProfile>("POST", "/api/setup/sources/profile", { given, jurisdictions }),
   testModel: (block: Record<string, unknown>) => call<Tested>("POST", "/api/setup/models/test", { block }),
+  histories: () => call<SuiteHistory[]>("GET", "/api/history"),
+  history: (suite: string) => call<History>("GET", `/api/history/${encodeURIComponent(suite)}`),
   runSuites: () => call<SuiteChoice[]>("GET", "/api/run/suites"),
   runPlan: (asked: RunAsked) => call<RunPlan>("POST", "/api/run/plan", asked),
   runStart: (asked: RunAsked) => call<JobView>("POST", "/api/run/start", asked),

@@ -6,6 +6,7 @@ import { AppSidebar, type Page } from "@/components/app-sidebar"
 import { ChangeReview } from "@/components/change-review"
 import { GoldenData, type Opened } from "@/components/golden-data"
 import { Guide } from "@/components/guide/guide"
+import { HistoryPage } from "@/components/history-page"
 import { HomePage } from "@/components/home-page"
 import { JurisdictionsPage } from "@/components/jurisdictions-page"
 import { ModelsPage } from "@/components/models-page"
@@ -95,6 +96,7 @@ const PAGES: Record<string, string> = {
   try: "Try a question",
   compare: "Compare runs",
   reports: "Reports",
+  history: "History",
   run: "Run",
   settings: "Settings",
 }
@@ -281,6 +283,8 @@ function Workbench({
     body = <TryQuestion locked={!allows(me, "edit")} />
   } else if (page === "compare") {
     body = <CompareRuns onHelp={() => setHelp(true)} canPrefer={allows(me, "compare")} />
+  } else if (page === "history") {
+    body = <HistoryPage />
   } else if (page === "reports") {
     body = <Reports onOpen={open} />
   } else if (page === "settings" && me.setup) {
