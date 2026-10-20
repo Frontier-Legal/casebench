@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/Frontier-Legal/casebench/compare/v0.4.0...v0.5.0) (2026-10-20)
+
+
+### Features
+
+* setup starts in the workbench, with a guide, Home, and Jurisdictions and Models pages ([#99](https://github.com/Frontier-Legal/casebench/issues/99)) ([e19c497](https://github.com/Frontier-Legal/casebench/commit/e19c49727d45647af4746cea78fcf7399df25cc9))
+* **team:** one server keeps many organisations apart, with Postgres row-level security ([#103](https://github.com/Frontier-Legal/casebench/issues/103)) ([ab2ccdf](https://github.com/Frontier-Legal/casebench/commit/ab2ccdf5817ed6f7d11ff92cd6423781b636813a))
+* **workbench:** a History page charts each metric and error rate of a suite run by run ([#102](https://github.com/Frontier-Legal/casebench/issues/102)) ([eb60f98](https://github.com/Frontier-Legal/casebench/commit/eb60f9893cfa147681c74dce6ea48aa617793ec7))
+
+
+### Documentation
+
+* **decisions:** one shared cloud for every organisation, and run history charted from nightly CI runs (0066, 0067) ([#100](https://github.com/Frontier-Legal/casebench/issues/100)) ([bdb9e0d](https://github.com/Frontier-Legal/casebench/commit/bdb9e0da773c178b693449c7d37046341f011459))
+
 ## [0.4.0](https://github.com/Frontier-Legal/casebench/compare/v0.3.0...v0.4.0) (2026-10-16)
 
 
