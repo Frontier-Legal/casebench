@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from casebench.config import SINGLE, CasebenchConfig, ConfigError, config_from, load_config
+from casebench.judge.judges import shared_family
 from casebench.setup.config_schema import LINE, write_schema
 
 # Each section the page edits, in the order a new file lists them.
@@ -122,9 +123,16 @@ class Settings:
     def _check(self, data: Any) -> None:
         path = self._path()
         try:
-            config_from(data, path.resolve().parent, str(path.name))
+            config = config_from(data, path.resolve().parent, str(path.name))
         except ConfigError as error:
             raise Refused(str(error)) from None
+        shared = shared_family(config.judges)
+        if shared:
+            # A run refuses it too; saving it would only put the refusal off (decision 0035).
+            raise Refused(
+                f"both judges are of the {shared} family; pick a second judge from another "
+                "model family, or keep one judge"
+            )
 
     def _write(self, data: dict[str, Any]) -> None:
         self._check(data)

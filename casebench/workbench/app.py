@@ -22,6 +22,8 @@ from casebench.workbench import (
     reports,
     run_routes,
     settings_routes,
+    setup_routes,
+    source_routes,
     trying,
 )
 from casebench.workbench.access import (
@@ -114,6 +116,10 @@ class SaveMe(BaseModel):
 class Session(BaseModel):
     role_locked: bool
     mode: str = Field(default="local", description="local, or team with logins (0058).")
+    setting_up: bool = Field(
+        default=False,
+        description="An engineer's own machine with no casebench.yaml yet: the guide is first.",
+    )
 
 
 class Queue(BaseModel):
@@ -261,7 +267,8 @@ def create_app(
     @app.get("/api/session")
     def session() -> Session:
         locked = isinstance(access, LocalAccess) and access.role == REVIEWER
-        return Session(role_locked=locked, mode=access.mode)
+        fresh = local and not locked and not settings.text()
+        return Session(role_locked=locked, mode=access.mode, setting_up=fresh)
 
     @app.get("/api/me")
     def me(who: Who) -> Me:
@@ -510,6 +517,8 @@ def create_app(
         jobs = Jobs()
         here = folder or Path.cwd()
         app.include_router(run_routes.router(settings, workspace, jobs, here, engineer_name))
+        app.include_router(setup_routes.router(settings, here, engineer_name))
+        app.include_router(source_routes.router(settings, here, engineer_name))
     for router in routers:
         app.include_router(router)
 

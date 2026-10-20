@@ -19,3 +19,22 @@ def judges_for(configs: list[JudgeConfig], memo: Memo | None = None) -> list[Jud
             "model family, or keep one judge"
         )
     return judges
+
+
+def _family(config: JudgeConfig) -> str | None:
+    """The family its options name, else its provider's; None when the provider is not here."""
+    named = config.options.get("family")
+    if named:
+        return str(named)
+    try:
+        return Judge(config).family
+    except Exception:
+        return None
+
+
+def shared_family(configs: list[JudgeConfig]) -> str | None:
+    """The family two judges share, read without calling either; None when they differ."""
+    families = [_family(config) for config in configs]
+    if len(families) == 2 and families[0] is not None and families[0] == families[1]:
+        return families[0]
+    return None
