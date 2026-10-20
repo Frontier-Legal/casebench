@@ -6,7 +6,7 @@
 - Standalone. Casebench stores its own cases, runs, eval traces and reviews. Any other tool is optional export, never required.
 - One app, three places. `casebench ui` runs locally with no login and a SQLite file. Casebench Cloud is the same app as a hosted service, reached from an email invite. The same image self-hosts for firms that cannot push. The cloud and the team server store and show; the runner on the engineer's machine computes every score ([decision 0005](../decisions/0005-cloud-never-computes-a-score.md)).
 - A lawyer's first session is a queue, never an empty case editor: answers to review with the judge's verdict pre-filled, one key per verdict. Writing cases comes after, in the workbench or in a spreadsheet.
-- Not an observability platform. No production dashboards, cost analytics or prompt management. Traces exist only to explain eval results.
+- Evaluation history, not yet production monitoring: each metric charted across runs, with the nightly runs a team's CI pushes ([decision 0067](../decisions/0067-run-history.md)). No production traffic dashboards or prompt management for now; traces explain eval results.
 
 ## What crosses the line (checked 2026-10-11)
 
@@ -80,7 +80,7 @@
 | Traces | OTLP receiver and SDK spans stored per run in the same database; kept only for eval runs |
 | Local mode | `casebench ui` binds 127.0.0.1, no login, opens the browser |
 | Team mode | `casebench-ee` from `ee/`, in one Docker image on Postgres; the first admin set up with a one-time code from the server's log and a password that is no default; everyone else signs in with an emailed link or with Google or Microsoft; the five roles above; an audit log that cannot be changed; API keys for CI; spend limits ([decision 0058](../decisions/0058-the-team-server.md)) |
-| Cloud | the same `ee/` app as a hosted service, one tenant per organisation; magic-link email, Microsoft and Google login; `casebench invite <email> --role` from the CLI; retention, SSO and scheduled runs |
+| Cloud | the same `ee/` app as one hosted service for every organisation: each row carries its organisation and Postgres row-level security enforces it, and stored files live in object storage under the organisation's prefix ([decision 0066](../decisions/0066-one-shared-cloud.md)); a push is archived and loaded into tables that chart each metric across runs, and nightly runs come from the team's CI ([decision 0067](../decisions/0067-run-history.md)); magic-link email, Microsoft and Google login; `casebench invite <email> --role` from the CLI; retention and SSO |
 | Sync | `casebench push` sends runs and their suites to the cloud or team server, `casebench invite` asks it to invite a lawyer, and `casebench pull` brings approvals and verdicts back; the table above says what crosses, and steps go only with `--traces`, as ids and numbers ([decision 0059](../decisions/0059-push-invite-pull.md)) |
 | Spreadsheet review | `casebench export --review` writes an XLSX with one row per criterion: the answer, the judge's verdict, the evidence as links (a corpus's `link:` names the provider's page) and verdict, note and reviewer columns; lawyers fill it; `casebench import` checks every row, then merges the verdicts as reviews, exactly as the workbench would. The lawyer path when there is no server and no cloud ([decision 0055](../decisions/0055-review-in-a-spreadsheet.md)) |
 | Model calls | only through targets and the judge the admin configured, with per-user and per-day spend limits |
@@ -89,7 +89,7 @@ The same package serves local, team and cloud use. Review, overrule, compare and
 
 ## What it will not become
 
-- A tracing or monitoring product: no production traffic dashboards, latency or cost analytics beyond a run's own cost.
+- For now, a monitor of production traffic: no live traffic dashboards; latency and cost are a run's own, charted across runs.
 - A prompt editor or playground for engineers. "Try a question" calls a configured target only.
-- Dependent on Elasticsearch, Redis, ClickHouse or any second service.
+- Dependent on Elasticsearch, Redis, ClickHouse or any second service locally. The cloud adds object storage beside Postgres ([decision 0066](../decisions/0066-one-shared-cloud.md)).
 - A place where an LLM judge can overwrite a lawyer's decision.

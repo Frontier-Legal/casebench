@@ -42,6 +42,6 @@ Run the tests for the area you changed before opening a pull request, and the wh
 
 ## Out of scope
 
-- Production observability: traces exist only to explain evaluation results.
+- Monitoring an agent's live production traffic, for now. Evaluation history over time is in scope ([decision 0067](docs/decisions/0067-run-history.md)); live traffic is a long-term goal, and traces otherwise exist to explain evaluation results.
 - Shipping any corpus. Users connect their own decisions and statutes.
 - Grading drafting or advice without an evidenced reference.

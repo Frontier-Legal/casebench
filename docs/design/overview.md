@@ -34,7 +34,7 @@ Casebench reads those labels out of decisions the user already holds, so an answ
 
 ## Non-goals
 
-- A tracing or observability platform for production. Casebench keeps only the traces that explain eval results, shown per model call and tool call in the harness view. It needs no other tracing or eval tool, and can export to them.
+- For now, a monitor of production traffic. Casebench charts each metric across runs, as nightly runs from a team's CI land in the cloud ([decision 0067](../decisions/0067-run-history.md)), and keeps the traces that explain eval results, per model call and tool call in the harness view. Live production traffic is a long-term goal. It needs no other tracing or eval tool, and can export to them.
 - Grading drafting, editing or advice without an evidenced reference. Court records do not label those; a lawyer-authored reference can.
 - Shipping any corpus. Users bring their own data, Türkiye included.
 - A leaderboard. The project publishes no rankings of products.

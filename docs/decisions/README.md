@@ -73,8 +73,10 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0057](0057-ee-under-the-elastic-license.md) | `ee/` is under the Elastic License 2.0, and the rest of the repository under Apache-2.0 | accepted |
 | [0058](0058-the-team-server.md) | The team server: the workbench with logins, five roles and an append-only audit log, from one image | accepted |
 | [0059](0059-push-invite-pull.md) | An engineer pushes runs and suites to a team server, invites lawyers, and pulls their decisions back; the server never scores | accepted |
-| [0060](0060-hosting-seams.md) | The hosted service builds on the team server through two seams, a seat check and erasing a team, and the public server needs neither | accepted |
+| [0060](0060-hosting-seams.md) | The hosted service builds on the team server through two seams, a seat check and erasing a team, and the public server needs neither | one server per organisation replaced by [0066](0066-one-shared-cloud.md) |
 | [0061](0061-the-first-ten-minutes.md) | The first ten minutes: a demo with no key, a first run that builds its own suite, the search store named by init, a setup skill, and answers from a tool Casebench cannot reach | accepted |
 | [0063](0063-the-workbench-sets-up-and-runs.md) | The workbench on an engineer's machine edits every setting in casebench.yaml, sets keys, and starts runs | accepted |
 | [0064](0064-the-team-server-in-setup.md) | Setup asks whether lawyers review on a team server, names it, and checks that it takes the engineer's key; it never installs one | accepted |
 | [0065](0065-setting-up-in-the-workbench.md) | Setup starts in the workbench: init opens it, a guide walks a first-time user through each part, and jurisdictions and models get their own pages | accepted |
+| [0066](0066-one-shared-cloud.md) | Casebench Cloud is one shared service for every organisation, and the database enforces which organisation a request reaches | accepted |
+| [0067](0067-run-history.md) | Run history: nightly runs from a team's CI land in the cloud's tables, which chart every metric over time | accepted |
