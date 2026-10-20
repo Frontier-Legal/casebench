@@ -15,6 +15,8 @@ from alembic.config import Config
 from sqlalchemy import JSON, DateTime, Engine, Integer, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
+from casebench.workbench.tenancy import current
+
 DEFAULT_DATABASE = Path(".casebench") / "casebench.db"
 # How long an opened item stays reserved without being renewed.
 HOLD = timedelta(minutes=15)
@@ -35,9 +37,15 @@ class Base(DeclarativeBase):
     pass
 
 
+def organisation_column(primary_key: bool = False) -> Mapped[str]:
+    """The organisation a row belongs to, the request's when it is written (decision 0066)."""
+    return mapped_column(String(64), primary_key=primary_key, default=current)
+
+
 class Person(Base):
     __tablename__ = "people"
 
+    organisation: Mapped[str] = organisation_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), primary_key=True)
     view: Mapped[str] = mapped_column(String(20), default="review")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
@@ -46,6 +54,7 @@ class Person(Base):
 class Reservation(Base):
     __tablename__ = "reservations"
 
+    organisation: Mapped[str] = organisation_column(primary_key=True)
     item: Mapped[str] = mapped_column(String(500), primary_key=True)
     person: Mapped[str] = mapped_column(String(200))
     until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -56,6 +65,7 @@ class Draft(Base):
 
     __tablename__ = "drafts"
 
+    organisation: Mapped[str] = organisation_column(primary_key=True)
     item: Mapped[str] = mapped_column(String(500), primary_key=True)
     person: Mapped[str] = mapped_column(String(200), primary_key=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
@@ -77,6 +87,7 @@ class Event(Base):
     before: Mapped[Any] = mapped_column(JSON, nullable=True)
     after: Mapped[Any] = mapped_column(JSON, nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organisation: Mapped[str] = organisation_column()
 
 
 PENDING, APPROVED, REJECTED = "pending", "approved", "rejected"
@@ -102,6 +113,7 @@ class Proposal(Base):
     decided_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organisation: Mapped[str] = organisation_column()
 
 
 def url_for(path: Path) -> str:
@@ -134,11 +146,11 @@ class Store:
 
     def person(self, name: str) -> Person | None:
         with self.session() as session:
-            return session.get(Person, name)
+            return session.get(Person, (current(), name))
 
     def save_person(self, name: str, view: str) -> Person:
         with self.session() as session:
-            person = session.get(Person, name) or Person(name=name)
+            person = session.get(Person, (current(), name)) or Person(name=name)
             person.view = view
             session.add(person)
             return person
@@ -146,7 +158,7 @@ class Store:
     def holder(self, item: str) -> str | None:
         """Who holds the item now, if anyone."""
         with self.session() as session:
-            held = session.get(Reservation, item)
+            held = session.get(Reservation, (current(), item))
             if held is None or _aware(held.until) <= now():
                 return None
             return held.person
@@ -159,7 +171,7 @@ class Store:
     def reserve(self, item: str, person: str) -> str:
         """Reserves the item for the person, or renews it; returns who holds it after."""
         with self.session() as session:
-            held = session.get(Reservation, item)
+            held = session.get(Reservation, (current(), item))
             if held is not None and held.person != person and _aware(held.until) > now():
                 return held.person
             held = held or Reservation(item=item)
@@ -169,18 +181,18 @@ class Store:
 
     def release(self, item: str) -> None:
         with self.session() as session:
-            held = session.get(Reservation, item)
+            held = session.get(Reservation, (current(), item))
             if held is not None:
                 session.delete(held)
 
     def draft(self, item: str, person: str) -> dict[str, Any] | None:
         with self.session() as session:
-            found = session.get(Draft, (item, person))
+            found = session.get(Draft, (current(), item, person))
             return dict(found.payload) if found else None
 
     def save_draft(self, item: str, person: str, payload: dict[str, Any]) -> None:
         with self.session() as session:
-            found = session.get(Draft, (item, person)) or Draft(item=item, person=person)
+            found = session.get(Draft, (current(), item, person)) or Draft(item=item, person=person)
             found.payload, found.saved_at = payload, now()
             session.add(found)
 

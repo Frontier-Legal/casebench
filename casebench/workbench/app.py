@@ -55,6 +55,7 @@ from casebench.workbench.jobs import Jobs
 from casebench.workbench.settings import Settings
 from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
+from casebench.workbench.tenancy import Organisations
 
 __all__ = ["ENGINEER", "PERSON_HEADER", "REVIEWER", "create_app"]
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
@@ -231,8 +232,10 @@ def create_app(
     `config_path` names the casebench.yaml the Settings page edits, and `folder` is where a run
     started from the Run page runs (decision 0063)."""
     app = FastAPI(title="Casebench workbench", docs_url=None, redoc_url=None)
-    app.add_middleware(Loopback, hosts=hosts)
     access = access or LocalAccess(role)
+    # Added first, so it runs after the host check (decision 0066).
+    app.add_middleware(Organisations, resolve=getattr(access, "organisation", None))
+    app.add_middleware(Loopback, hosts=hosts)
 
     def changed(new: CasebenchConfig | None) -> None:
         """A save on the Settings page takes effect at once."""

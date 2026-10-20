@@ -12,10 +12,10 @@ from fastapi import FastAPI
 from casebench.config import CasebenchConfig
 from casebench.corpus.corpora import Corpora
 from casebench.workbench.app import create_app
-from casebench.workbench.sources import Workspace
 from casebench.workbench.store import Store
 from casebench.workbench.trying import Limits
 from casebench_ee.access import TeamAccess
+from casebench_ee.folders import OrganisationWorkspace
 from casebench_ee.hosting import SeatCheck
 from casebench_ee.mail import Mailer, NoMail
 from casebench_ee.oidc import Provider
@@ -23,6 +23,8 @@ from casebench_ee.routes import Settings, team_routes
 from casebench_ee.sync import sync_routes
 from casebench_ee.team import Team
 
+# Beside the runs folder: every organisation but the server's own keeps its folders here.
+ORGANISATIONS = "organisations"
 # Letters a person reads off a log and types without confusing them.
 CODE_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
@@ -52,6 +54,7 @@ class Server:
     team: Team
     setup_code: str | None
     settings: Settings = field(repr=False)
+    workspace: OrganisationWorkspace | None = field(default=None, repr=False)
 
 
 def build(
@@ -64,8 +67,11 @@ def build(
     providers: dict[str, Provider] | None = None,
     hosts: list[str] | None = None,
     seats: SeatCheck | None = None,
+    organisations_dir: Path | None = None,
 ) -> Server:
-    """A team with no one yet gets a one-time setup code, which the caller prints."""
+    """A team with no one yet gets a one-time setup code, which the caller prints. Each
+    organisation but the server's own keeps its runs and suites under `organisations_dir`,
+    beside the runs folder unless given (decision 0066)."""
     store = Store(database_url(database))
     runs_dir.mkdir(parents=True, exist_ok=True)
     for folder in suite_dirs:
@@ -74,7 +80,13 @@ def build(
     code = setup_code() if team.setup_needed() else None
     settings = Settings(public_url=public_url, setup_code=code, config=config)
     corpora = Corpora(config.corpora) if config and config.corpora else None
-    workspace = Workspace(runs_dir, suite_dirs, corpora, config.agent_models if config else [])
+    workspace = OrganisationWorkspace(
+        runs_dir,
+        suite_dirs,
+        organisations_dir or runs_dir.parent / ORGANISATIONS,
+        corpora,
+        config.agent_models if config else [],
+    )
     configured = config.workbench.try_daily_limit_usd if config and config.workbench else None
 
     def limits() -> Limits:
@@ -97,4 +109,4 @@ def build(
         ],
         limits=limits,
     )
-    return Server(app=app, team=team, setup_code=code, settings=settings)
+    return Server(app=app, team=team, setup_code=code, settings=settings, workspace=workspace)

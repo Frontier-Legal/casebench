@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
 from fastapi.testclient import TestClient
@@ -36,6 +37,28 @@ def fresh_postgres() -> Iterator[str]:
     finally:
         with psycopg.connect(POSTGRES, autocommit=True) as admin:
             admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')  # type: ignore[arg-type]
+
+
+@contextmanager
+def service_postgres() -> Iterator[str]:
+    """A database owned by a role of its own that is no superuser and cannot bypass row-level
+    security, as the shared service connects (decision 0066); both dropped afterwards."""
+    assert POSTGRES
+    tag = uuid.uuid4().hex[:12]
+    role, name = f"casebench_app_{tag}", f"casebench_{tag}"
+    with psycopg.connect(POSTGRES, autocommit=True) as admin:
+        admin.execute(f"CREATE ROLE {role} LOGIN PASSWORD '{tag}' NOSUPERUSER NOBYPASSRLS")  # type: ignore[arg-type]
+        admin.execute(f'CREATE DATABASE "{name}" OWNER {role}')  # type: ignore[arg-type]
+    parts = urlsplit(POSTGRES)
+    url = urlunsplit(
+        parts._replace(netloc=f"{role}:{tag}@{parts.hostname}:{parts.port}", path=f"/{name}")
+    )
+    try:
+        yield url
+    finally:
+        with psycopg.connect(POSTGRES, autocommit=True) as admin:
+            admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')  # type: ignore[arg-type]
+            admin.execute(f"DROP ROLE {role}")  # type: ignore[arg-type]
 
 
 def serve(url: str, tmp_path: Path, mailer: Mailer | None = None, **kwargs: Any) -> Server:
