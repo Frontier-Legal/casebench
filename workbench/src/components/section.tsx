@@ -19,7 +19,7 @@ export function Section({
   className,
   ...props
 }: {
-  title: string
+  title: React.ReactNode
   description?: React.ReactNode
   action?: React.ReactNode
   footer?: React.ReactNode

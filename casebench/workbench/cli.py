@@ -1,5 +1,6 @@
 """`casebench ui`: the workbench on this machine, with no login (decision 0050)."""
 
+import socket
 import webbrowser
 from pathlib import Path
 
@@ -14,6 +15,17 @@ from casebench.workbench.store import DEFAULT_DATABASE, Store, url_for
 
 LOOPBACK = "127.0.0.1"
 PORT = 7462
+
+
+def free_port(preferred: int = PORT) -> int:
+    """The preferred port when nothing listens on it, else one the operating system names."""
+    with socket.socket() as probe:
+        try:
+            probe.bind((LOOPBACK, preferred))
+            return preferred
+        except OSError:
+            probe.bind((LOOPBACK, 0))
+            return probe.getsockname()[1]
 
 
 @click.command(name="ui")

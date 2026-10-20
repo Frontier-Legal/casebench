@@ -18,7 +18,7 @@ from casebench.perimeter import enforce
 from casebench.setup import catalog as model_catalog
 from casebench.setup import screen
 from casebench.setup.advice import advice
-from casebench.setup.catalog import families, prices
+from casebench.setup.catalog import families
 from casebench.setup.checks import Status, live, offline
 from casebench.setup.config_schema import LINE, SCHEMA_FILE, write_schema
 from casebench.setup.corpus_question import corpus_for_init
@@ -39,9 +39,12 @@ HEADER = LINE + (
     "# environment variables named here, or from the .env files `keys:` names for them,\n"
     "# so this file can be committed and deployed.\n"
 )
+BROWSER = "browser"
+OPENS = "The workbench opens on Home: what is set up, and what comes next."
 LANES = [
-    ("Quick start (recommended): use what was found, ask only what's missing", "quick"),
-    ("Custom: choose every part", "custom"),
+    ("In the browser (recommended): the workbench walks you through each part", BROWSER),
+    ("Quick start here: use what was found, ask only what's missing", "quick"),
+    ("Custom here: choose every part", "custom"),
 ]
 KINDS = [
     ("a Python function in this project", "python"),
@@ -51,14 +54,23 @@ KINDS = [
 OTHER = "\0other"
 
 
-def _lane(given: bool | None) -> bool:
-    """True for Custom. Without a terminal and without a flag, every part is asked, as a
-    script answering init's questions expects."""
+def _lane(given: bool | None, browser: bool) -> str:
+    """browser, quick or custom. Without a terminal and without a flag, every part is asked,
+    as a script answering init's questions expects; the browser is offered only when the
+    workbench is to open (decision 0065)."""
     if given is not None:
-        return given
+        return "custom" if given else "quick"
     if not interactive():
-        return True
-    return pick("How do you want to start?", LANES, "quick") == "custom"
+        return "custom"
+    lanes = LANES if browser else LANES[1:]
+    return pick("How do you want to start?", lanes, lanes[0][1])
+
+
+def _open_workbench(ctx: click.Context, config_path: Path) -> None:
+    """The workbench on this machine, on Home, or on the guide when nothing is written yet."""
+    from casebench.workbench.cli import free_port, ui_command
+
+    ctx.invoke(ui_command, config_path=config_path, port=free_port(), no_open=False)
 
 
 def _entry(given: str | None, entries: list[str], custom: bool) -> str:
@@ -343,7 +355,15 @@ def _review(data: dict[str, Any]) -> list[tuple[str, str]]:
 )
 @click.option("--yes", is_flag=True, help="Write casebench.yaml without asking after the review.")
 @click.option("--details", is_flag=True, help="List everything the code scan found.")
+@click.option(
+    "--ui/--no-ui",
+    "ui",
+    default=None,
+    help="Open the workbench when done; the default at a terminal, never without one.",
+)
+@click.pass_context
 def init_command(
+    ctx: click.Context,
     config_path: Path,
     target_kind: str | None,
     entry: str | None,
@@ -366,8 +386,11 @@ def init_command(
     team_server: str | None,
     yes: bool,
     details: bool,
+    ui: bool | None,
 ) -> None:
     """Set Casebench up for the agent in this folder, or bring an existing setup up to date."""
+    # A server that never returns would hang a coding agent or CI, so only a person gets one.
+    opens = interactive() if ui is None else ui
     checkout = config_path.resolve().parent
     preset(given_keys(key_files, checkout))
     updating = config_path.exists()
@@ -383,8 +406,21 @@ def init_command(
         for name, file in record_keys(config_path, given_files(checkout)).items():
             screen.ok(f"key {name}: read from {file}, by name")
         _update(config_path, found, catalog_path, routes, team_server, yes)
+        if opens:
+            _open_workbench(ctx, config_path)
         return
-    choose_all = _lane(custom)
+    lane = _lane(custom, opens)
+    if lane == BROWSER:
+        screen.outro(
+            [
+                "Opening the workbench: it walks you through your agent, its jurisdictions and "
+                "the judge.",
+                f"What you choose there is saved to {config_path}, which the command line reads.",
+            ]
+        )
+        _open_workbench(ctx, config_path)
+        return
+    choose_all = lane == "custom"
     screen.step("Your agent")
     data: dict[str, Any] = {"target": _target(target_kind, entry, run_line, url, found, choose_all)}
     screen.step("Court decisions")
@@ -437,15 +473,11 @@ def init_command(
         if warning:
             screen.warn(warning)
             click.echo(warning, err=True)
-        # Each run checks the judge's family against these again (decision 0047).
-        named = families(listed(), [m.name for m in found.models])
-        priced = prices(listed(), list(named))
+        # Each run checks the judge's family against these again (decision 0047), and prices
+        # them so it can say what the agent's calls cost (decision 0051).
+        named = model_catalog.agent_models(listed(), [m.name for m in found.models])
         if named:
-            # With each price, so a run can say what the agent's calls cost (decision 0051).
-            data["agent_models"] = [
-                {"model": m, "family": f} | ({"price": priced[m]} if m in priced else {})
-                for m, f in sorted(named.items())
-            ]
+            data["agent_models"] = named
     asks_extract = choose_all and not no_extract
     wants_extract = bool(extract_models) or (
         asks_extract
@@ -501,8 +533,11 @@ def init_command(
                 f"Wrote {config_path}.",
                 "Next: casebench check, where the corpus, the agent and the judge are reachable",
                 *_team_lines(team),
+                *([OPENS] if opens else []),
             ]
         )
+        if opens:
+            _open_workbench(ctx, config_path)
         return
     checked = load_config(config_path)
     enforce(checked)
@@ -531,5 +566,8 @@ def init_command(
                 else []
             ),
             *_team_lines(team),
+            *([OPENS] if opens else []),
         ]
     )
+    if opens:
+        _open_workbench(ctx, config_path)

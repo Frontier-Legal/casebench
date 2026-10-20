@@ -8,6 +8,8 @@ export interface Session {
   role_locked: boolean
   /** local, or team when people sign in (decision 0058). */
   mode?: "local" | "team"
+  /** An engineer's own machine with no casebench.yaml yet: the guide comes first (0065). */
+  setting_up?: boolean
 }
 
 export interface Me {
@@ -107,6 +109,91 @@ export interface Picked {
   block: Record<string, unknown> | null
   missing: string[]
   plugins: string[]
+}
+
+// The setup guide, Jurisdictions and Models pages (decision 0065).
+
+export interface ScanView {
+  said: string
+  /** Functions Casebench can call with a question, as path.py:function. */
+  entries: string[]
+  clients: string[]
+  models: string[]
+}
+
+export type Tested = CheckView
+
+/** A model the agent's code names, with its catalog family and price (0047, 0051). */
+export interface AgentModelRow {
+  model: string
+  family: string
+  price?: { input: number; output: number } | null
+}
+
+export interface Leaf {
+  path: string
+  value: string
+}
+
+/** What a person has picked in a source's search result and document so far. */
+export interface Picks {
+  probe: string
+  jurisdictions: string[]
+  result_fields?: Record<string, string>
+  fields?: Record<string, string>
+}
+
+export interface ApiAsked extends Picks {
+  base_url: string
+  search_path: string
+  fetch_path: string
+  query_param?: string
+  key_env?: string | null
+  key_header?: string
+}
+
+export interface McpReach {
+  command?: string | null
+  url?: string | null
+}
+
+export interface McpAsked extends McpReach, Picks {
+  search_tool: string
+  search_arg?: string
+  fetch_tool: string
+  fetch_arg?: string
+}
+
+export interface Tool {
+  name: string
+  description: string
+}
+
+export interface ProfileView {
+  id: string
+  name: string
+  jurisdictions: string[]
+  key_env: string | null
+  key_found: boolean
+  docs: string | null
+  terms: string | null
+}
+
+export interface FromProfile {
+  name: string
+  block: Record<string, unknown>
+  notes: string[]
+}
+
+export interface Connected {
+  name: string
+  results: string | null
+  result_choices: Leaf[]
+  document_choices: Leaf[]
+  fields: Record<string, string>
+  missing: string[]
+  /** The corpus block, once a document was fetched. */
+  block: Record<string, unknown> | null
 }
 
 // The Run page (decision 0063).
@@ -670,6 +757,18 @@ export const api = {
     call<CatalogModel[]>("GET", `/api/settings/catalog/${encodeURIComponent(provider)}`),
   pickModel: (provider: string, model: string, plugin?: string | null) =>
     call<Picked>("POST", "/api/settings/catalog/model", { provider, model, plugin: plugin ?? null }),
+  scan: () => call<ScanView>("GET", "/api/setup/scan"),
+  agentModels: () => call<AgentModelRow[]>("GET", "/api/setup/agent-models"),
+  jurisdictionCodes: () => call<string[]>("GET", "/api/setup/jurisdictions"),
+  testSource: (block: Record<string, unknown>, probe?: string | null) =>
+    call<Tested>("POST", "/api/setup/sources/test", { block, probe: probe ?? null }),
+  connectApi: (asked: ApiAsked) => call<Connected>("POST", "/api/setup/sources/api", asked),
+  mcpTools: (reach: McpReach) => call<Tool[]>("POST", "/api/setup/sources/mcp/tools", reach),
+  connectMcp: (asked: McpAsked) => call<Connected>("POST", "/api/setup/sources/mcp", asked),
+  profiles: () => call<ProfileView[]>("GET", "/api/setup/profiles"),
+  connectProfile: (given: string, jurisdictions: string[]) =>
+    call<FromProfile>("POST", "/api/setup/sources/profile", { given, jurisdictions }),
+  testModel: (block: Record<string, unknown>) => call<Tested>("POST", "/api/setup/models/test", { block }),
   runSuites: () => call<SuiteChoice[]>("GET", "/api/run/suites"),
   runPlan: (asked: RunAsked) => call<RunPlan>("POST", "/api/run/plan", asked),
   runStart: (asked: RunAsked) => call<JobView>("POST", "/api/run/start", asked),

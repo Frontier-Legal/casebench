@@ -58,6 +58,10 @@ NEXT_TARGET = (
 NEXT_MODEL = "check the model's id and the key casebench.yaml names for it under `keys`"
 NEXT_REACH = "run this where the service is reachable"
 NEXT_PLUGIN = "install the package that provides it"
+NEXT_EMPTY = (
+    "give a search that finds a document, or point it at documents: a folder holds one JSON "
+    "file per document, with its id, jurisdiction, court, date and text"
+)
 TEAM_SERVER = "team server"
 # What an engineer's machine asks the team server for, with nothing named: the cheapest call
 # an engineer key may make, which says whether the key is accepted (decision 0064).
@@ -192,6 +196,10 @@ def _corpus(corpora: Corpora, name: str, queries: list[str], size: int) -> Check
         failed = f"{len(report.failures)} fetches failed" if report.failures else ""
         mapped = "map each missing field with `casebench corpus add --field NAME=JSONPATH`"
         return Check(label, Status.FAILED, "; ".join(filter(None, (missing, failed))), mapped)
+    if not report.sampled:
+        # A store that answers but holds nothing readable cannot check a citation.
+        empty = "the source answered, but no document was found in it"
+        return Check(label, Status.FAILED, empty, NEXT_EMPTY)
     sampled = f"{report.sampled} document{'s' if report.sampled != 1 else ''} sampled"
     return Check(label, Status.PASSED, sampled)
 

@@ -7,6 +7,7 @@ import {
   ShieldCheckIcon,
 } from "lucide-react"
 
+import { Brand } from "@/components/brand"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -41,16 +42,19 @@ const POINTS = [
   },
 ]
 
-/** The first screen: who you are, and whether you review answers or build the system. */
+/** The first screen: who you are, and whether you review answers or build the system. With
+ * nothing set up yet, building is the likelier answer, and the guide follows (0065). */
 export function Welcome({
   roleLocked,
+  settingUp = false,
   onStart,
 }: {
   roleLocked: boolean
+  settingUp?: boolean
   onStart: (name: string, view: View) => Promise<void>
 }) {
   const [name, setName] = useState("")
-  const [view, setView] = useState<View>("review")
+  const [view, setView] = useState<View>(settingUp && !roleLocked ? "engineering" : "review")
   const [busy, setBusy] = useState(false)
 
   async function start(event: React.FormEvent) {
@@ -66,16 +70,17 @@ export function Welcome({
 
   return (
     <div className="grid min-h-svh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 p-10 text-primary-foreground lg:flex">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 -right-40 size-[32rem] rounded-full bg-white/8 blur-3xl"
+          className="pointer-events-none absolute -top-40 -right-40 size-[32rem] rounded-full bg-white/10 blur-3xl"
         />
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-white/15">
-            <ScaleIcon className="size-5" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">Casebench</span>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-48 -left-32 size-[28rem] rounded-full bg-white/8 blur-3xl"
+        />
+        <div className="relative">
+          <Brand light />
         </div>
         <div className="relative flex max-w-md flex-col gap-8">
           <h1 className="font-serif text-4xl leading-tight font-medium">
@@ -95,23 +100,23 @@ export function Welcome({
             ))}
           </ul>
         </div>
-        <p className="text-xs text-primary-foreground/60">
+        <p className="relative text-xs text-primary-foreground/70">
           Runs on this machine. Nothing you do here leaves it.
         </p>
       </aside>
       <main className="flex items-center justify-center p-6 sm:p-10">
         <form onSubmit={start} className="flex w-full max-w-sm flex-col gap-8">
           <div className="flex flex-col gap-2">
-            <div className="mb-4 flex items-center gap-2.5 lg:hidden">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <ScaleIcon className="size-5" />
-              </div>
-              <span className="text-lg font-semibold tracking-tight">Casebench</span>
+            <div className="mb-4 lg:hidden">
+              <Brand />
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight">Open the review queue</h2>
+            <h2 className="font-serif text-3xl font-medium tracking-tight">
+              {settingUp ? "Welcome to Casebench" : "Open the review queue"}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Check the AI's answers against the evidence and approve cases drawn from court
-              decisions.
+              {settingUp
+                ? "Nothing is set up here yet. Tell us who you are, and a short guide connects your agent, its jurisdictions and a judge."
+                : "Check the AI's answers against the evidence and approve cases drawn from court decisions."}
             </p>
           </div>
           <FieldGroup>

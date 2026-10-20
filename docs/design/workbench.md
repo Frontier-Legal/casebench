@@ -29,6 +29,10 @@
 
 | Screen | Who | What they do |
 |---|---|---|
+| Home | engineer, on their own machine | each part of the setup with whether it is done and the button that does it, then the first run, the review queue and how Casebench works; where the workbench opens, and where `casebench init` opens it ([decision 0065](../decisions/0065-setting-up-in-the-workbench.md)) |
+| Setup guide | engineer, first visit | with no `casebench.yaml`: what Casebench does, the agent from the functions the code scan found, jurisdictions, the judge, and a check, each saved as it is done ([decision 0065](../decisions/0065-setting-up-in-the-workbench.md)) |
+| Jurisdictions | engineer, on their own machine | each country with the sources that hold its decisions and statutes and a test search; a new one added by name, from a document API, an MCP server, a provider's profile, a source already connected or a folder of sample files, its fields picked from real values ([decision 0065](../decisions/0065-setting-up-in-the-workbench.md)) |
+| Models | engineer, on their own machine | the judge, a second judge from another family and the two extraction models as cards: what each does and costs, changed from the model catalog, keyed and tested alone ([decision 0065](../decisions/0065-setting-up-in-the-workbench.md)) |
 | Inbox | everyone | items assigned to me: drafts to approve, answers to review, judge disagreements; one item at a time with auto-advance |
 | Golden data | lawyer editor | grid of cases (spreadsheet-like), XLSX import/export; open a case to edit question, facts, reference answer, weighted pass/fail criteria and authorities; every case names its practice area and who approved it; every save needs a reason, shows a diff, and waits for a second approver when the team turns that on ([decision 0053](../decisions/0053-second-approval-is-opt-in.md)) |
 | Court drafts | lawyer editor | cases Casebench extracted from decisions: each fact shown beside its highlighted passage in the decision; approve, edit or reject with one key; a draft can be run at once, and its scores stay in the unreviewed row until approved |

@@ -4,6 +4,8 @@ import {
   ChevronsUpDownIcon,
   CodeIcon,
   DatabaseIcon,
+  EarthIcon,
+  HouseIcon,
   FileCheckIcon,
   FilePenIcon,
   GitCompareArrowsIcon,
@@ -15,8 +17,10 @@ import {
   PlayIcon,
   ScaleIcon,
   SettingsIcon,
+  SparklesIcon,
 } from "lucide-react"
 
+import { Brand } from "@/components/brand"
 import { Status } from "@/components/section"
 import { extension } from "@/extension"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -51,6 +55,9 @@ import type { Me, QueueItem, View } from "@/lib/api"
 type Filter = "all" | "answer" | "approve"
 // A team build adds its own pages, named extra:<id> (decision 0058).
 export type Page =
+  | "home"
+  | "jurisdictions"
+  | "models"
   | "queue"
   | "golden"
   | "try"
@@ -110,20 +117,21 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarHeader className="gap-3 px-3 pt-4">
-        <div className="flex items-center gap-2.5 px-1">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ScaleIcon className="size-4.5" />
-          </div>
-          <div className="leading-tight">
-            <div className="font-semibold tracking-tight">Casebench</div>
-            <div className="text-xs text-muted-foreground">Workbench</div>
-          </div>
+        <div className="px-1">
+          <Brand caption="Workbench" />
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu aria-label="Pages">
+              {me.setup && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={page === "home"} onClick={() => onPage("home")}>
+                    <HouseIcon /> Home
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={page === "queue"} onClick={() => onPage("queue")}>
                   <InboxIcon /> Review queue
@@ -153,18 +161,11 @@ export function AppSidebar({
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {me.setup && (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton isActive={page === "run"} onClick={() => onPage("run")}>
-                      <PlayIcon /> Run
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton isActive={page === "settings"} onClick={() => onPage("settings")}>
-                      <SettingsIcon /> Settings
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={page === "run"} onClick={() => onPage("run")}>
+                    <PlayIcon /> Run
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
               {extension.pages
                 .filter((extra) => me.can?.includes(extra.needs) ?? false)
@@ -181,6 +182,33 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {me.setup && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Set up</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu aria-label="Set up">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={page === "jurisdictions"}
+                    onClick={() => onPage("jurisdictions")}
+                  >
+                    <EarthIcon /> Jurisdictions
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={page === "models"} onClick={() => onPage("models")}>
+                    <SparklesIcon /> Models
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={page === "settings"} onClick={() => onPage("settings")}>
+                    <SettingsIcon /> Settings
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {page === "queue" && (
         <SidebarGroup>
           <SidebarGroupLabel>To do</SidebarGroupLabel>
