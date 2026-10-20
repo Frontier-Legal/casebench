@@ -77,3 +77,4 @@ Every material choice in Casebench has a record here: a dependency, a public int
 | [0061](0061-the-first-ten-minutes.md) | The first ten minutes: a demo with no key, a first run that builds its own suite, the search store named by init, a setup skill, and answers from a tool Casebench cannot reach | accepted |
 | [0063](0063-the-workbench-sets-up-and-runs.md) | The workbench on an engineer's machine edits every setting in casebench.yaml, sets keys, and starts runs | accepted |
 | [0064](0064-the-team-server-in-setup.md) | Setup asks whether lawyers review on a team server, names it, and checks that it takes the engineer's key; it never installs one | accepted |
+| [0065](0065-setting-up-in-the-workbench.md) | Setup starts in the workbench: init opens it, a guide walks a first-time user through each part, and jurisdictions and models get their own pages | accepted |
