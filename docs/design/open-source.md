@@ -64,5 +64,5 @@ Choices behind it:
 | Untrusted model output | never `eval`, `exec` or unpickle outputs; `yaml.safe_load` only; the viewer HTML-escapes everything under a strict CSP ([OWASP LLM05](https://genai.owasp.org/llmrisk/llm052025-improper-output-handling/)) |
 | Egress | per-target host allowlist; cross-host redirects refused; default timeouts |
 | Custom Python metrics | run in-process at R1 with a warning; container sandbox with no network later |
-| Team server and cloud | no default password; first admin set at setup; OIDC for firm SSO; API keys for CI; the cloud isolates tenants per organisation and holds only what push sends ([workbench.md](workbench.md)) |
+| Team server and cloud | no default password; first admin set at setup; OIDC for firm SSO; API keys for CI; the cloud is one service whose database admits only the signed-in organisation's rows, and holds only what push sends ([decision 0066](../decisions/0066-one-shared-cloud.md)) ([workbench.md](workbench.md)) |
 | Telemetry | none in v0.x ([decision 0007](../decisions/0007-no-telemetry.md)); firm security reviews check for it |

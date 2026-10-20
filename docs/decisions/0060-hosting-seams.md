@@ -6,7 +6,7 @@ decision-makers: Casebench maintainers
 
 # The hosted service builds on the team server through two seams, a seat check and erasing a team, and the public server needs neither
 
-Adds to [0058](0058-the-team-server.md) (the team server) and [0059](0059-push-invite-pull.md) (push, invite, pull).
+Adds to [0058](0058-the-team-server.md) (the team server) and [0059](0059-push-invite-pull.md) (push, invite, pull). One server per organisation is replaced by [0066](0066-one-shared-cloud.md): the cloud is one shared service; the two seams stay.
 
 ## Context and problem statement
 
