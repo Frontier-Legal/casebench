@@ -27,7 +27,11 @@ Paste this into the coding agent you use in your project:
 
 > Set up Casebench for this project. Run `uvx casebench guide` and follow it.
 
-The guide has the coding agent read your project and write two things: `casebench.yaml` and an adapter in `.casebench/` that starts your agent the way your production does. Nothing else in your project changes, and no key's value is read or written. It ends when `casebench check` passes, and it asks you one question: which judge model to pay for. Without a coding agent, `casebench init` asks the same things in the terminal.
+The guide has the coding agent read your project and write two things: `casebench.yaml` and an adapter in `.casebench/` that starts your agent the way your production does. Nothing else in your project changes, and no key's value is read or written. It ends when `casebench check` passes, and it asks you one question: which judge model to pay for.
+
+Without a coding agent, run `casebench init`. It reads your project, then asks where to set up: in the browser, where the workbench walks you through your agent, its jurisdictions, the judge and a check, or in the terminal. Either way the workbench opens when init is done, on a Home page that says what is set up and what comes next. `--no-ui` keeps init in the terminal, and init never starts the workbench when it has no terminal, as a coding agent or CI runs it.
+
+A new jurisdiction is a few choices on the workbench's Jurisdictions page and no code: the country by name, then where its documents are. That is usually a legal data provider's API, your firm's own search service or an MCP server; the workbench makes one search and one fetch and you pick, from the values they returned, which field is the id, the citation and the text. A provider's profile connects with only its key to set. On the Models page each model Casebench calls is a card that says what it does: change it by picking another from the public model catalog, set its key, test it alone, or add a second judge from another model family and the two models that turn court decisions into cases.
 
 A coding agent that reads skills from a folder can take the same steps as a skill: copy [`skills/casebench-setup`](skills/casebench-setup/SKILL.md) into its skills folder and ask it to set up Casebench for this agent and run the first evaluation. The skill follows the guide, then runs the first evaluation and opens the workbench.
 

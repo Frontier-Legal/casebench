@@ -691,14 +691,22 @@ const WHERE: Record<KeyView["where"], { tone: "good" | "bad" | "none"; label: st
   missing: { tone: "bad", label: "Not set" },
 }
 
-function SetKey({ name, onSet }: { name: string; onSet: (view: SettingsView) => void }) {
+export function SetKey({
+  name,
+  onSet,
+  label = "Set",
+}: {
+  name: string
+  onSet: (view: SettingsView) => void
+  label?: string
+}) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
   const [busy, setBusy] = useState(false)
   if (!open) {
     return (
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <KeyRoundIcon /> Set
+        <KeyRoundIcon /> {label}
       </Button>
     )
   }

@@ -145,7 +145,7 @@ export function ModelEditor({
   )
 }
 
-function CatalogDialog({
+export function CatalogDialog({
   open,
   onOpenChange,
   onPicked,
