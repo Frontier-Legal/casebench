@@ -5,6 +5,7 @@ from real values; a provider's profile is checked and copied; any source is test
 (decisions 0033, 0043, 0065).
 """
 
+import os
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -17,7 +18,7 @@ from pydantic import BaseModel, Field
 from casebench import keys, network
 from casebench.config import CasebenchConfig, ConfigError, config_from
 from casebench.corpus.add import name_for
-from casebench.corpus.bundled import bundled, resolve
+from casebench.corpus.bundled import bundled
 from casebench.corpus.from_profile import ProfileProblem, profile_block
 from casebench.perimeter import enforce
 from casebench.setup.checks import SETUP_SAMPLE, Check, Status, live, unreachable
@@ -27,6 +28,8 @@ from casebench.workbench.settings import Settings
 
 # The name a source is tested under; it is never saved.
 TRIED = "tried"
+# A profile file is YAML (decision 0033).
+PROFILE_SUFFIXES = (".yaml", ".yml")
 # Enough of a value to recognise it in a list; the list scrolls, the value does not wrap.
 SHOWN = 160
 
@@ -148,6 +151,21 @@ def _reaching(block: dict[str, Any] | None) -> Iterator[None]:
         network.release()
 
 
+def _profile_in(folder: Path, given: str) -> tuple[Path, str]:
+    """A bundled profile by its id, or a profile file inside the project; a request never
+    names a file anywhere else on the machine."""
+    for item in bundled():
+        if item.id == given:
+            return item.path, item.id
+    root = os.path.realpath(folder)
+    found = os.path.realpath(os.path.join(root, given))
+    if not found.startswith(root + os.sep) or not found.endswith(PROFILE_SUFFIXES):
+        raise HTTPException(422, "a profile is a bundled id, or a .yaml file in this project")
+    if not os.path.isfile(found):
+        raise HTTPException(422, f"there is no profile file {given} in this project")
+    return Path(found), Path(found).name
+
+
 def _address(kind: str, options: dict[str, Any]) -> dict[str, Any]:
     """The part of a source's block that says which host it calls."""
     named = {key: options[key] for key in ("base_url", "url") if options.get(key)}
@@ -242,11 +260,9 @@ def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> AP
     @routes.post("/api/setup/sources/profile")
     def from_profile(body: ProfileAsked, name: str = Depends(engineer)) -> FromProfile:
         """One live search and fetch prove the profile works with the key here (0033)."""
-        given = body.given if Path(body.given).is_absolute() else str(folder / body.given)
-        path_or_id = given if Path(given).is_file() else body.given
+        path, recorded = _profile_in(folder, body.given)
         # The profile names its own address, read only once it is loaded (decision 0033).
         with _reaching(None):
-            path, recorded = resolve(path_or_id)
             block, notes = profile_block(path, body.jurisdictions or None, recorded)
         return FromProfile(name=name_for(block, taken()), block=block, notes=notes)
 

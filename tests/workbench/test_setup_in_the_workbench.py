@@ -193,6 +193,20 @@ def test_a_provider_profile_connects_with_its_key(fresh: Path):
     assert DOC_KEY not in connected.text
 
 
+def test_a_profile_is_read_only_from_the_project(
+    fresh: Path, tmp_path_factory: pytest.TempPathFactory
+):
+    outside = tmp_path_factory.mktemp("elsewhere") / "provider.yaml"
+    outside.write_text("format: casebench.profile/1.0\n", encoding="utf-8")
+    (fresh / "notes.txt").write_text("not a profile", encoding="utf-8")
+    client = workbench(fresh)
+
+    for given in (str(outside), "../elsewhere/provider.yaml", "notes.txt", "/etc/hostname"):
+        refused = client.post("/api/setup/sources/profile", json={"given": given}, headers=ME)
+        assert refused.status_code == 422, given
+        assert "in this project" in refused.json()["detail"]
+
+
 def test_a_document_api_that_refuses_the_key_says_so(fresh: Path):
     os.environ["DOC_KEY"] = "not-the-key"
     api = start_document_api()
