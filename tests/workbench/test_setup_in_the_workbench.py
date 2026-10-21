@@ -15,7 +15,7 @@ from casebench.setup import catalog as model_catalog
 from casebench.workbench.settings import SECTIONS
 from tests.corpus.document_api import KEY as DOC_KEY
 from tests.corpus.document_api import start_document_api
-from tests.corpus.profiles import http_options, profile
+from tests.corpus.profiles import FIELDS, http_options, profile
 from tests.workbench.test_settings import CATALOG, JUDGE, ME, SECOND, project, workbench
 
 DECISION = {
@@ -68,13 +68,8 @@ def test_the_agents_models_are_read_from_its_code(fresh: Path, monkeypatch: pyte
     found = client.get("/api/setup/agent-models", headers=ME)
 
     assert found.status_code == 200, found.text
-    assert found.json() == [
-        {
-            "model": "accounts/fireworks/models/qwen-x",
-            "family": "qwen",
-            "price": {"input": 0.2, "output": 0.6},
-        }
-    ]
+    # The family only: a price is looked up when a run needs it, never written (0069).
+    assert found.json() == [{"model": "accounts/fireworks/models/qwen-x", "family": "qwen"}]
 
 
 def test_the_catalog_is_fetched_once_for_every_setup_page(
@@ -228,6 +223,40 @@ def test_a_profile_is_read_only_from_the_project(
         refused = client.post("/api/setup/sources/profile", json={"given": given}, headers=ME)
         assert refused.status_code == 422, given
         assert "in this project" in refused.json()["detail"]
+
+
+def test_a_document_api_that_searches_by_post(fresh: Path):
+    os.environ["DOC_KEY"] = DOC_KEY
+    api = start_document_api()
+    asked = {
+        "base_url": f"http://127.0.0.1:{api.server_port}/v1",
+        "search_path": "/search-by-post",
+        "search_body": {"query": "{text}", "limit": "{limit}"},
+        "fetch_path": "/documents/{id}",
+        "key_env": "DOC_KEY",
+        "probe": "feshi",
+        "result_fields": {"id": "$.work.work_id"},
+        "fields": FIELDS,
+    }
+    try:
+        client = workbench(fresh)
+        connected = client.post("/api/setup/sources/api", json=asked, headers=ME)
+        source = {"corpora": {"tr": connected.json()["block"]}}
+        saved = client.put(
+            "/api/settings/sections/corpora", json={"value": source["corpora"]}, headers=ME
+        )
+        tested = client.post(
+            "/api/setup/sources/test", json={"block": connected.json()["block"]}, headers=ME
+        ).json()
+    finally:
+        api.shutdown()
+
+    assert connected.status_code == 200, connected.text
+    options = connected.json()["block"]["options"]
+    assert options["search_body"] == {"query": "{text}", "limit": "{limit}"}
+    assert "search_params" not in options
+    assert saved.status_code == 200, saved.text
+    assert tested["passed"] is True, tested
 
 
 def test_a_document_api_that_refuses_the_key_says_so(fresh: Path):

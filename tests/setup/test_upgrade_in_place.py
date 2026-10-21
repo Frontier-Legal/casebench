@@ -58,7 +58,8 @@ def test_init_updates_an_existing_setup(tmp_path: Path, monkeypatch: pytest.Monk
     again = invoke("init", "--catalog", "catalog.json")
 
     assert updated.exit_code == 0, updated.output
-    assert "add judge judge-model: price $3.0 and $15.0 a million" in updated.output
+    # A price is looked up when a run needs it, never written (decision 0069).
+    assert "price" not in updated.output
     assert "add judge judge-model: context window of 200000 tokens" in updated.output
     assert "add openai.OpenAI at agent.py:6: route api-fireworks-ai" in updated.output
     after = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
@@ -66,7 +67,6 @@ def test_init_updates_an_existing_setup(tmp_path: Path, monkeypatch: pytest.Monk
     assert after["capture"]["functions"] == before["capture"]["functions"]
     assert after["judge"] == {
         **before["judge"],
-        "price": {"input": 3.0, "output": 15.0},
         "context_window": 200000,
     }
     assert [route["name"] for route in after["capture"]["routes"]] == ["api-fireworks-ai"]
@@ -199,7 +199,5 @@ def test_check_says_what_is_out_of_date(tmp_path: Path, monkeypatch: pytest.Monk
     assert checked.exit_code == 0, checked.output  # advice never fails the check
     assert "could use corpus corpus: its search results are not described" in checked.output
     assert "`casebench corpus add` suggests where its results keep" in checked.output
-    assert "could use judge: no price, so costs show as tokens; `casebench init`" in (
-        checked.output
-    )
+    assert "no price" not in checked.output
     assert "could use judge: no context window" in checked.output

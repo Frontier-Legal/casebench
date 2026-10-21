@@ -44,6 +44,15 @@ class ModelView(BaseModel):
     base_url: str | None
 
 
+class AgentModelView(BaseModel):
+    """A model the agent calls, priced from the sellers' lists unless the file prices it."""
+
+    model: str
+    family: str
+    price_input: float | None
+    price_output: float | None
+
+
 class KeyView(BaseModel):
     """`where` says whether a value is found, never what it is."""
 
@@ -78,6 +87,7 @@ class SettingsView(BaseModel):
     sections: dict[str, Any]
     text: str
     models: list[ModelView]
+    agent_models: list[AgentModelView]
     keys: list[KeyView]
     budget: trying.Budget | None
     runs: list[RunSpend]
@@ -222,6 +232,15 @@ def view(settings: Settings, workspace: Workspace, store: Store, person: str) ->
         sections=json.loads(keys.scrub(json.dumps(sections, default=str), names)),
         text=keys.scrub(settings.text(), names),
         models=models(shown),
+        agent_models=[
+            AgentModelView(
+                model=m.model,
+                family=m.family,
+                price_input=m.price.input if m.price else None,
+                price_output=m.price.output if m.price else None,
+            )
+            for m in shown.agent_models
+        ],
         keys=key_views(shown),
         budget=trying.budget(config, store, person) if config else None,
         runs=run_spends(workspace),

@@ -39,6 +39,7 @@ const VIEW: SettingsView = {
       base_url: null,
     },
   ],
+  agent_models: [],
   keys: [{ name: "ANTHROPIC_API_KEY", where: "missing", file: null, used_by: ["judge"] }],
   budget: { target: "answer", limit: 5, spent_today: 1.25, remaining: 3.75, can_ask: true, why_not: null, checks_citations: true },
   runs: [{ run_id: "run-1", suite_id: "labour", scored: true, agent: 0.42, judge: 0.18, total: 0.6, unpriced: [] }],

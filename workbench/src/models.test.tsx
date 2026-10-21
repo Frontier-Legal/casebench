@@ -49,7 +49,13 @@ function serve() {
     },
     "/api/setup/agent-models": () => [{ model: "gpt-4.1", family: "gpt", price: { input: 2, output: 8 } }],
     "PUT /api/settings/sections/agent_models": (body) => {
-      view = { ...view, sections: { ...view.sections, agent_models: (body as { value: unknown }).value } }
+      const listed = (body as { value: { model: string; family: string }[] }).value
+      // As the server answers: the agent's models priced from the sellers' lists (0069).
+      view = {
+        ...view,
+        sections: { ...view.sections, agent_models: listed },
+        agent_models: listed.map((m) => ({ ...m, price_input: 2, price_output: 8 })),
+      }
       return view
     },
     "PUT /api/settings/sections/judges": (body) => {
@@ -112,5 +118,6 @@ test("the agent's models are read from its code", async () => {
   expect(await screen.findByRole("cell", { name: "gpt-4.1" })).toBeInTheDocument()
   expect(screen.getByRole("cell", { name: "$2 in · $8 out" })).toBeInTheDocument()
   const saved = sent.find((r) => r.method === "PUT" && r.path === "/api/settings/sections/agent_models")
-  expect(saved?.body).toEqual({ value: [{ model: "gpt-4.1", family: "gpt", price: { input: 2, output: 8 } }] })
+  // Saved without a price: it is looked up, never written.
+  expect(saved?.body).toEqual({ value: [{ model: "gpt-4.1", family: "gpt" }] })
 })

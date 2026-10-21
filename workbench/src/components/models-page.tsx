@@ -179,9 +179,7 @@ export function ModelsPage() {
       </div>
     )
   }
-  const agentModels =
-    (view.sections.agent_models as { model: string; family?: string; price?: { input: number; output: number } }[]) ??
-    []
+  const agentModels = view.agent_models ?? []
   return (
     <div className="flex flex-col gap-6 pb-10">
       <div className="flex flex-col gap-1">
@@ -208,7 +206,7 @@ export function ModelsPage() {
       </Section>
       <Section
         title={(<RoleTitle icon={ScaleIcon}>Your agent's models</RoleTitle>)}
-        description="What your agent calls, with the price a run uses to say what it spent. A judge of the same family would favour their answers, so a run warns."
+        description="What your agent calls, priced from OpenRouter's list or the public catalog when a run needs it, so it can say what it spent. A judge of the same family would favour their answers, so a run warns."
         action={<ReadFromCode settings={settings} again={agentModels.length > 0} />}
       >
         {agentModels.length ? (
@@ -226,7 +224,7 @@ export function ModelsPage() {
                   <TableCell className="font-mono text-xs">{m.model}</TableCell>
                   <TableCell>{m.family ?? "–"}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {m.price ? `$${m.price.input} in · $${m.price.output} out` : "–"}
+                    {m.price_input != null ? `$${m.price_input} in · $${m.price_output} out` : "–"}
                   </TableCell>
                 </TableRow>
               ))}

@@ -22,7 +22,7 @@ export function message(error: unknown): string {
 /** The models the agent's code names, priced from the catalog, as an `agent_models:` value. */
 export async function agentModelsFromCode(): Promise<AgentModelRow[]> {
   const found = await api.agentModels()
-  return found.map(({ model, family, price }) => ({ model, family, ...(price ? { price } : {}) }))
+  return found.map(({ model, family }) => ({ model, family }))
 }
 
 export interface Settings {

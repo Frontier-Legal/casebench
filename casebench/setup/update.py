@@ -35,24 +35,12 @@ def missing_from_models(data: dict[str, Any]) -> bool:
 
 
 def model_additions(data: dict[str, Any], catalog: dict[str, Any]) -> list[Addition]:
-    """A price and a context window from the catalog, for each model that has none."""
+    """A context window from the catalog, for each model that has none; prices are looked up
+    when needed, never written (decision 0069)."""
     found = []
     for label, block in _model_blocks(data):
         entry = entry_for(catalog, str(block.get("model", ""))) or {}
-        cost, window = entry.get("cost") or {}, (entry.get("limit") or {}).get("context")
-        if (
-            "price" not in block
-            and cost.get("input") is not None
-            and cost.get("output") is not None
-        ):
-            price = {"input": cost["input"], "output": cost["output"]}
-            found.append(
-                Addition(
-                    f"{label} {block['model']}: price ${price['input']} and ${price['output']} a "
-                    "million input and output tokens",
-                    lambda d, b=block, p=price: b.update(price=p),
-                )
-            )
+        window = (entry.get("limit") or {}).get("context")
         if "context_window" not in block and window:
             found.append(
                 Addition(

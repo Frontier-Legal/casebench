@@ -40,6 +40,14 @@ export interface ModelView {
   base_url: string | null
 }
 
+export interface AgentModelView {
+  model: string
+  family: string
+  /** From the sellers' lists unless casebench.yaml prices it (decision 0069). */
+  price_input: number | null
+  price_output: number | null
+}
+
 export interface KeyView {
   name: string
   /** Whether a value is found, never what it is. */
@@ -75,6 +83,7 @@ export interface SettingsView {
   sections: Sections
   text: string
   models: ModelView[]
+  agent_models: AgentModelView[]
   keys: KeyView[]
   budget: Budget | null
   runs: RunSpend[]
@@ -148,6 +157,8 @@ export interface ApiAsked extends Picks {
   search_path: string
   fetch_path: string
   query_param?: string
+  /** For an API that searches by POST: its JSON body, with {text} where the words go. */
+  search_body?: Record<string, unknown> | null
   key_env?: string | null
   key_header?: string
 }

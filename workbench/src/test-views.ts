@@ -30,6 +30,7 @@ export function settingsView(sections: Sections, models: ModelView[] = [], keys:
     sections,
     text: "",
     models,
+    agent_models: [],
     keys,
     budget: null,
     runs: [],

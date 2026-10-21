@@ -84,7 +84,14 @@ def ui_command(
     store = Store(database or url_for(DEFAULT_DATABASE))
     hosts = [f"{LOOPBACK}:{port}", f"localhost:{port}"]
     app = create_app(
-        workspace, store, hosts, role, config=config, config_path=config_path, folder=Path.cwd()
+        workspace,
+        store,
+        hosts,
+        role,
+        config=config,
+        config_path=config_path,
+        folder=Path.cwd(),
+        look_up_prices=True,
     )
     url = f"http://{LOOPBACK}:{port}/"
     click.echo(f"the workbench is at {url}; press Ctrl+C to stop it")

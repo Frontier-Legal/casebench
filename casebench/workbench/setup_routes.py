@@ -37,9 +37,6 @@ class ScanView(BaseModel):
 class AgentModel(BaseModel):
     model: str
     family: str
-    price: dict[str, float] | None = Field(
-        default=None, description="US dollars per million input and output tokens."
-    )
 
 
 class ModelTry(BaseModel):
@@ -88,8 +85,8 @@ def router(
 
     @routes.get("/api/setup/agent-models")
     def agent_models(name: str = Depends(engineer)) -> list[AgentModel]:
-        """The models the agent's code names, with the family and price the catalog gives
-        them, as `casebench init` writes them (decisions 0047, 0051)."""
+        """The models the agent's code names, with the family the catalog gives them, as
+        `casebench init` writes them (decisions 0047, 0069)."""
         names = [model.name for model in scan(folder).models]
         if not names:
             return []
