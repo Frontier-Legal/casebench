@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Frontier-Legal/casebench/compare/v0.5.1...v0.6.0) (2026-10-21)
+
+
+### Features
+
+* pages open at once, document APIs search by POST, and prices are looked up instead of written ([#106](https://github.com/Frontier-Legal/casebench/issues/106)) ([272a9dd](https://github.com/Frontier-Legal/casebench/commit/272a9ddef6392cf223cceeed4594e83a0ca93341))
+
 ## [0.5.1](https://github.com/Frontier-Legal/casebench/compare/v0.5.0...v0.5.1) (2026-10-21)
 
 
