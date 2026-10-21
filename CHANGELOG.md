@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Frontier-Legal/casebench/compare/v0.5.0...v0.5.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **workbench:** setup and History use shadcn's own components, and the model catalog loads once, in the background ([#104](https://github.com/Frontier-Legal/casebench/issues/104)) ([f42f145](https://github.com/Frontier-Legal/casebench/commit/f42f145d9813481961a2efe4469c4b116d6746e7))
+
 ## [0.5.0](https://github.com/Frontier-Legal/casebench/compare/v0.4.0...v0.5.0) (2026-10-20)
 
 
