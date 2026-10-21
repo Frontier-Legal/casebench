@@ -54,9 +54,13 @@ def api_options(
     query_param: str = "q",
     key_env: str | None = None,
     key_header: str = "Authorization",
+    search_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """A document API's connector options, its key named and never given."""
-    return http_options(base_url, search_path, query_param, fetch_path, (), key_env, key_header)
+    """A document API's connector options, its key named and never given; a search body
+    makes its search a POST."""
+    return http_options(
+        base_url, search_path, query_param, fetch_path, (), key_env, key_header, search_body
+    )
 
 
 def reach(command: str | None, url: str | None) -> dict[str, Any]:

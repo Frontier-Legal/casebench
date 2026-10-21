@@ -71,10 +71,7 @@ def model_block(plugin: str, model: dict[str, Any], options: dict[str, Any]) -> 
     window = (model.get("limit") or {}).get("context")
     if window:
         block["context_window"] = window
-    # So a run can say what it cost; without a price it counts tokens only (decision 0038).
-    cost = model.get("cost") or {}
-    if cost.get("input") is not None and cost.get("output") is not None:
-        block["price"] = {"input": cost["input"], "output": cost["output"]}
+    # No price: a command looks it up when it needs it (decision 0069).
     return block
 
 
@@ -136,13 +133,11 @@ def prices(catalog: dict[str, Any], names: list[str]) -> dict[str, dict[str, flo
 
 
 def agent_models(catalog: dict[str, Any], names: list[str]) -> list[dict[str, Any]]:
-    """Each model the agent's code names that the catalog knows, with its family and its price
-    when listed, as `agent_models:` holds them (decisions 0047, 0051)."""
-    named = families(catalog, names)
-    priced = prices(catalog, list(named))
+    """Each model the agent's code names that the catalog knows, with its family, as
+    `agent_models:` holds them; its price is looked up when needed (decisions 0047, 0069)."""
     return [
-        {"model": model, "family": family} | ({"price": priced[model]} if model in priced else {})
-        for model, family in sorted(named.items())
+        {"model": model, "family": family}
+        for model, family in sorted(families(catalog, names).items())
     ]
 
 

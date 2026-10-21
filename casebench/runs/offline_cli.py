@@ -10,6 +10,8 @@ from casebench.config import CasebenchConfig, load_config
 from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
 from casebench.perimeter import enforce
+from casebench.pricing.lookup import lookup
+from casebench.pricing.priced import priced
 from casebench.runs.cli import show_scored
 from casebench.runs.log import RunInfo, RunLog
 from casebench.runs.offline import TARGET, AnswersError, read_answers, write_questions
@@ -30,6 +32,8 @@ def import_answers(
 ) -> None:
     """A run of the tool's answers, scored as `casebench run` scores one (decision 0061)."""
     config = load_config(config_path) if config_path.is_file() else CasebenchConfig()
+    # Priced from the sellers' lists before the run is held to its hosts (decision 0069).
+    config = priced(config, lookup())
     enforce(config)
     manifest, cases = load(suite_dir)
     cases = as_qualified(cases, list(config.corpora))

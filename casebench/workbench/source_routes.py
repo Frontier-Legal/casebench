@@ -63,6 +63,9 @@ class ApiSource(Picks):
     query_param: str = "q"
     key_env: str | None = Field(default=None, description="The variable the key is read from.")
     key_header: str = "Authorization"
+    search_body: dict[str, Any] | None = Field(
+        default=None, description="For a search by POST: its JSON body, with {text}."
+    )
 
 
 class McpReach(BaseModel):
@@ -221,6 +224,7 @@ def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> AP
                 body.query_param,
                 body.key_env or None,
                 body.key_header,
+                body.search_body,
             )
         return connected("http", options, body)
 

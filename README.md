@@ -53,7 +53,7 @@ workbench:
   second_approval: true   # off unless set
 ```
 
-Every run reports what it spent, per model, the agent's calls apart from the judge's, at the prices `casebench.yaml` gives each model. It also reports how often the agent cited a decision the corpus does not hold, cited one for something it does not say, missed the ruling, or relied on a statute the court did not apply. In the workbench each of these rates opens the answers behind it. A case can name its practice area, in a spreadsheet column or in the workbench.
+Every run reports what it spent, per model, the agent's calls apart from the judge's, at each model's price that day: OpenRouter's own for a model it sells, the public model catalog's for the rest, never a number copied into `casebench.yaml` (a price written there by hand still wins, for a model on your own servers). It also reports how often the agent cited a decision the corpus does not hold, cited one for something it does not say, missed the ruling, or relied on a statute the court did not apply. In the workbench each of these rates opens the answers behind it. A case can name its practice area, in a spreadsheet column or in the workbench.
 
 For partners, the report exports as PDF, Word or one HTML file that opens with no server. It gives each measure by task and practice area with its interval, worked examples beside their evidence, and who approved the answer key:
 

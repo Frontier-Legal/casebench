@@ -16,7 +16,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 2. A change to behaviour arrives with a test that fails before the change and passes after it. Name the test after what a user would notice. A behaviour written as a scenario gets exactly one test named after that scenario.
 3. No magic numbers. A budget, limit or timeout is derived from a documented contract or from a measurement, and the decision record says which, with the date.
 4. Identifiers are English. Other languages appear only in user-facing strings and test fixtures.
-5. Nothing leaves the user's machine except calls to the system under test and the judge the user configured. There is no telemetry.
+5. Nothing leaves the user's machine except calls to the system under test and the judge the user configured, and the two public price lists a run reads, which carry nothing of the user's (decision 0069). There is no telemetry.
 6. Metrics read the corpus. They never ask the system under test to verify itself, and a human verdict always outranks a model's.
 7. A material choice, such as a dependency, a public interface or a storage format, gets a decision record under `docs/decisions/` before the code.
 8. Results are reported per task, per metric and per reference source. There is no single accuracy number, and the project publishes no rankings of products.

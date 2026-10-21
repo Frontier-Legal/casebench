@@ -226,6 +226,7 @@ def create_app(
     limits: Callable[[], trying.Limits] | None = None,
     config_path: Path | None = None,
     folder: Path | None = None,
+    look_up_prices: bool = False,
 ) -> FastAPI:
     """`role` set to `reviewer` serves the review view only: no response carries engineering
     fields, whatever the browser asks for. A team server passes its own `access`, which says
@@ -246,6 +247,8 @@ def create_app(
     # Settings and runs are an engineer's, on their own machine; a team server's never are.
     local = isinstance(access, LocalAccess) and config_path is not None
     settings = Settings(config_path if local else None, config, changed)
+    if local and look_up_prices:
+        settings.look_up_prices()
 
     def second() -> bool:
         """Whether a change to golden data waits for a second editor (decision 0053)."""

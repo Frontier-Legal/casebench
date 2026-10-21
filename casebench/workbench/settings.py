@@ -4,6 +4,7 @@ A save is validated as every command reads the file, and changes nothing when it
 validate; the workbench then serves the saved settings without restarting (decision 0063).
 """
 
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,9 @@ import yaml
 
 from casebench.config import SINGLE, CasebenchConfig, ConfigError, config_from, load_config
 from casebench.judge.judges import shared_family
+from casebench.pricing.lookup import PriceList, lookup
+from casebench.pricing.lookup import saved as saved_prices
+from casebench.pricing.priced import priced
 from casebench.setup.config_schema import LINE, write_schema
 
 # Each section the page edits, in the order a new file lists them.
@@ -83,6 +87,8 @@ class Settings:
         self.path = path
         self.config = config
         self.changed = changed
+        # The sellers' price lists, which price every model the file does not (decision 0069).
+        self.prices = PriceList()
 
     @property
     def editable(self) -> bool:
@@ -151,9 +157,23 @@ class Settings:
 
     def reload(self) -> None:
         path = self._path()
-        self.config = load_config(path) if path.is_file() else None
+        self.config = priced(load_config(path), self.prices) if path.is_file() else None
         if self.changed is not None:
             self.changed(self.config)
+
+    def look_up_prices(self) -> None:
+        """The last lists at once, then fresh ones in the background; each takes effect as it
+        arrives, without a restart."""
+        self.prices = saved_prices()
+        if self.path is not None and self.path.is_file():
+            self.reload()
+
+        def fresh() -> None:
+            self.prices = lookup()
+            if self.path is not None and self.path.is_file():
+                self.reload()
+
+        threading.Thread(target=fresh, daemon=True).start()
 
     def _path(self) -> Path:
         if self.path is None:

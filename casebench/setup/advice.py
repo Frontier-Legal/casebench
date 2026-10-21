@@ -17,11 +17,6 @@ def advice(config: CasebenchConfig) -> list[str]:
                 "results keep their citation, type and passage (search_results, result_fields)"
             )
     for label, model in models_of(config):
-        if model.price is None:
-            lines.append(
-                f"{label}: no price, so costs show as tokens; `casebench init` takes it from the "
-                "model catalog"
-            )
         if label.endswith("judge") and model.context_window is None:
             lines.append(
                 f"{label}: no context window, so a matching call is never split to fit; "

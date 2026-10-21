@@ -14,6 +14,8 @@ from casebench.config import DEFAULT_CONFIG, CasebenchConfig, load_config, targe
 from casebench.judge.judges import SameFamily
 from casebench.metrics.loading import MetricNeeds
 from casebench.perimeter import enforce
+from casebench.pricing.lookup import lookup
+from casebench.pricing.priced import priced
 from casebench.report import render
 from casebench.report.errors import error_rates
 from casebench.runs import first
@@ -40,6 +42,8 @@ def _config(path: Path, python: str | None) -> CasebenchConfig:
         raise click.ClickException(f"{path} does not exist; pass --config or --python")
     if python is not None:
         config = config.model_copy(update={"target": {"type": "python", "entry": python}})
+    # Priced from the sellers' lists before the run is held to its hosts (decision 0069).
+    config = priced(config, lookup())
     enforce(config)
     return config
 
