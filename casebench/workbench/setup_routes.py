@@ -20,6 +20,7 @@ from casebench.perimeter import enforce
 from casebench.setup import catalog as model_catalog
 from casebench.setup.checks import SETUP_SAMPLE, live
 from casebench.setup.scan import scan
+from casebench.workbench.catalog_cache import CatalogCache
 from casebench.workbench.settings import Settings
 from casebench.workbench.source_routes import Tested, shown
 
@@ -49,11 +50,12 @@ def _refused(error: Exception) -> HTTPException:
     return HTTPException(422, keys.scrub(str(error)))
 
 
-def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> APIRouter:
+def router(
+    settings: Settings, folder: Path, engineer: Callable[..., str], catalog: CatalogCache
+) -> APIRouter:
     """`folder` is the project the workbench was started in; `engineer` names a caller who may
     use the engineering view."""
     routes = APIRouter()
-    held: dict[str, dict[str, Any]] = {}
 
     def config_of(data: dict[str, Any]) -> CasebenchConfig:
         """A part read as casebench.yaml would read it, its paths relative to the file."""
@@ -91,13 +93,12 @@ def router(settings: Settings, folder: Path, engineer: Callable[..., str]) -> AP
         names = [model.name for model in scan(folder).models]
         if not names:
             return []
-        if "catalog" not in held:
-            try:
-                held["catalog"] = model_catalog.load()
-            except httpx2.HTTPError as error:
-                said = f"the model catalog could not be fetched: {error}"
-                raise HTTPException(502, said) from None
-        return [AgentModel(**found) for found in model_catalog.agent_models(held["catalog"], names)]
+        try:
+            listed = catalog.get()
+        except httpx2.HTTPError as error:
+            said = f"the model catalog could not be fetched: {error}"
+            raise HTTPException(502, said) from None
+        return [AgentModel(**found) for found in model_catalog.agent_models(listed, names)]
 
     @routes.get("/api/setup/jurisdictions")
     def jurisdictions(name: str = Depends(engineer)) -> list[str]:

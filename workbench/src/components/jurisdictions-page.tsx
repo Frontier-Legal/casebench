@@ -9,6 +9,8 @@ import { Status } from "@/components/section"
 import { TestButton } from "@/components/setup/test-result"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item"
 import {
   Empty,
   EmptyContent,
@@ -40,15 +42,16 @@ function SourceRow({
 }) {
   const place = sourcePlace(corpus)
   return (
-    <li className="flex flex-col gap-2 rounded-lg border bg-background p-3">
-      <div className="flex items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-sm font-medium">{name}</span>
-          <span className="truncate text-xs text-muted-foreground">
-            {sourceKind(corpus)}
-            {place ? ` · ${place}` : ""}
-          </span>
-        </div>
+    <Item role="listitem" variant="outline" size="sm" className="items-start">
+      <ItemContent>
+        <ItemTitle>{name}</ItemTitle>
+        <ItemDescription>
+          {sourceKind(corpus)}
+          {place ? ` · ${place}` : ""}
+        </ItemDescription>
+        <TestButton label="Test a search" test={() => api.testSource(corpus as Record<string, unknown>)} />
+      </ItemContent>
+      <ItemActions>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -57,9 +60,8 @@ function SourceRow({
         >
           <Trash2Icon />
         </Button>
-      </div>
-      <TestButton label="Test a search" test={() => api.testSource(corpus as Record<string, unknown>)} />
-    </li>
+      </ItemActions>
+    </Item>
   )
 }
 
@@ -73,36 +75,33 @@ function JurisdictionCard({
   onRemove: (name: string) => void
 }) {
   const holds = new Set(sources.flatMap(([, corpus]) => holdsOf(corpus)))
+  const name = code ? jurisdictionName(code) : "Every jurisdiction"
   return (
-    <article
-      aria-label={code ? jurisdictionName(code) : "Every jurisdiction"}
-      className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex size-11 items-center justify-center rounded-lg bg-brand-soft text-2xl leading-none">
-          {code ? <span aria-hidden>{flag(code)}</span> : <EarthIcon className="size-5 text-primary" />}
+    <Card role="article" aria-label={name} size="sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {code ? <span aria-hidden>{flag(code)}</span> : <EarthIcon className="size-4" />} {name}
+        </CardTitle>
+        <CardDescription>
+          {code ? <span className="font-mono">{code}</span> : "Sources that name no jurisdiction"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-3">
+          <Status tone={holds.has("decisions") ? "good" : "warn"}>
+            {holds.has("decisions") ? "Court decisions" : "No court decisions"}
+          </Status>
+          <Status tone={holds.has("statutes") ? "good" : "warn"}>
+            {holds.has("statutes") ? "Statutes" : "No statutes"}
+          </Status>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-medium">{code ? jurisdictionName(code) : "Every jurisdiction"}</span>
-          <span className="text-xs text-muted-foreground">
-            {code ? <span className="font-mono">{code}</span> : "Sources that name no jurisdiction"}
-          </span>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Status tone={holds.has("decisions") ? "good" : "warn"}>
-          {holds.has("decisions") ? "Court decisions" : "No court decisions"}
-        </Status>
-        <Status tone={holds.has("statutes") ? "good" : "warn"}>
-          {holds.has("statutes") ? "Statutes" : "No statutes"}
-        </Status>
-      </div>
-      <ul className="flex flex-col gap-2">
-        {sources.map(([name, corpus]) => (
-          <SourceRow key={name} name={name} corpus={corpus} code={code} onRemove={() => onRemove(name)} />
-        ))}
-      </ul>
-    </article>
+        <ItemGroup role="list" className="gap-2">
+          {sources.map(([source, corpus]) => (
+            <SourceRow key={source} name={source} corpus={corpus} code={code} onRemove={() => onRemove(source)} />
+          ))}
+        </ItemGroup>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -131,7 +130,7 @@ export function JurisdictionList({ settings }: { settings: Settings }) {
       <>
         <Empty className="border bg-card">
           <EmptyHeader>
-            <EmptyMedia variant="icon" className="bg-brand-soft text-primary">
+            <EmptyMedia variant="icon">
               <EarthIcon />
             </EmptyMedia>
             <EmptyTitle>No jurisdiction yet</EmptyTitle>

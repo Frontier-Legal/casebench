@@ -63,13 +63,12 @@ test("history over time", async () => {
   expect(within(ruling).getByText("+25 points, better")).toBeInTheDocument()
   const rate = screen.getByRole("article", { name: "Wrong outcome" })
   expect(within(rate).getByText("-25 points, better")).toBeInTheDocument()
-  // The run where the judge changed is named, in the runs table and on the chart's readout.
+  // The run where the judge changed is named in the runs table.
   expect(screen.getByRole("cell", { name: "judge" })).toBeInTheDocument()
-  within(screen.getByRole("article", { name: "Criteria met, weighted" })).getByRole("img").focus()
-  expect(await screen.findByText("Changed: judge")).toBeInTheDocument()
 
   // One practice area at a time: tax stayed at half until the third night.
-  await user.selectOptions(screen.getByLabelText("Practice area"), "tax")
+  await user.click(screen.getByRole("combobox", { name: "Practice area" }))
+  await user.click(await screen.findByRole("option", { name: "tax" }))
   const tax = screen.getByRole("article", { name: "Ruling correct" })
   await user.click(within(tax).getByText("Values"))
   const rows = within(tax).getAllByRole("row").slice(1).map((row) => row.textContent)

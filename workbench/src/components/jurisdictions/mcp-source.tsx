@@ -1,13 +1,12 @@
 // Connect an MCP server: how it is reached, the tool that searches and the one that fetches,
 // picked from the tools it lists, then the fields picked from what it returned (0065).
 
-import { useId, useState } from "react"
+import { useState } from "react"
 import { ListIcon } from "lucide-react"
 
 import { FieldPicker, type Found } from "@/components/jurisdictions/field-picker"
-import { TextField } from "@/components/settings/fields"
+import { ChoiceField, TextField } from "@/components/settings/fields"
 import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { api, type McpAsked, type Tool } from "@/lib/api"
 import { message } from "@/lib/use-settings"
@@ -23,25 +22,17 @@ function ToolPick({
   value: string
   onChange: (tool: string) => void
 }) {
-  const id = useId()
   return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <option value="">Choose a tool</option>
-        {tools.map((tool) => (
-          <option key={tool.name} value={tool.name}>
-            {tool.name}
-            {tool.description ? ` — ${tool.description}` : ""}
-          </option>
-        ))}
-      </select>
-    </Field>
+    <ChoiceField
+      label={label}
+      value={value || null}
+      placeholder="Choose a tool"
+      choices={tools.map((tool) => ({
+        value: tool.name,
+        label: tool.description ? `${tool.name} — ${tool.description}` : tool.name,
+      }))}
+      onChange={onChange}
+    />
   )
 }
 

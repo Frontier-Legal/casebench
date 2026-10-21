@@ -65,6 +65,11 @@ export function Guide({ name, onDone }: { name: string; onDone: (page?: Page) =>
   const index = STEPS.findIndex((s) => s.id === step)
 
   useEffect(() => {
+    // The judge step picks from the model catalog; fetching it takes seconds, so it starts now.
+    api.warmCatalog().catch(() => {})
+  }, [])
+
+  useEffect(() => {
     // Opened again later, the guide resumes at the first part not yet set up.
     if (!view || resumed.current) return
     resumed.current = true
@@ -89,14 +94,11 @@ export function Guide({ name, onDone }: { name: string; onDone: (page?: Page) =>
       setBusy(true)
       const listed = Boolean((view?.sections.agent_models as unknown[] | undefined)?.length)
       const ok = await save("target", draft)
-      // The agent's own models, priced, so a run says what they cost, as init writes them.
+      // The agent's own models, priced, as init writes them; the guide moves on meanwhile.
       if (ok && !listed) {
-        try {
-          const found = await agentModelsFromCode()
-          if (found.length) await save("agent_models", found)
-        } catch {
-          // The catalog is out of reach: the Models page reads them again later.
-        }
+        agentModelsFromCode()
+          .then((found) => (found.length ? save("agent_models", found) : false))
+          .catch(() => {})
       }
       setBusy(false)
       if (!ok) return
@@ -119,7 +121,6 @@ export function Guide({ name, onDone }: { name: string; onDone: (page?: Page) =>
   return (
     <div className="grid min-h-svh lg:grid-cols-[22rem_minmax(0,1fr)]">
       <aside className="relative hidden flex-col gap-10 overflow-hidden bg-gradient-to-b from-primary to-primary/85 p-8 text-primary-foreground lg:flex">
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-24 size-96 rounded-full bg-white/10 blur-3xl" />
         <Brand caption="Setup guide" light />
         <ol aria-label="Setup steps" className="relative flex flex-col gap-1">
           {STEPS.map((item, n) => (
@@ -233,7 +234,7 @@ export function Guide({ name, onDone }: { name: string; onDone: (page?: Page) =>
             </div>
           )}
         </div>
-        <footer className="sticky bottom-0 border-t bg-background/90 backdrop-blur">
+        <footer className="sticky bottom-0 border-t bg-background">
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-3 lg:px-10">
             <Button variant="ghost" onClick={() => setStep(STEPS[Math.max(index - 1, 0)].id)} disabled={index === 0}>
               <ArrowLeftIcon /> Back

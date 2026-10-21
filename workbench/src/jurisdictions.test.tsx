@@ -55,13 +55,18 @@ afterEach(() => {
   window.localStorage.clear()
 })
 
+async function pick(user: ReturnType<typeof userEvent.setup>, box: HTMLElement, option: RegExp) {
+  await user.click(box)
+  await user.click(await screen.findByRole("option", { name: option }))
+}
+
 async function openFrance(user: ReturnType<typeof userEvent.setup>) {
   render(<App />)
   await user.click(await screen.findByRole("button", { name: "Jurisdictions" }))
   expect(await screen.findByRole("article", { name: "Türkiye" })).toBeInTheDocument()
   await user.click(screen.getByRole("button", { name: "Add a jurisdiction" }))
   await user.type(await screen.findByLabelText("Find a country"), "fran")
-  await user.click(await screen.findByRole("button", { name: /France/ }))
+  await user.click(await screen.findByRole("option", { name: /France/ }))
 }
 
 test("a jurisdiction is added from a document API", async () => {
@@ -69,17 +74,17 @@ test("a jurisdiction is added from a document API", async () => {
   const user = userEvent.setup()
   await openFrance(user)
 
-  const choices = screen.getAllByRole("radio").map((r) => r.textContent)
+  const choices = screen.getByRole("radiogroup", { name: "Where its documents are" }).textContent ?? ""
   // A provider's or the firm's API comes first; sample files last.
-  expect(choices[0]).toMatch(/A document API/)
-  expect(choices.findIndex((c) => /sample documents/.test(c ?? ""))).toBeGreaterThan(2)
+  expect(choices.indexOf("A document API")).toBe(0)
+  expect(choices.indexOf("A folder of sample documents")).toBeGreaterThan(choices.indexOf("A source already connected"))
   await user.click(screen.getByRole("radio", { name: /A document API/ }))
   await user.type(screen.getByLabelText("The API's address"), "https://api.example/v1")
   await user.type(screen.getByLabelText("A search that finds a document"), "licenciement")
   await user.click(screen.getByRole("button", { name: /Search the source/ }))
 
   const result = await screen.findByRole("region", { name: "A search result" })
-  await user.selectOptions(within(result).getByLabelText(/The document's id/), "$.work.work_id")
+  await pick(user, within(result).getByRole("combobox", { name: /The document's id/ }), /\$\.work\.work_id/)
   await user.click(within(result).getByRole("button", { name: /Fetch that document/ }))
   expect(await screen.findByRole("region", { name: "The document" })).toBeInTheDocument()
   await user.click(screen.getByRole("button", { name: "Add France" }))
@@ -101,12 +106,12 @@ test("a jurisdiction is added from an MCP server", async () => {
   await user.click(screen.getByRole("radio", { name: /An MCP server/ }))
   await user.type(screen.getByLabelText("How to reach the server"), "legal-docs-mcp")
   await user.click(screen.getByRole("button", { name: /List its tools/ }))
-  await user.selectOptions(await screen.findByLabelText("The tool that searches"), "search")
-  await user.selectOptions(screen.getByLabelText("The tool that returns a document"), "get_document")
+  await pick(user, await screen.findByRole("combobox", { name: "The tool that searches" }), /^search/)
+  await pick(user, screen.getByRole("combobox", { name: "The tool that returns a document" }), /^get_document/)
   await user.type(screen.getByLabelText("A search that finds a document"), "licenciement")
   await user.click(screen.getByRole("button", { name: /Search the source/ }))
   const result = await screen.findByRole("region", { name: "A search result" })
-  await user.selectOptions(within(result).getByLabelText(/The document's id/), "$.work.work_id")
+  await pick(user, within(result).getByRole("combobox", { name: /The document's id/ }), /\$\.work\.work_id/)
   await user.click(within(result).getByRole("button", { name: /Fetch that document/ }))
   await user.click(await screen.findByRole("button", { name: "Add France" }))
 

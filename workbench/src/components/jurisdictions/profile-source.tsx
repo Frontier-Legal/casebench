@@ -6,12 +6,12 @@ import { BadgeCheckIcon } from "lucide-react"
 
 import type { Found } from "@/components/jurisdictions/field-picker"
 import { TextField } from "@/components/settings/fields"
+import { ChoiceCards } from "@/components/setup/choice-cards"
 import { KeyLine } from "@/components/setup/model-card"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { api, type FromProfile, type ProfileView, type SettingsView } from "@/lib/api"
 import { message } from "@/lib/use-settings"
-import { cn } from "@/lib/utils"
 
 export function ProfileSource({
   view,
@@ -54,27 +54,16 @@ export function ProfileSource({
   return (
     <div className="flex flex-col gap-4">
       {bundled.length > 0 && (
-        <div role="radiogroup" aria-label="Profiles bundled with Casebench" className="grid gap-2 sm:grid-cols-2">
-          {bundled.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={given === item.id}
-              onClick={() => {
-                setGiven(item.id)
-                onReady(null)
-              }}
-              className={cn(
-                "flex flex-col gap-0.5 rounded-lg border p-3 text-left hover:bg-accent/40",
-                given === item.id && "border-primary bg-accent/60",
-              )}
-            >
-              <span className="font-medium">{item.name}</span>
-              <span className="text-xs text-muted-foreground">{item.jurisdictions.join(", ")}</span>
-            </button>
-          ))}
-        </div>
+        <ChoiceCards
+          label="Profiles bundled with Casebench"
+          className="sm:grid-cols-2"
+          value={chosen ? given : null}
+          onChange={(id) => {
+            setGiven(id)
+            onReady(null)
+          }}
+          choices={bundled.map((item) => ({ value: item.id, title: item.name, text: item.jurisdictions.join(", ") }))}
+        />
       )}
       <TextField
         label={bundled.length ? "Or a profile file" : "Profile file"}

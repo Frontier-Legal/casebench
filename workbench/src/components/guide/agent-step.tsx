@@ -5,44 +5,13 @@ import { useEffect, useState } from "react"
 import { CodeIcon, GlobeIcon, SquareTerminalIcon } from "lucide-react"
 
 import { JsonField, TextField } from "@/components/settings/fields"
+import { ChoiceCards } from "@/components/setup/choice-cards"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, type ScanView } from "@/lib/api"
 import type { Target } from "@/lib/setup-progress"
-import { cn } from "@/lib/utils"
 
-function Choice({
-  checked,
-  onClick,
-  icon: Icon,
-  title,
-  text,
-}: {
-  checked: boolean
-  onClick: () => void
-  icon: React.ElementType
-  title: React.ReactNode
-  text: string
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={checked}
-      onClick={onClick}
-      className={cn(
-        "flex items-start gap-3 rounded-xl border p-4 text-left transition hover:border-primary/50 hover:bg-accent/40",
-        checked && "border-primary bg-accent/60 ring-1 ring-primary/30",
-      )}
-    >
-      <Icon className="mt-0.5 size-5 shrink-0 text-primary" />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="font-medium break-all">{title}</span>
-        <span className="text-sm text-muted-foreground">{text}</span>
-      </span>
-    </button>
-  )
-}
+const OTHER = "other-python"
 
 export function AgentStep({ target, onChange }: { target: Target | null; onChange: (target: Target) => void }) {
   const [found, setFound] = useState<ScanView | null>(null)
@@ -84,39 +53,42 @@ export function AgentStep({ target, onChange }: { target: Target | null; onChang
           <span className="text-xs text-muted-foreground">{found.said}</span>
         </div>
       )}
-      <div role="radiogroup" aria-label="How Casebench reaches your agent" className="grid gap-3">
-        {found.entries.map((name) => (
-          <Choice
-            key={name}
-            checked={kind === "python" && target?.entry === name}
-            onClick={() => onChange({ type: "python", entry: name })}
-            icon={CodeIcon}
-            title={<code>{name}</code>}
-            text="A function in your project that answers a question. Casebench calls it as your app does."
-          />
-        ))}
-        <Choice
-          checked={kind === "python" && !listed}
-          onClick={() => onChange({ type: "python", entry: entry || "" })}
-          icon={CodeIcon}
-          title={found.entries.length ? "Another Python function" : "A Python function"}
-          text="Written as path.py:function, taking the question and returning the answer."
-        />
-        <Choice
-          checked={kind === "http"}
-          onClick={() => onChange({ type: "http", url: "", body: { question: "{question}" }, answer: "$.answer" })}
-          icon={GlobeIcon}
-          title="An HTTP endpoint"
-          text="A deployed service in any language: Casebench posts each question and reads the answer."
-        />
-        <Choice
-          checked={kind === "command"}
-          onClick={() => onChange({ type: "command", run: "" })}
-          icon={SquareTerminalIcon}
-          title="A command"
-          text="A program Casebench starts with the question, reading the answer it prints."
-        />
-      </div>
+      <ChoiceCards
+        label="How Casebench reaches your agent"
+        value={kind === "python" ? (listed ? `entry:${target?.entry}` : OTHER) : kind}
+        onChange={(chosen) => {
+          if (chosen.startsWith("entry:")) onChange({ type: "python", entry: chosen.slice("entry:".length) })
+          else if (chosen === OTHER) onChange({ type: "python", entry: entry || "" })
+          else if (chosen === "http") onChange({ type: "http", url: "", body: { question: "{question}" }, answer: "$.answer" })
+          else onChange({ type: "command", run: "" })
+        }}
+        choices={[
+          ...found.entries.map((name) => ({
+            value: `entry:${name}`,
+            icon: CodeIcon,
+            title: <code>{name}</code>,
+            text: "A function in your project that answers a question. Casebench calls it as your app does.",
+          })),
+          {
+            value: OTHER,
+            icon: CodeIcon,
+            title: found.entries.length ? "Another Python function" : "A Python function",
+            text: "Written as path.py:function, taking the question and returning the answer.",
+          },
+          {
+            value: "http",
+            icon: GlobeIcon,
+            title: "An HTTP endpoint",
+            text: "A deployed service in any language: Casebench posts each question and reads the answer.",
+          },
+          {
+            value: "command",
+            icon: SquareTerminalIcon,
+            title: "A command",
+            text: "A program Casebench starts with the question, reading the answer it prints.",
+          },
+        ]}
+      />
       {kind === "python" && !listed && (
         <TextField
           label="The function"

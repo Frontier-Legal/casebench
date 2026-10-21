@@ -19,6 +19,7 @@ import type { Found } from "@/components/jurisdictions/field-picker"
 import { McpSource } from "@/components/jurisdictions/mcp-source"
 import { ProfileSource } from "@/components/jurisdictions/profile-source"
 import { PickField, TextField } from "@/components/settings/fields"
+import { ChoiceCards } from "@/components/setup/choice-cards"
 import { TestButton } from "@/components/setup/test-result"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,7 +34,6 @@ import { Spinner } from "@/components/ui/spinner"
 import { api, type SettingsView } from "@/lib/api"
 import { flag, jurisdictionName } from "@/lib/jurisdictions"
 import { progress, sourceKind, sourcePlace, type Corpus } from "@/lib/setup-progress"
-import { cn } from "@/lib/utils"
 
 type How = "api" | "mcp" | "profile" | "existing" | "folder" | "other"
 
@@ -208,28 +208,21 @@ export function AddJurisdiction({
           />
         )}
         {step === "how" && (
-          <div role="radiogroup" aria-label="Where its documents are" className="grid gap-3 sm:grid-cols-2">
-            {HOWS.filter((h) => h.value !== "existing" || taken.length > 0).map((choice) => (
-              <button
-                key={choice.value}
-                type="button"
-                role="radio"
-                aria-checked={how === choice.value}
-                onClick={() => {
-                  setHow(choice.value)
-                  setStep("details")
-                }}
-                className={cn(
-                  "flex flex-col gap-2 rounded-xl border p-4 text-left transition hover:border-primary/50 hover:bg-accent/40",
-                  how === choice.value && "border-primary bg-accent/60",
-                )}
-              >
-                <choice.icon className="size-5 text-primary" />
-                <span className="font-medium">{choice.title}</span>
-                <span className="text-sm text-muted-foreground">{choice.text}</span>
-              </button>
-            ))}
-          </div>
+          <ChoiceCards
+            label="Where its documents are"
+            className="sm:grid-cols-2"
+            value={how}
+            onChange={(chosen) => {
+              setHow(chosen as How)
+              setStep("details")
+            }}
+            choices={HOWS.filter((h) => h.value !== "existing" || taken.length > 0).map((h) => ({
+              value: h.value,
+              icon: h.icon,
+              title: h.title,
+              text: h.text,
+            }))}
+          />
         )}
         {step === "details" && how === "folder" && (
           <div className="flex flex-col gap-4">
@@ -265,27 +258,19 @@ export function AddJurisdiction({
           </div>
         )}
         {step === "details" && how === "existing" && (
-          <div role="radiogroup" aria-label="Sources connected" className="flex flex-col gap-2">
-            {Object.entries(state.corpora).map(([name, corpus]) => (
-              <button
-                key={name}
-                type="button"
-                role="radio"
-                aria-checked={existing === name}
-                onClick={() => setExisting(name)}
-                className={cn(
-                  "flex flex-col gap-0.5 rounded-lg border p-3 text-left hover:bg-accent/40",
-                  existing === name && "border-primary bg-accent/60",
-                )}
-              >
-                <span className="font-medium">{name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {sourceKind(corpus)}
-                  {sourcePlace(corpus) ? ` · ${sourcePlace(corpus)}` : ""} ·{" "}
-                  {corpus.jurisdictions?.length ? corpus.jurisdictions.join(", ") : "every jurisdiction"}
-                </span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-2">
+            <ChoiceCards
+              label="Sources connected"
+              value={existing}
+              onChange={setExisting}
+              choices={Object.entries(state.corpora).map(([name, corpus]) => ({
+                value: name,
+                title: name,
+                text: `${sourceKind(corpus)}${sourcePlace(corpus) ? ` · ${sourcePlace(corpus)}` : ""} · ${
+                  corpus.jurisdictions?.length ? corpus.jurisdictions.join(", ") : "every jurisdiction"
+                }`,
+              }))}
+            />
             {existing && !state.corpora[existing].jurisdictions?.length && (
               <p className="text-sm text-muted-foreground">
                 It covers every jurisdiction now; naming {named} makes it cover {named} only.

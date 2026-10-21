@@ -1,13 +1,17 @@
 // The History page: a suite's error rates and metrics run by run, by practice area, reference
 // source and approval, never averaged across them, with the runs listed below (decision 0067).
 
-import { useEffect, useId, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ArrowDownRightIcon, ArrowUpRightIcon, ChartLineIcon, MinusIcon } from "lucide-react"
 
 import { day, percent, TrendChart } from "@/components/history/trend-chart"
+import { ChoiceField } from "@/components/settings/fields"
 import { Section } from "@/components/section"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Empty,
   EmptyDescription,
@@ -21,7 +25,8 @@ import { api, type History, type HistoryPoint, type HistoryRun, type SuiteHistor
 import { message } from "@/lib/use-settings"
 import { taskName } from "@/lib/words"
 
-const EVERY_AREA = ""
+// Every practice area together; no area is named so.
+const EVERY_AREA = "every"
 const SOURCES: Record<string, string> = {
   court: "Court records",
   lawyer: "Lawyers' references",
@@ -29,37 +34,6 @@ const SOURCES: Record<string, string> = {
   hybrid: "Court and lawyer",
 }
 const APPROVALS: Record<string, string> = { approved: "Lawyer-approved cases", draft: "Unreviewed cases" }
-
-function Picker({
-  label,
-  value,
-  choices,
-  onChange,
-}: {
-  label: string
-  value: string
-  choices: { value: string; label: string }[]
-  onChange: (value: string) => void
-}) {
-  const id = useId()
-  return (
-    <label htmlFor={id} className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-      {label}
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        {choices.map((choice) => (
-          <option key={choice.value} value={choice.value}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
 
 /** The latest value and how far it moved since the run before, in the measure's own terms. */
 function Latest({ points, lowerIsBetter }: { points: HistoryPoint[]; lowerIsBetter: boolean }) {
@@ -88,34 +62,40 @@ function Latest({ points, lowerIsBetter }: { points: HistoryPoint[]; lowerIsBett
 function Values({ runs, points }: { runs: HistoryRun[]; points: HistoryPoint[] }) {
   const byRun = new Map(points.map((p) => [p.run_id, p]))
   return (
-    <details className="text-xs">
-      <summary className="cursor-pointer text-muted-foreground">Values</summary>
-      <Table className="mt-2">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Run</TableHead>
-            <TableHead className="text-right">Value</TableHead>
-            <TableHead className="text-right">95% interval</TableHead>
-            <TableHead className="text-right">Answers</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {runs.map((run) => {
-            const point = byRun.get(run.run_id)
-            return (
-              <TableRow key={run.run_id}>
-                <TableCell>{day(run.scored_at)}</TableCell>
-                <TableCell className="text-right tabular-nums">{point ? percent(point.mean) : "–"}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {point ? `${percent(point.low)} to ${percent(point.high)}` : "–"}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{point?.n ?? "–"}</TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </details>
+    <Collapsible>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
+          Values
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Run</TableHead>
+              <TableHead className="text-right">Value</TableHead>
+              <TableHead className="text-right">95% interval</TableHead>
+              <TableHead className="text-right">Answers</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {runs.map((run) => {
+              const point = byRun.get(run.run_id)
+              return (
+                <TableRow key={run.run_id}>
+                  <TableCell>{day(run.scored_at)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{point ? percent(point.mean) : "–"}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {point ? `${percent(point.low)} to ${percent(point.high)}` : "–"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{point?.n ?? "–"}</TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -137,18 +117,20 @@ function Measure({
   lowerIsBetter: boolean
 }) {
   return (
-    <article aria-label={title} className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium">{title}</h3>
-          <span className="text-xs text-muted-foreground">{lowerIsBetter ? "lower is better" : "higher is better"}</span>
-        </div>
-        {meaning && <p className="text-xs text-muted-foreground">{meaning}</p>}
-      </div>
-      <Latest points={points} lowerIsBetter={lowerIsBetter} />
-      <TrendChart label={title} runs={runs} points={points} moved={moved} changes={changes} />
-      <Values runs={runs} points={points} />
-    </article>
+    <Card role="article" aria-label={title} size="sm">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {meaning && <CardDescription>{meaning}</CardDescription>}
+        <CardAction className="text-xs text-muted-foreground">
+          {lowerIsBetter ? "lower is better" : "higher is better"}
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <Latest points={points} lowerIsBetter={lowerIsBetter} />
+        <TrendChart label={title} runs={runs} points={points} moved={moved} changes={changes} />
+        <Values runs={runs} points={points} />
+      </CardContent>
+    </Card>
   )
 }
 
@@ -207,7 +189,7 @@ export function HistoryPage() {
     return (
       <Empty className="mt-10 border md:mt-20">
         <EmptyHeader>
-          <EmptyMedia variant="icon" className="bg-brand-soft text-primary">
+          <EmptyMedia variant="icon">
             <ChartLineIcon />
           </EmptyMedia>
           <EmptyTitle>No history yet</EmptyTitle>
@@ -239,30 +221,34 @@ export function HistoryPage() {
         </p>
       </div>
       <div className="flex flex-wrap items-end gap-3" aria-label="What the charts show">
-        <Picker
+        <ChoiceField
           label="Suite"
-          value={suite ?? ""}
+          className="w-64"
+          value={suite}
           choices={suites.map((s) => ({ value: s.suite_id, label: `${s.suite_id} · ${s.runs} runs` }))}
           onChange={setSuite}
         />
-        <Picker
+        <ChoiceField
           label="Practice area"
+          className="w-56"
           value={area}
           choices={[{ value: EVERY_AREA, label: "Every practice area" }, ...options.areas.map((a) => ({ value: a, label: a }))]}
           onChange={setArea}
         />
         {options.sources.length > 1 && (
-          <Picker
+          <ChoiceField
             label="Reference"
-            value={source ?? ""}
+            className="w-56"
+            value={source}
             choices={options.sources.map((s) => ({ value: s, label: SOURCES[s] ?? s }))}
             onChange={setSource}
           />
         )}
         {options.approvals.length > 1 && (
-          <Picker
+          <ChoiceField
             label="Cases"
-            value={approval ?? ""}
+            className="w-56"
+            value={approval}
             choices={options.approvals.map((a) => ({ value: a, label: APPROVALS[a] ?? a }))}
             onChange={setApproval}
           />
@@ -297,7 +283,7 @@ export function HistoryPage() {
           <section aria-label="Metrics" className="flex flex-col gap-3">
             <h2 className="text-sm font-medium text-muted-foreground">
               Metrics · {SOURCES[source ?? ""] ?? source} · {APPROVALS[approval ?? ""] ?? approval}
-              {area ? ` · ${area}` : ""}
+              {area !== EVERY_AREA ? ` · ${area}` : ""}
             </h2>
             {shown.length ? (
               <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">

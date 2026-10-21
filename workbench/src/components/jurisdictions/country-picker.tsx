@@ -3,14 +3,21 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CheckIcon, SearchIcon } from "lucide-react"
+import { CheckIcon } from "lucide-react"
 
-import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command"
+import { Spinner } from "@/components/ui/spinner"
 import { api } from "@/lib/api"
 import { byName, flag, jurisdictionName } from "@/lib/jurisdictions"
 import { message } from "@/lib/use-settings"
-import { cn } from "@/lib/utils"
 
 // ISO 3166-2: a country's code, a hyphen, and up to three letters or digits.
 const PART = /^[A-Z]{2}-[A-Z0-9]{1,3}$/
@@ -35,62 +42,45 @@ export function CountryPicker({
       .catch((error) => toast.error(message(error)))
   }, [])
 
+  const named = useMemo(() => (codes ?? []).map((code) => ({ code, name: jurisdictionName(code) })), [codes])
   const typed = search.trim().toUpperCase()
-  const shown = useMemo(() => {
-    const needle = search.trim().toLowerCase()
-    const found = (codes ?? []).filter(
-      (code) => !needle || code.toLowerCase() === needle || jurisdictionName(code).toLowerCase().includes(needle),
-    )
-    const part = PART.test(typed) && codes?.includes(typed.slice(0, 2)) ? [typed] : []
-    return [...part, ...found]
-  }, [codes, search, typed])
+  const part = PART.test(typed) && codes?.includes(typed.slice(0, 2)) ? typed : null
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-        <Input
-          aria-label="Find a country"
-          autoFocus
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="France, Türkiye, US-CA…"
-          className="pl-8"
-        />
-      </div>
-      <ul aria-label="Jurisdictions" className="max-h-72 overflow-y-auto rounded-lg border">
+    <Command label="Find a country" className="rounded-lg border">
+      <CommandInput
+        aria-label="Find a country"
+        placeholder="France, Türkiye, US-CA…"
+        value={search}
+        onValueChange={setSearch}
+        autoFocus
+      />
+      <CommandList>
         {codes === null ? (
-          <li className="p-3">
-            <Skeleton className="h-6" />
-          </li>
-        ) : shown.length === 0 ? (
-          <li className="p-3 text-sm text-muted-foreground">
-            No country by that name. A part of a country is written like US-CA.
-          </li>
+          <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+            <Spinner /> Loading the countries
+          </div>
         ) : (
-          shown.map((code) => (
-            <li key={code}>
-              <button
-                type="button"
-                onClick={() => onChange(code)}
-                aria-pressed={value === code}
-                className={cn(
-                  "flex w-full items-center gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/60",
-                  value === code && "bg-accent text-accent-foreground",
-                )}
-              >
-                <span aria-hidden className="w-6 text-lg leading-none">
-                  {flag(code)}
-                </span>
-                <span className="flex-1 truncate">{jurisdictionName(code)}</span>
-                {covered.includes(code) && <span className="text-xs text-muted-foreground">has a source</span>}
-                <span className="font-mono text-xs text-muted-foreground">{code}</span>
-                {value === code && <CheckIcon className="size-4 text-primary" />}
-              </button>
-            </li>
-          ))
+          <>
+            <CommandEmpty>No country by that name. A part of a country is written like US-CA.</CommandEmpty>
+            <CommandGroup>
+              {part && (
+                <CommandItem value={part} onSelect={() => onChange(part)}>
+                  <span aria-hidden>{flag(part)}</span> {jurisdictionName(part)}
+                  <CommandShortcut>{part}</CommandShortcut>
+                </CommandItem>
+              )}
+              {named.map(({ code, name }) => (
+                <CommandItem key={code} value={`${name} ${code}`} onSelect={() => onChange(code)}>
+                  <span aria-hidden>{flag(code)}</span> {name}
+                  {value === code && <CheckIcon />}
+                  <CommandShortcut>{covered.includes(code) ? `${code} · has a source` : code}</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
         )}
-      </ul>
-    </div>
+      </CommandList>
+    </Command>
   )
 }
