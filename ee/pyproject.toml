@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Elastic-2.0
 [project]
 name = "casebench-ee"
-version = "0.5.0"  # x-release-please-version
+version = "0.5.1"  # x-release-please-version
 description = "Casebench's team server: logins, roles, an audit log and admin pages on the workbench"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     # Released together, at the same version.
-    "casebench==0.5.0",  # x-release-please-version
+    "casebench==0.5.1",  # x-release-please-version
     "psycopg[binary]>=3.3.6",
     "pyjwt[crypto]>=2.15.1",
 ]
