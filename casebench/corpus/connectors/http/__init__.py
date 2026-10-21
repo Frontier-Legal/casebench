@@ -17,13 +17,15 @@ class HttpCorpusConfig(Record):
     `search_results` finds each result in a search response, and `result_fields` reads its
     `id`, `citation`, `type` and `passage` inside it (decision 0037); without them,
     `search_ids` finds the ids alone. `base_url` may name a variable, such as
-    `${DOCS_URL}`, read like a header's key (decision 0044)."""
+    `${DOCS_URL}`, read like a header's key (decision 0044). With `search_body`, a search is
+    a POST of that JSON, `{text}` and `{limit}` filled in, and `search_params` is not sent."""
 
     base_url: str
     headers: dict[str, str] = Field(default_factory=dict)
     fetch_path: str
     search_path: str
     search_params: dict[str, str] = Field(default_factory=lambda: {"q": "{text}"})
+    search_body: dict[str, Any] | None = None
     search_ids: str = "$"
     search_results: str | None = None
     result_fields: dict[str, str] = Field(default_factory=dict)
@@ -37,6 +39,19 @@ class HttpCorpusConfig(Record):
         if self.search_results and "id" not in self.result_fields:
             raise ValueError("result_fields needs an id when search_results is set")
         return self
+
+
+def _filled(value: Any, text: str, limit: int) -> Any:
+    """A body with `{text}` and `{limit}` in its strings filled; `{limit}` alone is a number."""
+    if isinstance(value, dict):
+        return {key: _filled(item, text, limit) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_filled(item, text, limit) for item in value]
+    if value == "{limit}":
+        return limit
+    if isinstance(value, str):
+        return value.replace("{text}", text).replace("{limit}", str(limit))
+    return value
 
 
 class Connector:
@@ -58,7 +73,13 @@ class Connector:
         return self._get(self.config.fetch_path.replace("{id}", decision_id))
 
     def search_raw(self, text: str, limit: int, filters: dict[str, Any] | None = None) -> Any:
-        """`filters` are further query parameters, such as a document type (decision 0037)."""
+        """`filters` are further query parameters, or body fields when the search is a POST,
+        such as a document type (decision 0037)."""
+        if self.config.search_body is not None:
+            body = _filled(self.config.search_body, text, limit) | (filters or {})
+            response = self.client.post(self.config.search_path, json=body)
+            response.raise_for_status()
+            return response.json()
         params = {
             key: value.replace("{text}", text).replace("{limit}", str(limit))
             for key, value in self.config.search_params.items()

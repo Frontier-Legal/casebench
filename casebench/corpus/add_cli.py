@@ -1,5 +1,6 @@
 """`casebench corpus add http|mcp|profile`: describe a store from one live search and fetch."""
 
+import json
 import re
 import shutil
 from pathlib import Path
@@ -294,6 +295,7 @@ def http_block(
     jurisdictions: list[str] | None = None,
     ask: bool = True,
     show: bool = True,
+    search_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Ask for what was not given, make one live search and fetch, and return the corpus block.
     `show` prints the responses the paths are suggested from."""
@@ -307,7 +309,14 @@ def http_block(
         ask,
     )
     options = http_options(
-        base_url, search_path, query_param, fetch_path, headers, key_env, key_header_name
+        base_url,
+        search_path,
+        query_param,
+        fetch_path,
+        headers,
+        key_env,
+        key_header_name,
+        search_body,
     )
     probe = _ask(probe, "a search that finds at least one document", ask)
     store = connector("http", options)
@@ -316,6 +325,20 @@ def http_block(
     )
     # The search it was added with is the one `casebench check` runs (decision 0044).
     return {**corpus_block("http", options, jurisdictions), "probe": probe}
+
+
+def _body(given: str | None) -> dict[str, Any] | None:
+    if given is None:
+        return None
+    try:
+        body = json.loads(given)
+    except json.JSONDecodeError as error:
+        raise click.BadParameter(f"not JSON: {error}", param_hint="--search-body") from error
+    if not isinstance(body, dict):
+        raise click.BadParameter(
+            'a JSON object, such as {"query": "{text}"}', param_hint="--search-body"
+        )
+    return body
 
 
 def key_names(base_url: str, headers: tuple[str, ...], key_env: str | None) -> set[str]:
@@ -332,9 +355,10 @@ def http_options(
     headers: tuple[str, ...],
     key_env: str | None,
     key_header_name: str,
+    search_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The connector's options, with each key named, never given; every key they name must be
-    set in the shell or read from a .env file already."""
+    set in the shell or read from a .env file already. A search body makes the search a POST."""
     if "{id}" not in fetch_path:
         raise click.BadParameter(f"{fetch_path!r} has no {{id}} for the document's id")
     sent = _headers(headers) | key_header(key_env or None, key_header_name)
@@ -345,11 +369,16 @@ def http_options(
             f"{', '.join(unset)} is set neither in this shell nor in any .env file here; "
             f"export it, or pass --key {unset[0]}=FILE"
         )
+    searched: dict[str, Any] = (
+        {"search_body": search_body}
+        if search_body is not None
+        else {"search_params": {query_param: "{text}"}}
+    )
     return {
         "base_url": base_url,
         "headers": sent,
         "search_path": search_path,
-        "search_params": {query_param: "{text}"},
+        **searched,
         "fetch_path": fetch_path,
     }
 
@@ -450,6 +479,11 @@ def add() -> None:
 )
 @click.option("--search-path", help="Such as /search.")
 @click.option("--query-param", default="q", show_default=True)
+@click.option(
+    "--search-body",
+    help="For an API that searches by POST: its JSON body, with {text} where the words go, "
+    'such as \'{"query": "{text}", "limit": "{limit}"}\'.',
+)
 @click.option("--fetch-path", help="With {id}, such as /documents/{id}.")
 @click.option("--key-env", help="The environment variable that holds the API key.")
 @click.option(
@@ -476,6 +510,7 @@ def http(
     base_url: str | None,
     search_path: str | None,
     query_param: str,
+    search_body: str | None,
     fetch_path: str | None,
     key_env: str | None,
     key_header: str,
@@ -516,6 +551,7 @@ def http(
         result_fields=result_fields,
         jurisdictions=codes(jurisdictions),
         ask=not yes,
+        search_body=_body(search_body),
     )
     _save(config_path, block, not yes, name)
     for key, file in record_keys(config_path, found).items():

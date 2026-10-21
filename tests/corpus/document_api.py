@@ -90,6 +90,20 @@ class DocumentApi(BaseHTTPRequestHandler):
             return self._send(200, work(found.group(1)))
         return self._send(404, {"error": "not_found"})
 
+    def do_POST(self) -> None:
+        """A search taken only by POST, as some APIs do: the words in a JSON body."""
+        if self.headers.get("Authorization") != f"Bearer {KEY}":
+            return self._send(401, {"error": "missing_key"})
+        if urlsplit(self.path).path != "/v1/search-by-post":
+            return self._send(405, {"error": "method_not_allowed"})
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        DocumentApi.searches.append(body["query"])
+        words = set(re.findall(r"\w+", body["query"].casefold()))
+        hits = [
+            i for i, w in WORKS.items() if words & set(re.findall(r"\w+", w["text"].casefold()))
+        ]
+        return self._send(200, {"results": [described(i) for i in hits][: body["limit"]]})
+
     def _send(self, status: int, body: dict) -> None:
         payload = json.dumps(body, ensure_ascii=False).encode()
         self.send_response(status)

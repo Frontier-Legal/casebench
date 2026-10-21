@@ -4,7 +4,7 @@
 import { useState } from "react"
 
 import { FieldPicker, type Found } from "@/components/jurisdictions/field-picker"
-import { TextField } from "@/components/settings/fields"
+import { ChoiceField, JsonField, TextField } from "@/components/settings/fields"
 import { KeyLine } from "@/components/setup/model-card"
 import { api, type ApiAsked, type SettingsView } from "@/lib/api"
 
@@ -44,12 +44,37 @@ export function ApiSource({
           value={asked.base_url}
           onChange={(base_url) => put({ base_url: base_url ?? "" })}
         />
+        <ChoiceField
+          label="How it searches"
+          value={asked.search_body ? "POST" : "GET"}
+          choices={[
+            { value: "GET", label: "GET, the words in the address" },
+            { value: "POST", label: "POST, the words in a JSON body" },
+          ]}
+          onChange={(method) =>
+            put({ search_body: method === "POST" ? { query: "{text}", limit: "{limit}" } : null })
+          }
+        />
         <TextField
           label="Search path"
-          description="Under that address; the search words go in its q parameter."
+          description={
+            asked.search_body
+              ? "Under that address; the body below is sent to it."
+              : "Under that address; the search words go in its q parameter."
+          }
           value={asked.search_path}
           onChange={(search_path) => put({ search_path: search_path ?? "" })}
         />
+        {asked.search_body && (
+          <JsonField
+            label="Search body"
+            className="sm:col-span-2"
+            rows={3}
+            description="JSON, with {text} where the search words go and {limit} for how many results."
+            value={asked.search_body}
+            onChange={(search_body) => put({ search_body: search_body as Record<string, unknown> })}
+          />
+        )}
         <TextField
           label="Document path"
           description="With {id} where a document's id goes."
