@@ -69,7 +69,7 @@ reference:
 metrics: [criteria, edit_preservation, false_positive_issues]
 ```
 
-Criteria use per-criterion pass/fail with signed integer weights, the scheme [PRBench](https://arxiv.org/html/2511.11562) and BigLaw Bench use (score = Σ weight·pass / Σ positive weights, clipped to 0 to 1). PRBench measured judge-expert κ 0.603 against expert-expert κ 0.589 with this form.
+Criteria use per-criterion pass/fail with signed integer weights, the scheme of the [PRBench paper](https://arxiv.org/html/2511.11562) (score = Σ weight·pass / Σ positive weights, clipped to 0 to 1). PRBench measured judge-expert κ 0.603 against expert-expert κ 0.589 with this form.
 
 ## Components
 
