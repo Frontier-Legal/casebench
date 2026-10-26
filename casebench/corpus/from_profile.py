@@ -107,6 +107,8 @@ def profile_block(
     fetched = _check(profile)
     block = corpus_block(profile.connector, profile.options, jurisdictions or profile.jurisdictions)
     block["profile"] = recorded or path.name
+    # The search the live check ran, which `casebench check` runs again (decision 0044).
+    block["probe"] = profile.probe
     if profile.metered is not Metered.NONE:
         block["metered"] = profile.metered.value
     if profile.search_filters:

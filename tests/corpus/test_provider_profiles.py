@@ -1,5 +1,6 @@
 """A provider's profile file sets up the corpus with no questions, or fails before writing."""
 
+import json
 import socket
 import subprocess
 import sys
@@ -76,6 +77,19 @@ def test_a_profile_sets_up_the_corpus_with_no_questions(api: str, tmp_path: Path
     assert corpus["options"] == http_options(api)
     checked = invoke("corpus", "check", "--query", "feshi kıdem madde")
     assert checked.exit_code == 0, checked.output
+
+
+def test_check_searches_a_store_added_from_a_profile_with_its_probe(api: str, tmp_path: Path):
+    path = profile(tmp_path, "http", http_options(api))
+
+    added = invoke("corpus", "add", "profile", str(path))
+    checked = invoke("check", "--json")
+
+    assert added.exit_code == 0, added.output
+    written = yaml.safe_load((tmp_path / "casebench.yaml").read_text(encoding="utf-8"))
+    assert written["corpora"]["provider"]["probe"] == "feshi"
+    (corpus,) = [part for part in json.loads(checked.output)["parts"] if part["part"] == "corpus"]
+    assert corpus["passed"], corpus
 
 
 def test_init_sets_up_the_corpus_from_a_profile(api: str, tmp_path: Path):
