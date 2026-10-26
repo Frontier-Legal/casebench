@@ -97,7 +97,7 @@ export function TryQuestion({ locked }: { locked: boolean }) {
         <h1 className="text-xl font-semibold tracking-tight md:text-2xl">Try a question</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Ask {budget.target ? <span className="font-medium text-foreground">{budget.target}</span> : "the team's agent"}{" "}
-          a question as a client would.
+          a question as your agent's users would ask it.
           {budget.checks_citations
             ? " Every citation in the answer is checked against the corpus."
             : " Citations are not checked: the engineer has not configured a judge and a corpus."}

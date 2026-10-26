@@ -146,6 +146,14 @@ def test_template_round_trip(tmp_path: Path, key: None):
     assert scores(tmp_path)[("cases-2", "criteria")]["value"] == pytest.approx(1.0)
 
 
+def test_the_template_asks_for_the_question_as_the_agents_users_would_ask_it(tmp_path: Path):
+    template = load_workbook(workbook(tmp_path / "cases.xlsx", "qa", []))
+
+    how = {row[0]: row[1] for row in template["how to fill"].iter_rows(values_only=True)}
+
+    assert how["question"] == "The question, as your agent's users would ask it."
+
+
 def test_research_task(tmp_path: Path, key: None):
     server = start_resolving_judge()
     corpus = write_corpus(tmp_path / "corpus")

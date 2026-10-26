@@ -22,7 +22,7 @@ COLUMNS = {
     ID: "Optional. The case's id; without one, the file's name and the row's number.",
     PRACTICE_AREA: "Optional. The area of law, as your team names it, such as labour or tax. "
     "The report gives each metric by practice area.",
-    "question": "The question, as a client or a colleague would ask it.",
+    "question": "The question, as your agent's users would ask it.",
     "facts": "The facts the answer may rely on.",
     "constraints": "Limits on the research, such as courts or dates.",
     "instruction": "What to do with the facts or the document.",
