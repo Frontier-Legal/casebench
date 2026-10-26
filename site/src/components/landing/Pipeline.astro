@@ -1,0 +1,146 @@
+---
+/** How a court decision becomes a score, in four steps, each with the command that does it. */
+
+const steps = [
+	{
+		command: 'casebench corpus add',
+		title: 'Connect your decisions',
+		body: 'A folder, a document API over HTTP or an MCP server. Casebench never ships a corpus; it reads yours.',
+	},
+	{
+		command: 'casebench extract',
+		title: 'Read the answer keys',
+		body: 'Two different models read each decision. The outcome counts only where both name it; authorities only where both quote the same passages.',
+	},
+	{
+		command: 'casebench generate',
+		title: 'Freeze a suite',
+		body: 'Outcome, statute and precedent cases, optionally only from decisions after a model\'s training cutoff.',
+	},
+	{
+		command: 'casebench run',
+		title: 'Score your agent',
+		body: 'Every citation is looked up in the corpus. Each metric is reported per task, with its interval and baselines.',
+	},
+];
+---
+
+<section class="pipeline not-content" aria-labelledby="pipeline-title">
+	<header>
+		<p class="eyebrow">How it works</p>
+		<h2 id="pipeline-title">A court decision is already a labelled example.</h2>
+		<p>
+			Its operative part is the right outcome. Its citations are the right authorities. Its date fixes which version
+			of a statute applied. Casebench reads those labels out, so an answer key costs compute, not lawyer hours.
+		</p>
+	</header>
+	<ol>
+		{
+			steps.map((step, i) => (
+				<li>
+					<span class="number" aria-hidden="true">
+						{String(i + 1).padStart(2, '0')}
+					</span>
+					<h3>{step.title}</h3>
+					<p>{step.body}</p>
+					<code>{step.command}</code>
+				</li>
+			))
+		}
+	</ol>
+</section>
+
+<style>
+	.pipeline {
+		padding: 3.5rem 0;
+		border-top: 1px solid var(--cb-border);
+	}
+
+	header {
+		max-width: 42rem;
+	}
+
+	.eyebrow {
+		margin: 0 0 0.75rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--sl-color-text-accent);
+	}
+
+	h2 {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-weight: 560;
+		font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.4rem);
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		color: var(--sl-color-white);
+	}
+
+	header p {
+		margin: 1rem 0 0;
+		color: var(--sl-color-gray-2);
+		font-size: 1.0625rem;
+	}
+
+	ol {
+		display: grid;
+		gap: 1rem;
+		margin: 2.25rem 0 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: none;
+	}
+
+	@media (min-width: 50rem) {
+		ol {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (min-width: 72rem) {
+		ol {
+			grid-template-columns: repeat(4, 1fr);
+		}
+	}
+
+	li {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 1.4rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-lg);
+		background: var(--cb-surface);
+	}
+
+	.number {
+		font-family: var(--sl-font-mono);
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-4);
+	}
+
+	h3 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 620;
+		color: var(--sl-color-white);
+	}
+
+	li p {
+		margin: 0;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+		line-height: 1.6;
+	}
+
+	code {
+		margin-top: auto;
+		padding-top: 0.75rem;
+		font-family: var(--sl-font-mono);
+		font-size: 0.75rem;
+		color: var(--sl-color-text-accent);
+	}
+</style>

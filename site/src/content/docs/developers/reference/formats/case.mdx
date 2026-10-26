@@ -1,0 +1,91 @@
+---
+title: Case
+description: "One evaluation case: a task, its reference and the metrics to apply. One case per line of a suite's suite.jsonl."
+sidebar:
+  order: 2
+---
+
+import SchemaTables from '../../../../../components/SchemaTables.astro';
+
+`casebench.case/1.1`. One case per line of `suite.jsonl`. A suite's manifest names the case format as `case_format`, and a suite Casebench freezes today names `casebench.case/1.1`. Casebench reads every 1.x version.
+
+## What 1.1 adds
+
+Two optional fields on the case. A 1.0 file has neither.
+
+| Field | Holds |
+| --- | --- |
+| `practice_area` | The area of law, as your team names it, such as `employment`. Each score carries it, so the report for partners and a blind comparison of two runs split by it. |
+| `approved_by` | Who approved the answer key |
+
+A 1.0 file is read as it is. A 1.0 suite keeps its hash, because the hash is taken over the lines as written.
+
+## Example
+
+```json title="suite.jsonl (one line, formatted)"
+{
+  "id": "court-of-appeal-2024-0187:outcome",
+  "task": {
+    "type": "outcome",
+    "question": "How did the court rule? Answer with exactly one of: upheld, reversed.",
+    "facts": "The employee was dismissed after a single warning and appealed."
+  },
+  "reference": {
+    "source": "court",
+    "facts": [
+      {
+        "id": "f1",
+        "kind": "outcome",
+        "value": "reversed",
+        "evidence": { "doc": "appeals:court-of-appeal-2024-0187", "quote": "The appeal is allowed." }
+      }
+    ]
+  },
+  "metrics": ["outcome"],
+  "provenance": {
+    "builder": "court",
+    "source_decision_id": "appeals:court-of-appeal-2024-0187",
+    "jurisdiction": "GB",
+    "extracted_by": ["anthropic/model-a", "openai/model-b"]
+  },
+  "approval": "approved",
+  "practice_area": "employment",
+  "approved_by": "A. Lawyer"
+}
+```
+
+`casebench validate --format casebench.case/1.1` accepts this case.
+
+## Task types
+
+`task.type` names a task plugin. The built-in ones and the metrics each applies when a case names none:
+
+| Type | Default metrics |
+| --- | --- |
+| `outcome` | `outcome` |
+| `qa` | `criteria` |
+| `research` | `authority_recall`, `authority_ndcg`, `citation_integrity` |
+| `drafting` | `criteria`, `citation_integrity` |
+| `editing` | `issues_found`, `edit_preservation` |
+| `extraction` | `fields` |
+
+Every key of `task` beyond `type` is passed to the target as an input by that name.
+
+## Rules beyond the schema
+
+`casebench validate` also checks these:
+
+- Every fact id within a reference is unique.
+- A criterion's weight is never zero.
+- A criterion with a positive weight comes from at least one fact, and every fact it names exists.
+- A jurisdiction is an ISO 3166-1 alpha-2 code, an ISO 3166-2 code or `EU`. `UK` and `EL` are read as `GB` and `GR`.
+
+Casebench writes a document id with its corpus's name, as `<corpus>:<id>`. A setup with one corpus reads an id written without the name as that corpus's.
+
+Casebench also accepts `derived_from` for a criterion's `from`, and writes `from`.
+
+## Fields
+
+These tables are generated from the JSON Schema that ships with Casebench, at `casebench/formats/schemas/case/1.1.json`. `casebench schema export` writes a copy. The 1.0 schema ships beside it, at `case/1.0.json`.
+
+<SchemaTables format="case" version="1.1" />

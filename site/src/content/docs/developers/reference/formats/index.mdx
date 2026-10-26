@@ -1,0 +1,43 @@
+---
+title: File formats
+description: "The versioned formats Casebench reads and writes, each with a JSON Schema, and how a file names its version."
+sidebar:
+  label: Overview
+  order: 1
+---
+
+Casebench publishes the shapes other tools read and write as JSON Schemas, each with its own version. It writes the latest version of each format and reads every minor version of the same major version.
+
+| Format | What it is | Where a file names its version |
+| --- | --- | --- |
+| [`casebench.case/1.1`](/developers/reference/formats/case/) | One evaluation case, one line of `suite.jsonl` | The suite manifest's `case_format` |
+| [`casebench.suite/1.0`](/developers/reference/formats/suite/) | A frozen suite's `manifest.json` | Its own `format` field |
+| [`casebench.report/1.1`](/developers/reference/formats/report/) | A scored run's `report.json` | Its own `format` field |
+| [`casebench.document/1.0`](/developers/reference/formats/document/) | One decision or statute from a corpus | Outside the file: the profile, or `--format` |
+| [`casebench.profile/1.0`](/developers/reference/formats/profile/) | A data provider's profile, in YAML | Its own `format` field |
+
+## Versions
+
+The schemas ship with Casebench under `casebench/formats/schemas/<format>/<major>.<minor>.json`: case 1.0 and 1.1, report 1.0 and 1.1, and suite, document and profile 1.0. A released schema never changes; a change to a format is a new version.
+
+| A file at | Is read |
+| --- | --- |
+| A version Casebench knows | Strictly: an unknown field is an error, so a typo fails loudly |
+| A newer minor version | With its unknown fields ignored, and each one named |
+| Another major version | Not at all: it is refused |
+
+A minor version only adds optional fields. Case 1.1 adds a case's practice area and approver. Report 1.1 adds error rates, spend, warnings, unevidenced cases and calibration. Each format's page says what its latest version adds.
+
+## Extensions
+
+Data outside a format goes under `extensions`, keyed by a domain its author controls. Casebench never reads it and never requires it.
+
+```json
+"extensions": { "example.com": { "reviewed_in": "2024-Q3" } }
+```
+
+## Tools
+
+- `casebench validate FILE` checks a file against its schema and the rules a schema cannot hold. See [Validate a file](/developers/guides/maintain/validate-files/).
+- `casebench schema export --into DIR` writes each format's schema at its current version, one folder per format, for your editor.
+- `casebench.yaml` has a schema too, which `casebench init` writes to `.casebench/casebench.schema.json`. See [Validate in your editor](/developers/reference/configuration/#validate-in-your-editor).

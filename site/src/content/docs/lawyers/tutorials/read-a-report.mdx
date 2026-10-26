@@ -1,0 +1,93 @@
+---
+title: Read a report
+description: Read the error rates on the Reports page, follow a rate to the answers behind it, see how a measure moved over time, and export a report for partners.
+sidebar:
+  order: 3
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+After your team runs the AI on a suite, the Reports page says how often it got the law wrong in that run. This tutorial reads one with you, and ends with a report a partner can read.
+
+## Open the run
+
+Choose **Reports** in the sidebar, then the run under **Run**. Each run is named by your team, such as `after-prompt-fix`.
+
+<Screenshot
+	name="reports"
+	alt="The Reports page for the run after-prompt-fix: two error rates, fabricated citation 14% and unsupported claim 14%, each with its range, and below them the answers with a fabricated citation."
+	caption="Each error rate, the answers it was counted over, and its 95% range."
+/>
+
+## Read an error rate
+
+Take the first card: **Fabricated citation, 14%, 1 of 7 answers, 95% interval 0% to 57%.**
+
+- **14%** is the share of answers that cited a decision or statute your sources do not hold.
+- **1 of 7** says what it was counted over. Seven answers is a small test.
+- **0% to 57%** is the range the true rate very likely lies in. With seven answers it is wide. That is the honest answer: this run cannot tell a 5% problem from a 50% one.
+
+The report can give four rates, depending on the cases in the suite:
+
+| Rate | An answer has it when |
+| --- | --- |
+| Fabricated citation | It cites a decision or statute your sources do not hold |
+| Unsupported claim | It cites a real authority for something the authority does not say |
+| Wrong outcome | It states a ruling other than the court's or your colleague's, or none |
+| Wrong statute | It relies on a statute the court did not apply |
+
+Where a rate rests on a point a lawyer reviewed, such as whether the answer stated the court's outcome, the lawyer's verdict counts in place of the grading model's. Citation verdicts, fabricated or unsupported, come from the citation check and are not changed by a review.
+
+The Reports page counts every answer in the run, including answers to cases no lawyer has approved yet. The report exported for partners counts approved cases only.
+
+## Follow a rate to its answers
+
+Below the cards, each rate lists the answers that have the error. Open one and it shows the question, the answer and the court record or your colleague's reference side by side, as in the review queue. If the grading model was wrong about a point, overrule it there; a rate that rests on that point changes when the page reloads.
+
+## See how a measure moved
+
+Choose **History**. Each measure is charted run by run, with its range.
+
+<Screenshot
+	name="history"
+	alt="The History page for the employment suite: charts of the fabricated-citation and unsupported-claim rates across two runs."
+	caption="Unsupported claims fell from 43% to 14% between the two runs."
+/>
+
+A diamond on a chart marks a run whose settings, such as its grading model, changed that measure. The runs on either side of it do not compare.
+
+## Export it for partners
+
+<Steps>
+
+1. On the Reports page, choose **Export for partners**.
+
+2. Pick a format: **PDF** to read and send, **Word** to edit before sending, or **Web page, one file**, which opens in any browser with no server.
+
+	<Screenshot
+		name="report-export"
+		alt="The export choices: PDF, Word, and Web page, one file."
+		caption="The same report in three formats."
+	/>
+
+</Steps>
+
+The report holds each measure by task and practice area, over lawyer-approved cases only, with its range and the number of unreviewed cases left out; the error rates; up to three worked examples per error, each with its evidence; and who approved the answer key, with how many cases each person approved.
+
+## What to tell a partner
+
+A sentence the report supports:
+
+> On 7 employment questions, one answer cited a decision our corpus does not hold. Seven answers are too few to say how often this happens: the range runs from 0% to 57%.
+
+A sentence it does not support:
+
+> The assistant is 86% accurate.
+
+The second drops the range, merges kinds of error, and invents a single figure the report never gives. [Explain results to a partner](/lawyers/guides/explain-results/) has more.
+
+## Next
+
+- [What a score means](/lawyers/concepts/scores/).
+- [Compare two versions](/lawyers/guides/compare-versions/), when your team changes the AI.

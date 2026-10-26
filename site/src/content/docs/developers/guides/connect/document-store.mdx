@@ -1,0 +1,240 @@
+---
+title: Connect a document store
+description: Connect the decisions and statutes citations are checked against, from a document API, an MCP server, a provider's profile or a folder.
+sidebar:
+  order: 4
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The corpus is where Casebench looks up every citation and where court-derived answer keys come from. Casebench holds no legal logic for any store. It needs a way to search and a way to fetch a document by id, and it reads the fields it needs by JSONPath.
+
+The same document API your agent retrieves from is fine as a corpus, and a Python agent's own searches of it are then [recorded with no config](/developers/guides/capture/retrieval-steps/#searches-of-your-corpus). The agent itself is not: a config whose corpus is the target is refused, because a system must not confirm its own citations.
+
+<Tabs syncKey="store">
+<TabItem label="Document API">
+
+### See what the API answers
+
+`casebench corpus probe http` makes one search for one result, or one fetch, and prints the JSON that came back. It writes nothing:
+
+```sh
+casebench corpus probe http --base-url '${DOCS_URL}' --search-path /search \
+  --fetch-path "/documents/{id}" --key-env DOCS_API_KEY \
+  --query "written notice" --fetch 2024-118
+```
+
+```json
+{
+  "search": {
+    "query": "written notice",
+    "response": {
+      "results": [
+        { "id": "2024-118", "neutral_citation": "CA 2024/118", "highlight": "notice was not given in writing" }
+      ]
+    }
+  },
+  "document": {
+    "id": "2024-118",
+    "response": {
+      "id": "2024-118",
+      "court": { "name": "Court of Appeal" },
+      "decided_on": "2024-03-12",
+      "country": "GB",
+      "neutral_citation": "CA 2024/118",
+      "body": "The dismissal was void because notice was not given in writing. ..."
+    }
+  }
+}
+```
+
+`--base-url` takes a URL or a variable that holds one, such as `'${DOCS_URL}'` in single quotes. Both the address and the key are found by name in the shell or the project's `.env` files, and never printed. See [Keep keys out of the config](/developers/guides/setup/keys/).
+
+### Add it
+
+`casebench corpus add http` makes one search for one result and one fetch, shows the paths it found, and writes the corpus block. Give each path as a flag, taken from the responses you saw:
+
+```sh
+casebench corpus add http --base-url '${DOCS_URL}' --search-path /search \
+  --fetch-path "/documents/{id}" --key-env DOCS_API_KEY --probe "written notice" \
+  --results '$.results[*]' --result-field 'id=$.id' \
+  --result-field 'citation=$.neutral_citation' --result-field 'passage=$.highlight' \
+  --field 'id=$.id' --field 'jurisdiction=$.country' --field 'court=$.court.name' \
+  --field 'date=$.decided_on' --field 'text=$.body' \
+  --jurisdiction GB --name court-api --yes
+```
+
+```text frame="terminal"
+search for 'written notice' returned:
+  $.results[0].id  text, 8 characters
+  $.results[0].neutral_citation  text, 11 characters
+  $.results[0].highlight  text, 31 characters
+to match a citation the judge sees each result's citation, passage; missing: type, which Casebench fills from the document where it can
+document 2024-118 returned:
+  $.id  text, 8 characters
+  $.court.name  text, 15 characters
+  $.decided_on  text, 10 characters
+  $.country  text, 2 characters
+  $.neutral_citation  text, 11 characters
+  $.body  text, 320 characters
+every required field found
+```
+
+```yaml title="casebench.yaml"
+corpora:
+  court-api:
+    connector: http
+    jurisdictions:
+    - GB
+    options:
+      base_url: ${DOCS_URL}
+      headers:
+        Authorization: Bearer ${DOCS_API_KEY}
+      search_path: /search
+      search_params:
+        q: '{text}'
+      fetch_path: /documents/{id}
+      search_results: $.results[*]
+      result_fields:
+        id: $.id
+        citation: $.neutral_citation
+        passage: $.highlight
+      fields:
+        id: $.id
+        jurisdiction: $.country
+        court: $.court.name
+        date: $.decided_on
+        text: $.body
+    probe: written notice
+keys:
+  DOCS_API_KEY: research/.env
+  DOCS_URL: research/.env
+```
+
+- A document needs `id`, `jurisdiction`, `court`, `date` and `text`. `level` is optional, for a document that says where its court sits in the hierarchy.
+- `{text}`, `{limit}` and `{id}` are filled per call. `${NAME}` is read from the shell or a file under `keys:`, so neither the key nor the address enters the file.
+- `--search-body` takes a JSON body for an API that searches by `POST`.
+- `--key-header` names the header that carries the key. With the default, `Authorization`, the key goes as a bearer token.
+- `--name` is lower-case letters, digits and hyphens, such as `court-api`. A name `casebench.yaml` would reject is refused before anything is searched.
+- `probe` is the search the corpus was added with. `casebench check` runs it when you give no `--query`.
+
+At a terminal, without the field flags, `corpus add` shows each field with its path and a sample value and lets you pick. With `--yes` it takes only what it can suggest from the values: the id field is the one whose value is the fetched id, the text is the longest string, and a date is a value in ISO form. It suggests no id inside a search result, so give `--result-field id=...` with `--results`, or `--ids` alone for a search that returns only ids.
+
+</TabItem>
+<TabItem label="MCP server">
+
+A server with a search tool and a fetch tool works over stdio or Streamable HTTP:
+
+```sh
+casebench corpus add mcp --command "python -m court_search.mcp" \
+  --search-tool search_decisions --fetch-tool get_decision \
+  --probe "notice period" --jurisdiction NO
+```
+
+```sh
+casebench corpus add mcp --url https://mcp.example.com/mcp \
+  --search-tool search --fetch-tool fetch --probe "notice period"
+```
+
+Tool arguments may hold `{text}`, `{limit}` and `{id}`. Over HTTP, add `headers` to the corpus's `options` by hand, with `${NAME}` for a key; they are sent on every request. A server Casebench starts over stdio gets the MCP library's minimal default environment, not your shell's keys, and its own calls are outside the [perimeter](/developers/guides/setup/network/#what-the-perimeter-sees).
+
+</TabItem>
+<TabItem label="Provider profile">
+
+A data provider can describe its API once, in a [profile](/developers/reference/formats/profile/). Then nothing is asked:
+
+```sh
+casebench corpus add profile acme-legal.yaml
+```
+
+Casebench makes one live search and fetch with your key to prove it works. Profiles are read from local files or by a bundled profile's id, never fetched from a URL.
+
+</TabItem>
+<TabItem label="Folder">
+
+For a few hundred documents, one JSON file each in the [document format](/developers/reference/formats/document/):
+
+```yaml title="casebench.yaml"
+corpora:
+  folder:
+    connector: folder
+    options:
+      path: decisions
+```
+
+`casebench init --corpus folder --corpus-path decisions` writes this block in a new setup. There is no `corpus add` for a folder. Add the block by hand to an existing config.
+
+The folder's search counts matching words, which is enough to resolve a citation in a small set and too crude for a large one.
+
+</TabItem>
+</Tabs>
+
+## Check the corpus
+
+`casebench check` spends one search for one result and one document on each corpus:
+
+```text frame="terminal"
+corpus   passed: 1 document sampled
+```
+
+`casebench corpus check` samples more, up to 200 documents by default, and reports each required field as present or missing. It lists documents when the store can list them. A document API can list only when its corpus block names `list_path` and `list_ids`, which `corpus add` does not write, so give it searches with `--query`; the corpus's `probe` is not used here:
+
+```sh
+casebench corpus check --query "written notice"
+```
+
+```text frame="terminal"
+sampled 1 documents (0 fetched, 1 from the cache)
+  id            1/1 present
+  jurisdiction  1/1 present
+  court         1/1 present
+  date          1/1 present
+  text          1/1 present
+search results, as the judge sees them to match a citation:
+  citation      1/1 results
+  type          0/1 results
+  passage       1/1 results
+missing in some results: type; Casebench describes those results from each document instead, which costs a fetch; map them with search_results and result_fields
+```
+
+`--size` sets how many. Nothing is copied outside the cache.
+
+## Describe search results, for better matching
+
+When a search result says how the store cites the document, its type, or the passage that matched, the judge can match a citation from the result alone. Name where those are with `search_results` and `result_fields`, as above. `corpus add` takes them as `--results` and `--result-field`, and `corpus check` reports on them. Without them Casebench fetches each candidate and describes it from the document.
+
+## Search only the right kind of document
+
+`holds` says which kinds a corpus has, and `search_filters` adds parameters to a search for each kind of citation, so a statute is searched only among statutes:
+
+```yaml title="casebench.yaml"
+corpora:
+  court-api:
+    connector: http
+    holds: [decisions, statutes]
+    search_filters:
+      statute: { type: legislation }
+      decision: { type: judgment }
+```
+
+For a search by `POST`, the filters go into the body instead.
+
+## Link each decision for reviewers
+
+`link` is where a person reads a document on the provider's site, with `{id}` for its id. A review sheet then links each court fact to its decision:
+
+```yaml title="casebench.yaml"
+corpora:
+  court-api:
+    link: https://www.example.com/decisions/{id}
+```
+
+<Aside title="Caching and metered providers">
+Every fetched document is kept under `.casebench/corpus-cache/` and costs one call ever. For a provider that charges per search, set `metered: search` and each search is kept too. `keep` limits what a provider's terms let Casebench store. See [Manage the corpus cache](/developers/guides/maintain/corpus-cache/).
+</Aside>
+
+## Related
+
+- [Connect several corpora](/developers/guides/connect/several-corpora/), one per jurisdiction.
+- [Document stores](/integrations/stores/http-api/) in the integrations section, with every option.
+- [Write a connector plugin](/integrations/extend/plugins/) for a store neither HTTP nor MCP can reach.

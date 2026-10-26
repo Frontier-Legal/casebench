@@ -1,0 +1,62 @@
+---
+title: Casebench for lawyers
+description: What a lawyer does in the Casebench workbench, how you get in, and where to start. Everything happens in the browser; there is nothing to install.
+sidebar:
+  label: Overview
+  order: 0
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import Screenshot from '../../../components/Screenshot.astro';
+
+Your firm or your vendor uses an AI system to answer legal questions. Casebench tests how often it gets the law right, against court decisions and against your own answers. You do your part in the **workbench**, a web app that opens in your browser, on a laptop or a phone. There is nothing to install and no file to edit.
+
+<Screenshot
+	name="team-queue"
+	alt="The workbench review queue: a list of answers to review on the left, the first answer open on the right."
+	caption="The review queue, where most of your work happens. Answers the AI got wrong come first."
+/>
+
+## What you do in the workbench
+
+- **Review answers.** Each answer the AI gave sits beside the court's decision or your colleague's reference. The grading model's verdict is filled in; you confirm it, or overrule it with a short note. Your verdict replaces the model's in every result.
+- **Check citations.** Each citation in an answer is underlined: green when the source says it, orange when the source says something else, red when the source does not exist. One click opens the passage.
+- **Approve cases drawn from court decisions.** Casebench drafts test cases from decisions. You approve, edit or reject each point against the highlighted passage.
+- **Keep the answer key.** In Golden data you write new cases and correct existing ones. Every change carries your name and your reason.
+- **Try a question**, compare two versions of the AI blind, and **export a report** for partners as PDF or Word.
+
+## How you get in
+
+- **On your team's server.** Your admin invites you by email. The email says how many items wait for you and about how long they take. Click the link and you land in your queue. See [Sign in](/lawyers/guides/sign-in/).
+- **On a colleague's machine.** An engineer can open the workbench on their own computer for you. You type your name and choose "I review legal answers".
+
+What you can do depends on your role. A reviewer gives verdicts, tries questions and compares versions. An editor also writes and changes cases and approves court drafts. See [Roles](/lawyers/reference/roles/).
+
+## Start here
+
+<CardGrid>
+	<LinkCard
+		title="Your first review"
+		description="Sign in, read an answer beside its evidence, confirm or overrule the judge, and move to the next. Fifteen minutes."
+		href="/lawyers/tutorials/first-review/"
+	/>
+	<LinkCard
+		title="Write your first case"
+		description="Add a question, the answer you expect and the points a good answer must make."
+		href="/lawyers/tutorials/first-case/"
+	/>
+	<LinkCard
+		title="Read a report"
+		description="The error rates, what the ranges mean, and what to tell a partner."
+		href="/lawyers/tutorials/read-a-report/"
+	/>
+	<LinkCard
+		title="How Casebench grades an answer"
+		description="Where the answer key comes from, and what the grading model may and may not decide."
+		href="/lawyers/concepts/how-grading-works/"
+	/>
+</CardGrid>
+
+## If you are the engineer
+
+Setting Casebench up, running it and inviting lawyers is covered in the [developer documentation](/developers/). [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/) is the page to read before you send the first invitation.

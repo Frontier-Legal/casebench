@@ -1,0 +1,56 @@
+---
+/** A link styled as a button: `primary` for the one action a section asks for, `secondary` for the rest. */
+
+interface Props {
+	href: string;
+	variant?: 'primary' | 'secondary';
+}
+
+const { href, variant = 'secondary' } = Astro.props;
+---
+
+<a class:list={['cb-button', variant]} href={href}><slot /></a>
+
+<style>
+	.cb-button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.7rem 1.15rem;
+		border-radius: var(--cb-radius);
+		border: 1px solid var(--cb-border);
+		font-weight: 600;
+		font-size: var(--sl-text-sm);
+		line-height: 1.2;
+		color: var(--sl-color-white);
+		text-decoration: none;
+		background: var(--cb-surface-raised);
+		transition:
+			border-color 140ms ease,
+			background-color 140ms ease;
+	}
+
+	.cb-button:hover {
+		border-color: var(--sl-color-gray-4);
+	}
+
+	.primary {
+		background: var(--sl-color-accent);
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-black);
+	}
+
+	:global([data-theme='light']) .primary {
+		color: var(--cb-paper);
+	}
+
+	.primary:hover {
+		background: var(--sl-color-accent-high);
+		border-color: var(--sl-color-accent-high);
+	}
+
+	.cb-button:focus-visible {
+		outline: 2px solid var(--sl-color-accent);
+		outline-offset: 2px;
+	}
+</style>

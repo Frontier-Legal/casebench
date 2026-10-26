@@ -1,0 +1,32 @@
+---
+title: Document
+description: "One court decision or statute as a corpus connector returns it, in the shape everything after the connector reads."
+sidebar:
+  order: 5
+---
+
+import SchemaTables from '../../../../../components/SchemaTables.astro';
+
+`casebench.document/1.0`. One decision or statute, as a corpus connector returns it. The folder connector reads one such file per document. A document does not name its own format: pass `--format casebench.document/1.0` to `casebench validate`.
+
+## Example
+
+```json title="decisions/court-of-appeal-2024-0187.json"
+{
+  "id": "court-of-appeal-2024-0187",
+  "jurisdiction": "GB",
+  "court": "Court of Appeal (Civil Division)",
+  "date": "2024-05-17",
+  "text": "The appeal is allowed. The judge below did not apply the statutory test ...",
+  "level": "appellate",
+  "metadata": { "neutral_citation": "[2024] EWCA Civ 187" }
+}
+```
+
+`id`, `jurisdiction`, `court`, `date` and `text` are required. `date` is an ISO 8601 date. `level` is the court's level, when the provider gives one; `casebench generate --stratify court` needs it. `metadata` holds the provider's other fields as text, and the judge sees it when a search result does not describe itself. `casebench corpus check` fetches a sample through the connector and reports each required field present or missing.
+
+## Fields
+
+These tables are generated from the JSON Schema that ships with Casebench, at `casebench/formats/schemas/document/1.0.json`. `casebench schema export` writes a copy.
+
+<SchemaTables format="document" version="1.0" />

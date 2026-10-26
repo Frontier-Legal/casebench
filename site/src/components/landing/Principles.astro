@@ -1,0 +1,149 @@
+---
+import Button from '../Button.astro';
+
+/** The rules Casebench keeps, which a security officer or a partner can check for themselves. */
+
+const principles = [
+	{
+		title: 'Nothing leaves your machines',
+		body: 'A run calls only the hosts your config names: your agent, its models, your corpus and the judge you chose. There is no telemetry, and no key is written to any file.',
+		href: '/developers/concepts/privacy/',
+	},
+	{
+		title: 'The grader never asks the system it grades',
+		body: 'Citation checks read your corpus. A config whose corpus is the target is refused before anything is sent.',
+		href: '/developers/concepts/citation-checks/',
+	},
+	{
+		title: 'No single accuracy number',
+		body: 'Results are split by task, metric, reference source, approval and jurisdiction. Each rate has a 95% interval and its baselines.',
+		href: '/developers/concepts/scores/',
+	},
+	{
+		title: 'Any jurisdiction, no country code',
+		body: 'Models read the decisions and your corpus resolves citations, whatever their format. A new country costs a connector, not a parser.',
+		href: '/developers/concepts/evaluation-model/',
+	},
+];
+---
+
+<section class="principles not-content" aria-labelledby="principles-title">
+	<header>
+		<p class="eyebrow">Principles</p>
+		<h2 id="principles-title">Built so a skeptical reader can check the result.</h2>
+	</header>
+	<div class="grid">
+		{
+			principles.map((p) => (
+				<a class="item" href={p.href}>
+					<h3>{p.title}</h3>
+					<p>{p.body}</p>
+				</a>
+			))
+		}
+	</div>
+</section>
+
+<section class="closing not-content">
+	<h2>Start with one case.</h2>
+	<p>A developer runs it against the agent. A lawyer reviews what failed, in the browser, the same afternoon.</p>
+	<div class="actions">
+		<Button href="/developers/tutorials/first-evaluation/" variant="primary">Your first evaluation</Button>
+		<Button href="/lawyers/tutorials/first-review/">Your first review</Button>
+	</div>
+</section>
+
+<style>
+	.principles {
+		padding: 3.5rem 0;
+		border-top: 1px solid var(--cb-border);
+	}
+
+	.eyebrow {
+		margin: 0 0 0.75rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--sl-color-text-accent);
+	}
+
+	h2 {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-weight: 560;
+		font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.4rem);
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		color: var(--sl-color-white);
+	}
+
+	.grid {
+		display: grid;
+		gap: 1px;
+		margin-top: 2.25rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-lg);
+		overflow: hidden;
+		background: var(--cb-border);
+	}
+
+	@media (min-width: 50rem) {
+		.grid {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	.item {
+		display: block;
+		padding: 1.6rem;
+		background: var(--cb-surface);
+		color: inherit;
+		text-decoration: none;
+		transition: background-color 150ms ease;
+	}
+
+	.item:hover {
+		background: var(--cb-surface-raised);
+	}
+
+	h3 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 620;
+		color: var(--sl-color-white);
+	}
+
+	.item p {
+		margin: 0.5rem 0 0;
+		font-size: var(--sl-text-sm);
+		line-height: 1.65;
+		color: var(--sl-color-gray-2);
+	}
+
+	.closing {
+		margin: 1rem 0 4rem;
+		padding: 3rem 2rem;
+		text-align: center;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-lg);
+		background:
+			radial-gradient(60% 120% at 50% 0%, var(--cb-glow), transparent 70%),
+			var(--cb-surface);
+	}
+
+	.closing p {
+		margin: 0.75rem auto 0;
+		max-width: 32rem;
+		color: var(--sl-color-gray-2);
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.75rem;
+		margin-top: 1.75rem;
+	}
+
+</style>

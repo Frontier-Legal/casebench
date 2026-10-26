@@ -1,0 +1,76 @@
+---
+title: A suite across two jurisdictions
+description: Connect a Norwegian and a Turkish corpus, extract keys from each, freeze one suite in chosen shares, and read the per-jurisdiction rows.
+sidebar:
+  order: 3
+---
+
+A labour-law assistant serves clients in Norway and Türkiye. The team wants one suite that tests both, with each jurisdiction's citations checked against its own courts.
+
+## Connect both corpora
+
+```sh
+casebench corpus add http --name no-courts --jurisdiction NO \
+  --base-url https://api.no-provider.example/v2 --search-path /search \
+  --fetch-path "/decisions/{id}" --key-env NO_PROVIDER_KEY --probe "oppsigelse"
+casebench corpus add mcp --name tr-courts --jurisdiction TR \
+  --url https://mcp.tr-provider.example/mcp --search-tool search --fetch-tool fetch \
+  --probe "işe iade"
+```
+
+```yaml title="casebench.yaml (part)"
+corpora:
+  no-courts:
+    connector: http
+    jurisdictions: ["NO"]
+    options: { ... }
+  tr-courts:
+    connector: mcp
+    jurisdictions: [TR]
+    options: { ... }
+```
+
+`corpus add` quotes `NO` when it writes the file. Keep the quotes if you edit it by hand: YAML reads a bare `NO` as false, and the file then fails to load. Each corpus's host joins the hosts a run may call, so neither needs a `network: allow:` entry.
+
+## Extract from each, into one folder
+
+```sh
+casebench corpus check --corpus no-courts --query "oppsigelse"
+casebench corpus check --corpus tr-courts --query "işe iade"
+casebench extract --sample 80 --corpus no-courts --query "oppsigelse"
+casebench extract --sample 80 --corpus tr-courts --query "işe iade"
+```
+
+Extracting from the second corpus keeps the first one's keys in `.casebench/keys/`. Every key's decision id carries its corpus, such as `tr-courts:2024-1234`.
+
+`casebench run` with no `--suite` would build a first suite from the first corpus the config names only. A mixed suite is built with `extract` and `generate`, as here.
+
+## Freeze a suite in chosen shares
+
+```sh
+casebench generate --suite-id labour-no-tr --out suites/labour-no-tr \
+  --types outcome --corpus no-courts=30 --corpus tr-courts=30
+```
+
+The manifest counts cases per corpus and per jurisdiction, so a reader can see the mix without opening the cases. Then run it:
+
+```sh
+casebench run --suite suites/labour-no-tr --run-id mixed-1
+```
+
+## Read the rows
+
+```text frame="terminal"
+outcome · outcome
+  source   approval         place      n  score   95% interval  majority text-only
+  court    unreviewed       NO        30    63%        47%-80%       60%       53%
+  court    unreviewed       TR        30    77%        60%-90%       50%       47%
+```
+
+Each jurisdiction has its own row, never averaged with the other. In Norway the assistant has not shown it beats always guessing the most common outcome: 63% against 60%, with an interval reaching down to 47%. In Türkiye it beats both baselines, though 30 cases leave a wide interval. A single blended figure of 70% would have hidden the first finding.
+
+The rows say `unreviewed`: these cases come from court decisions no lawyer has read yet. Lawyers approve them as court drafts in the review queue. Until then, [`casebench gate`](/developers/guides/runs/gate-in-ci/) and the [report for partners](/developers/guides/runs/export-report/) leave them out, unless you pass `--include-unreviewed` to the gate.
+
+## Citations from a third country
+
+If an answer cites an EU directive and no connected corpus covers `EU`, that citation is labelled `unchecked`. It is counted apart and does not count against the answer.

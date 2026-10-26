@@ -1,0 +1,17 @@
+{
+	"casebench.nav.label": "Main",
+	"casebench.audience.developers": "For developers",
+	"casebench.audience.lawyers": "For lawyers",
+	"casebench.audience.everyone": "For everyone",
+	"casebench.kind.tutorial": "Tutorial",
+	"casebench.kind.how-to": "How-to guide",
+	"casebench.kind.concept": "Concept",
+	"casebench.kind.reference": "Reference",
+	"casebench.kind.overview": "Overview",
+	"casebench.kind.example": "Example",
+	"casebench.nav.developers": "Developers",
+	"casebench.nav.lawyers": "Lawyers",
+	"casebench.nav.integrations": "Integrations",
+	"casebench.nav.examples": "Examples",
+	"casebench.nav.changelog": "Changelog"
+}

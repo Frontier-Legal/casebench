@@ -1,0 +1,62 @@
+---
+/**
+ * Starlight's page title, with a line above it naming who the page is for and what kind of page it is, so a lawyer
+ * who lands on a developer reference knows it at once.
+ */
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+import { placement } from '../../lib/taxonomy';
+
+const { entry, locale } = Astro.locals.starlightRoute;
+const { t } = Astro.locals;
+const place = placement(entry.id, { audience: entry.data.audience, kind: entry.data.kind }, locale ? [locale] : []);
+---
+
+{
+	place && (
+		<p class="placement" data-audience={place.audience}>
+			<span class="audience">{t(`casebench.audience.${place.audience}`)}</span>
+			<span class="kind">{t(`casebench.kind.${place.kind}`)}</span>
+		</p>
+	)
+}
+<Default />
+
+<style>
+	.placement {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+		margin: 0.75rem 0 -0.25rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 560;
+		letter-spacing: 0.02em;
+	}
+
+	.placement span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.15rem 0.55rem;
+		border-radius: 999px;
+		border: 1px solid var(--cb-border);
+		color: var(--sl-color-gray-3);
+	}
+
+	.audience::before {
+		content: '';
+		width: 0.4rem;
+		height: 0.4rem;
+		border-radius: 999px;
+		background: var(--sl-color-accent);
+	}
+
+	[data-audience='lawyers'] .audience::before {
+		background: var(--cb-misgrounded);
+	}
+
+	[data-audience='everyone'] .audience::before {
+		background: var(--cb-verified);
+	}
+</style>

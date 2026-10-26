@@ -1,0 +1,49 @@
+---
+title: Integrations
+description: The model SDKs Casebench records, the document stores it reads, the judge providers it calls, the tracing formats it accepts, and how to add your own.
+sidebar:
+  label: Overview
+  order: 0
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Casebench connects to four kinds of systems. Each connection is a plugin with a documented interface, and the built-in ones are listed here.
+
+## Agent SDKs
+
+What your agent uses to call its models. Casebench records these calls through its proxy, with no change to your code. For a Python target, each worker sends every call through the proxy to the host your code chose, whatever base URL your settings give, so the calls are recorded with no capture route.
+
+| SDK | Parser | Reads |
+| --- | --- | --- |
+| [OpenAI](/integrations/sdks/openai/), and any OpenAI-compatible provider | `openai` | Chat Completions, streamed or not |
+| [Anthropic](/integrations/sdks/anthropic/) | `anthropic` | Messages, streamed or not |
+| [Google Gen AI](/integrations/sdks/gemini/) | `gemini` | `generateContent` and `streamGenerateContent` |
+| [Any other language or SDK](/integrations/sdks/other-languages/) | | Through HTTP or command targets |
+
+A Python agent's searches are recorded too: its calls to an HTTP corpus's own API, and Qdrant's REST search, become retrieval steps.
+
+## Document stores
+
+Where citations are checked and answer keys come from. Add one with `casebench corpus add`, `casebench init`, or the workbench's Jurisdictions page, where you pick a country, then a source, and pick each field from the values one live search and fetch returned.
+
+<CardGrid>
+	<LinkCard title="Document API over HTTP" href="/integrations/stores/http-api/" description="Any API that can search and fetch by id, by GET or by POST." />
+	<LinkCard title="MCP server" href="/integrations/stores/mcp-server/" description="A server with a search tool and a fetch tool." />
+	<LinkCard title="Provider profiles" href="/integrations/stores/provider-profiles/" description="A provider's own description of its API, connected in one command." />
+	<LinkCard title="Folder" href="/integrations/stores/folder/" description="One JSON file per document, for small sets." />
+</CardGrid>
+
+`casebench corpus probe http` prints what a document API answers, so a coding agent can map its fields by flag.
+
+## Judge and extraction models
+
+[Judge providers](/integrations/models/judge-providers/): `openai` (and OpenAI-compatible endpoints such as OpenRouter), `anthropic`, `google` (Gemini API and Vertex AI), `bedrock` and `azure`. `casebench models` lists the public model catalog's providers and models, and the workbench's Models page picks and tests each one. Prices are looked up from OpenRouter's list or the catalog when a command needs them.
+
+## Tracing
+
+[OpenTelemetry](/integrations/tracing/opentelemetry/): OTLP/HTTP spans in the GenAI semantic conventions or in OpenInference become steps.
+
+## Extend Casebench
+
+Every kind of connection above is a plugin found through Python entry points, with a scaffold and a conformance test. [Write a plugin or a profile](/integrations/extend/plugins/).

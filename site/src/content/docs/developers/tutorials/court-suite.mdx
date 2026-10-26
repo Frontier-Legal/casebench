@@ -1,0 +1,161 @@
+---
+title: Build a suite from court decisions
+description: Connect a folder of decisions, extract answer keys with two models, freeze a suite of outcome, statute and precedent cases, and run it.
+sidebar:
+  order: 3
+---
+
+import { Aside, FileTree, Steps } from '@astrojs/starlight/components';
+
+A court decision already holds the right answer to the question it decided: the ruling, the statutes it applied and the decisions it relied on. In this tutorial you turn a folder of decisions into a frozen suite of test cases and run your agent against it. The authorities your agent cites are resolved to documents in the same folder and compared with the ones the court relied on.
+
+It continues from [Your first evaluation](/developers/tutorials/first-evaluation/), where the first run built a small suite for you. Here you build one step by step, and choose the sample, the case types and the cutoff yourself. You need the `labour-agent` project from there.
+
+## Put the decisions in a folder
+
+The folder connector reads one JSON file per document. Use decisions you are allowed to process; Casebench never ships a corpus.
+
+<FileTree>
+- labour-agent/
+  - decisions/
+    - ewca-civ-2025-0412.json
+    - ewca-civ-2025-0517.json
+    - …
+  - casebench.yaml
+</FileTree>
+
+Each file is one decision in the [document format](/developers/reference/formats/document/):
+
+```json title="decisions/ewca-civ-2025-0412.json"
+{
+  "id": "ewca-civ-2025-0412",
+  "jurisdiction": "GB",
+  "court": "Court of Appeal (Civil Division)",
+  "level": "appellate",
+  "date": "2025-07-03",
+  "text": "1. This is an appeal against the decision of the Employment Appeal Tribunal ...",
+  "metadata": { "neutral_citation": "[2025] EWCA Civ 412" }
+}
+```
+
+`jurisdiction` is an ISO 3166 code, or `EU`. `text` is the full decision. Put statutes in the same folder if you have them, in the same shape: statute cases need the statutes in the corpus to resolve against.
+
+<Aside>
+A folder suits a few hundred documents: its search counts matching words. For a larger store, connect the [document API](/developers/guides/connect/document-store/) your agent already uses.
+</Aside>
+
+## Connect it
+
+<Steps>
+
+1. Make sure `casebench.yaml` names the corpus and two extraction models. `init` wrote both in the first tutorial; add `jurisdictions` so each citation is searched where it can be found:
+
+   ```yaml title="casebench.yaml"
+   corpora:
+     folder:
+       connector: folder
+       jurisdictions: [GB]
+       options:
+         path: decisions
+   extract:
+     models:
+     - provider: openai
+       model: gpt-5.5-mini
+       options: { api_key_env: OPENAI_API_KEY, family: openai }
+     - provider: anthropic
+       model: claude-haiku-5-5
+       options: { api_key_env: ANTHROPIC_API_KEY, family: claude-haiku, max_tokens: 128000 }
+   ```
+
+   To add them to an existing setup without editing the file, use the workbench's Jurisdictions and Models pages. The two models must differ. Where they read a decision differently, that field gets no key, so a wrong key costs you a case instead of marking a correct agent wrong.
+
+2. Check the corpus:
+
+   ```sh
+   uv run --with casebench casebench corpus check
+   ```
+
+   It reads a sample of up to 200 documents and reports, field by field, how many carry each required field. Fix any missing field in the files before you go on: a decision without a date cannot be filtered by cutoff, and one without a court cannot be balanced by level.
+
+</Steps>
+
+## Read the answer keys
+
+<Steps>
+
+1. Price it first. A dry run sends nothing:
+
+   ```sh
+   uv run --with casebench casebench extract --sample 60 --dry-run
+   ```
+
+   It states the decisions it would read, the model calls (two per decision) and a cost range from each model's price: at least the input, estimated at four characters per token, at most that plus each call's `max_tokens` of output. It is labelled an estimate.
+
+2. Extract:
+
+   ```sh
+   uv run --with casebench casebench extract --sample 60 --max-concurrency 4
+   ```
+
+   Both models read each decision and return the outcome, the statutes and the decisions it relied on, each with a quote. Casebench finds each quote in the text and records where it is. A quote that is not in the decision is dropped. A field becomes a key only where the two models' quotes point at the same passage.
+
+3. Look at what came out:
+
+   <FileTree>
+   - .casebench/keys/
+     - keys.jsonl one answer key per decision, agreed fields only
+     - extraction.json per-field agreement, time and tokens per model
+   </FileTree>
+
+   Open `extraction.json` and find the agreement rate per field. A low rate on statutes usually means the decisions cite them in a way the models read differently. It is the first number to look at before trusting a suite.
+
+</Steps>
+
+## Freeze a suite
+
+```sh
+uv run --with casebench casebench generate --suite-id employment-court --out suites/employment-court \
+  --types outcome,statute,precedent --n 100 --after 2025-06-01 --stratify court
+```
+
+- `--after` keeps only decisions dated after that day. Set it to your agent's model training cutoff so the model cannot have read the decision.
+- `--stratify court` balances the suite across court levels.
+- The suite id seeds the order, so generating again from the same keys gives the same suite and the same hash.
+
+Generating resolves every statute and precedent the court cited to a document in your corpus, with the judge. A citation the corpus does not hold is dropped, and the manifest counts what was resolved and dropped by type.
+
+<Aside type="caution" title="Every generated case starts as a draft">
+Court-derived cases are `draft` until a lawyer approves them. You can run drafts at once; the report keeps their rows apart from lawyer-approved ones.
+</Aside>
+
+## Run it
+
+```sh
+uv run --with casebench casebench run --suite suites/employment-court --run-id court-1
+```
+
+This time the report has a table per task type, and baselines for the outcome cases. A run of this shape prints:
+
+```text frame="terminal"
+outcome · outcome
+  source   approval         place      n  score   95% interval  majority text-only
+  court    unreviewed       GB        40    70%        55%-83%       58%       53%
+statute · statute
+  source   approval         place      n  score   95% interval  majority text-only
+  court    unreviewed       GB        34    61%        50%-71%         -         -
+precedent · precedent
+  source   approval         place      n  score   95% interval  majority text-only
+  court    unreviewed       GB        26    38%        27%-49%         -         -
+```
+
+The figures here are illustrative. Read the outcome row against its baselines: always answering the most common ruling would score 58%, and a classifier reading only the facts would score 53%. An agent at 70% with an interval reaching down to 55% has not clearly beaten them on 40 cases.
+
+The statute and precedent scores compare documents, not strings. The judge resolves each authority the answer cites to a document in your corpus, and the score is the F1 of those documents against the ones the court relied on. A correct statute cited in another format still counts.
+
+Below the tables the run prints the error rates, here including wrong outcome and wrong statute, and what it spent per model, the agent's calls apart from the judge's.
+
+## Next
+
+- Ask a lawyer to approve the drafts in the workbench. [Approve court drafts](/lawyers/guides/approve-court-drafts/) is their guide.
+- [Record retrieval steps](/developers/guides/capture/retrieval-steps/) to see where the right authority was lost.
+- [Compare two runs](/developers/guides/runs/compare-runs/) after you change the agent.

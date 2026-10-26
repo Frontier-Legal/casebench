@@ -1,0 +1,121 @@
+---
+/** The home page's opening: what Casebench does, the two ways in, the one command to try it, and the workbench. */
+import Button from '../Button.astro';
+import Screenshot from '../Screenshot.astro';
+---
+
+<section class="hero not-content">
+	<div class="copy">
+		<p class="eyebrow">Open source · Apache-2.0 core · any jurisdiction</p>
+		<h1>Test legal AI against what the court actually decided.</h1>
+		<p class="lede">
+			Casebench builds test cases from court decisions you already hold, checks the citations an answer makes against
+			your own corpus, and puts each failure in front of a lawyer, beside its evidence.
+		</p>
+		<div class="actions">
+			<Button href="/developers/tutorials/demo/" variant="primary">Try the demo</Button>
+			<Button href="/lawyers/">I'm a lawyer</Button>
+		</div>
+		<p class="try">
+			<span>No key, no data, no model calls:</span>
+			<code>uvx casebench demo</code>
+		</p>
+	</div>
+	<div class="visual">
+		<Screenshot
+			name="review-source-open"
+			alt="The Casebench workbench: an AI's answer under review, its citation's source open with the holding highlighted, and the lawyer's verdict on each point."
+			caption="A lawyer reviews an answer. The cited decision exists, but it holds something else."
+		/>
+	</div>
+</section>
+
+<style>
+	.hero {
+		display: grid;
+		gap: 2.5rem;
+		align-items: center;
+		padding: 3.5rem 0 2.5rem;
+	}
+
+	@media (min-width: 64rem) {
+		.hero {
+			grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+			gap: 3rem;
+			padding: 4.5rem 0 3rem;
+		}
+	}
+
+	.eyebrow {
+		margin: 0 0 1rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--sl-color-text-accent);
+	}
+
+	h1 {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-weight: 560;
+		font-size: clamp(2.3rem, 1.6rem + 2.6vw, 3.4rem);
+		line-height: 1.06;
+		letter-spacing: -0.025em;
+		color: var(--sl-color-white);
+		text-wrap: balance;
+	}
+
+	.lede {
+		margin: 1.4rem 0 0;
+		max-width: 36rem;
+		font-size: 1.125rem;
+		line-height: 1.65;
+		color: var(--sl-color-gray-2);
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 2rem;
+	}
+
+	.try {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 1.25rem 0 0;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+
+	.try code {
+		padding: 0.35rem 0.65rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-sm);
+		background: var(--cb-surface);
+		font-family: var(--sl-font-mono);
+		font-size: 0.8125rem;
+		color: var(--sl-color-white);
+		user-select: all;
+	}
+
+	.visual {
+		position: relative;
+		min-width: 0;
+	}
+
+	.visual::before {
+		content: '';
+		position: absolute;
+		inset: -12% -8%;
+		background: radial-gradient(closest-side, var(--cb-glow), transparent);
+		z-index: -1;
+	}
+
+	.visual :global(.screenshot) {
+		margin: 0;
+	}
+</style>

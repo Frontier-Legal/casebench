@@ -1,0 +1,69 @@
+---
+title: Try the demo
+description: Run a bundled suite with no key and no data, read the report it prints, and open its failed answers in the workbench. Five minutes.
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../../components/Screenshot.astro';
+
+The demo runs a small suite end to end on your machine: six legal questions, a demo agent's answers, a folder of court decisions and a judge whose replies are recorded with it. It needs no key and calls no model: the only requests it makes are for two public model price lists, which send nothing of yours.
+
+The cases, decisions and answers are written for the demo, about a fictional jurisdiction called Examplia. None is a real decision or legal advice.
+
+## Run it
+
+```sh
+uvx casebench demo
+```
+
+It copies the demo project into a new temporary folder, runs the suite, prints the report and opens the workbench. `--dir` keeps the project in a folder you name; give it an absolute path, because a relative one ends up one level deeper than you asked. `--no-serve` stops after the report.
+
+```text frame="terminal"
+run demo: 6 cases sent, 6 stored, 0 failed, 0 steps captured
+suite demo at sha256:9e8b1acb7eec9df61792f38c07d11222baf79e1aadc0eb027d49d4803f3ff754
+qa · citation_integrity
+  source   approval         place      n  score   95% interval  majority text-only
+  lawyer   lawyer-approved  -          6    50%        17%-83%         -         -
+qa · criteria
+  source   approval         place      n  score   95% interval  majority text-only all passed   95% interval
+  lawyer   lawyer-approved  -          6    71%        29%-92%         -         -        50%        17%-83%
+citations
+  verified         3    50%
+  misgrounded      2    33%
+  fabricated       1    17%
+  searched by: 6 every corpus
+authority funnel: no diagnostic possible; no captured step carried document ids
+fabricated citation: 17% of 6 answers [0%, 67%], cites a decision or statute the corpus does not hold
+unsupported claim: 33% of 6 answers [0%, 83%], cites an authority the corpus holds for something it does not say
+spend: $0.00 · agent $0.00 · judge $0.00
+  judge anthropic/demo-judge      23 calls            0 in           0 out  $0.00
+  only model calls are counted; search APIs and other services the agent pays for are not.
+```
+
+## Read the report
+
+- **One table per task and metric.** `qa · citation_integrity` scores each answer by the share of its citations that are verified. `qa · criteria` scores the lawyer's points each answer makes. There is no single figure for the whole agent.
+- **Every score has its interval.** With six cases, 71% could be anything from 29% to 92%. Six cases prove little, and the report says so.
+- **All passed** is the share of answers that made every point: 50%. Half the answers missed something a lawyer said they must say.
+- **Citations** counts every citation by verdict. Two of six cite a real decision for something it does not say.
+- **Error rates** say how often an answer had each error, with their intervals.
+- **Spend** is what the run cost, per model. The demo's judge replies are recorded, so it is $0.00.
+- The **authority funnel** needs captured retrieval steps. The demo agent answers from a file, so there are none.
+
+## Look at the failures
+
+The workbench opens in your browser. Type your name and choose a view: "I review legal answers" for the lawyer's view, "I build or run the AI system" for the engineer's.
+
+<Screenshot
+	name="demo-queue"
+	alt="The demo's review queue: six answers, four marked failed, the first one open beside its evidence."
+	caption="Failed answers come first, each beside the passage it cited."
+/>
+
+Open a failed answer. The evidence is on the left, the answer on the right, and each citation opens the passage it was matched to. Give a verdict on a point the judge got wrong, and the report counts yours instead. [Your first review](/lawyers/tutorials/first-review/) walks through this screen in detail.
+
+## Next
+
+- [Your first evaluation](/developers/tutorials/first-evaluation/) does the same on your own agent.
+- [How Casebench evaluates](/developers/concepts/evaluation-model/).

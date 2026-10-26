@@ -1,0 +1,147 @@
+---
+title: Add lawyer-written cases
+description: Lawyers write cases in the workbench's Golden data page. From the command line you can add one with casebench case new, or many from a spreadsheet with casebench template lawyer and casebench import.
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../../../components/Screenshot.astro';
+
+Court decisions label outcomes, statutes and precedents. They do not label the questions your firm cares about, or drafting, editing and extraction. Lawyers write those cases. This guide is the engineer's side: where lawyers write cases, what you set up for them, and the two command-line paths. The lawyer's side is [Write your first case](/lawyers/tutorials/first-case/).
+
+There are three ways in, and every one approves the case and records who wrote it:
+
+| Where | Who uses it | Good for |
+| --- | --- | --- |
+| The workbench's Golden data page | Lawyers | Writing and changing cases one at a time, with a change log |
+| `casebench template lawyer` and `casebench import` | A lawyer fills the sheet, you import it | Handing over fifty matters at once |
+| `casebench case new` | Anyone at a terminal | One case drafted from a decision found by topic, or one by hand |
+
+## In the workbench
+
+Most lawyers write cases in the workbench. **Golden data** lists every case of each suite the workbench reads, with its task, source and approval. **New case** opens a form with the same fields as the spreadsheet for the chosen task.
+
+<Screenshot
+	name="golden-data"
+	alt="Golden data: the employment suite with seven cases, six lawyer cases marked Approved and one court case marked Draft."
+	caption="Golden data lists each suite's cases with their task, source and status."
+/>
+
+Saving a new or changed case writes it into its suite. The suite is frozen again and gets a new hash. Every change needs a reason, and the event log keeps who made it, when, the case before and after, and why.
+
+On your machine, `casebench ui` serves the workbench and everyone who opens it may edit cases. `casebench ui --role reviewer` serves the review view only, which changes no case. On a team server only the editor role and above may edit; see [Run a team server](/developers/guides/team/team-server/).
+
+### A second editor's approval
+
+By default a lawyer's change takes effect when it is saved. A team that wants two people to read each change turns on a second approval in `casebench.yaml`:
+
+```yaml title="casebench.yaml"
+workbench:
+  second_approval: true
+```
+
+With it on:
+
+- A changed case is held as a proposal and the suite stays as it was. The change waits in every other editor's queue, with each changed field before and after, the author, the time and the reason.
+- A new case enters its suite as a draft. It can be run, and its scores appear in the report's unreviewed row, until a second editor approves it. A rejected new case leaves the suite.
+- No one approves their own change. On a team server that means a different signed-in person.
+- A proposal made while the setting was on can still be approved or rejected after it is turned off.
+
+A court draft is approved by one lawyer either way, with the decision's passages in view.
+
+## From a spreadsheet
+
+`casebench template lawyer` writes a workbook a lawyer fills with one case per row:
+
+```text frame="terminal"
+$ casebench template lawyer --task qa
+wrote cases-qa.xlsx: one case per row, under the columns of qa
+then: casebench import cases-qa.xlsx --suite DIR --by NAME
+```
+
+`--task` takes `qa` (the default), `outcome`, `research`, `drafting`, `editing` or `extraction`. Without `--out` the file is `cases-TASK.xlsx`. With `--out` ending in `.csv` it writes a CSV of the header row instead. The workbook has one sheet named after the task and a **how to fill** sheet that says what each column takes. A cell that holds several items takes one per line.
+
+The `qa` columns are `id`, `question`, `facts`, `reference answer`, `key points`, `statutes`, `precedents` and `practice area`. The other tasks' columns are in [Grade research, drafting, editing and extraction](/developers/guides/suites/other-tasks/).
+
+- `id` is optional. Without one a case is named after the file and its row, such as `cases-qa-3`.
+- `key points` are lines such as `+5 Concludes the dismissal is invalid` or `-4 Relies on the repealed article`. A line with no weight weighs 1. Each key point becomes a criterion in the lawyer's own words.
+- `reference answer` is shown to the judge as the lawyer's evidence. It makes no criterion on its own.
+- `practice area` is optional. Reports give each metric by practice area.
+
+When the sheet comes back, import it:
+
+```text frame="terminal"
+$ casebench import cases-qa.xlsx --suite suites/employment --by "Ayşe Demir"
+added 2 cases from cases-qa.xlsx, approved by Ayşe Demir
+  leave-forfeit: not in the corpus yet: Working Hours Act s 12; CA 2025/04; they resolve with a corpus, then casebench case resolve
+  cases-qa-3 (row 3) is unevidenced for criteria: the row gives nothing to grade against, so runs will not score it for them
+suite employment: new -> sha256:dfd95a53e4b392069793d0ccf7749da000f4e580bea60479367422342375704a
+```
+
+- `--suite` and `--by` are required for a sheet of cases. The folder is created when it does not exist.
+- `--by` names the lawyer who wrote the cases. Each case is `approved`, with that lawyer as the reference's author and approver, and `lawyer` as its source.
+- A CSV holds one task, so name it with `--task`. A workbook is read sheet by sheet, by each sheet's task name.
+- A row with no key points is imported but unevidenced: runs do not score it for criteria, and the report lists it.
+- A row whose id the suite already has is refused, and nothing is imported.
+- The suite is frozen again, and the command prints the old and the new hash.
+
+A file named in a `document` column is read relative to the spreadsheet, and its text goes into the case. The frozen suite holds it, so its hash covers it.
+
+## One case at a terminal
+
+`casebench case new` adds one approved case to a suite.
+
+### From a topic
+
+```sh
+casebench case new --suite suites/employment --topic "dismissal for lateness without warning" \
+  --author "Ayşe Demir" --practice-area labour
+```
+
+Casebench searches the corpus for decisions on the topic and lists them by the citation the corpus gives, else by court, date and id. Pick one by its number, or pass `--pick 2`. The first extraction model drafts the case at its configured settings, or the judge when there is no `extract:`. The draft holds a question, the facts without the ruling, the outcome, and the statutes and precedents the court relied on. A quote that is not in the decision is dropped. You read each field, change what you want, and confirm. The command prints the drafting model's time, tokens and cost.
+
+A fact left as drafted keeps its quote from the decision as evidence. One you rewrite is recorded as the reviewer's. The case keeps `court` as its source with the decision as provenance.
+
+### By hand
+
+```text frame="terminal"
+$ casebench case new --suite suites/employment --manual --author "Ayşe Demir" --practice-area labour
+question: Under Examplia law, may an employer dismiss an employee for one late arrival with no prior warning?
+the expected answer: No. A dismissal for one late arrival with no prior warning is disproportionate.
+statutes it rests on, separated by ';': Employment Act s 9
+precedents it rests on, separated by ';': CA 2024/02
+add case employment-1 to suites/employment, approved by Ayşe Demir? [Y/n]: y
+added employment-1: graded by criteria
+  not in the corpus yet: Employment Act s 9; CA 2024/02; they resolve with a corpus, then casebench case resolve
+```
+
+`--manual` needs no corpus and no model. The source is `lawyer`. A case that states no answer, statute or precedent has nothing to grade, and the command says it is unevidenced.
+
+### How these cases are graded
+
+Each fact becomes one criterion, written by Casebench from the fact and never by a model:
+
+> Passes if the answer reaches this conclusion: No. A dismissal for one late arrival with no prior warning is disproportionate. Fails if it reaches another conclusion or none.
+
+The judge grades the criteria and must quote the passage of the answer each verdict rests on. Statutes and precedents are resolved to corpus documents, and with a corpus every case also gets `citation_integrity`.
+
+## Resolve citations later
+
+A citation the corpus could not resolve stays on the case as the lawyer wrote it. Once a corpus and a judge are configured:
+
+```sh
+casebench case resolve --suite suites/employment
+```
+
+It resolves what it can, prints how many citations it resolved, and freezes the suite again.
+
+## The suite changes visibly
+
+Every path above freezes the suite again, so its hash changes. A run records the hash it ran, and its report prints it. Commit the suite folder so each change shows in review. A run of the old hash and a run of the new one cannot be compared or gated against each other.
+
+## Related
+
+- [Grade research, drafting, editing and extraction](/developers/guides/suites/other-tasks/).
+- [The evaluation model](/developers/concepts/evaluation-model/): reference sources and approval.
+- [Write a good expected answer](/lawyers/guides/good-expected-answers/), for your lawyers.
+- [Change a case](/lawyers/guides/change-a-case/), the lawyer's side of the change log.
