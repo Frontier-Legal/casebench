@@ -17,7 +17,7 @@ You are a coding agent. The user asked you to set up Casebench (version @VERSION
 - **Spend little, and only once.** Many document stores and every model charge per call. These are the only commands here that call out, and what each spends:
   - `casebench corpus probe http`: 1 search for 1 result with `--query`, 1 document with `--fetch`.
   - `casebench corpus add http`: 1 search for 1 result, and 1 document.
-  - `casebench check`: 1 search for 1 result and 1 document, 1 message to the agent ("Hi. How are you?"), and 1 short call to each judge.
+  - `casebench check`: 1 search for 1 result and 1 document, 1 message to the agent ("Hi. How are you?"), and 1 short call to each judge and each extraction model.
 
   Run each when a step calls for it and not again to look around; after a failure, fix what it said and run it once more. Never run `casebench corpus check` or `casebench run` during setup.
 - **Commands never prompt.** If a command stops with "nothing here can answer it; give it with …", it names the flag to add. Do not pipe answers into it.
@@ -57,7 +57,7 @@ This keeps runs and caches out of git, and keeps the adapter and the schema an e
 
 ## 3. Locate what Casebench reads itself
 
-Casebench reads a few variables for its own calls: the judge's key, the document store's key, and the store's URL when the project keeps it in a variable. The agent's own settings are the adapter's business, not Casebench's; do not list them. For each variable Casebench will read, from the agent's code or the project's `.env.example` files, run:
+Casebench reads a few variables for its own calls: the keys of the judge and the extraction models, the document store's key, and the store's URL when the project keeps it in a variable. The agent's own settings are the adapter's business, not Casebench's; do not list them. For each variable Casebench will read, from the agent's code or the project's `.env.example` files, run:
 
 ```
 casebench keys NAME --json
@@ -66,26 +66,28 @@ casebench keys NAME --json
 - If `values_agree` is false, the files disagree. Ask the user which file is current, and pass `--key NAME=FILE` to every command below that needs that key.
 - If no file has the name and it is not set in the shell, tell the user which variable to set and where.
 
-## 4. Choose the judge
+## 4. Choose the judge and the extraction models
 
-The judge grades the agent's answers, so it costs money on every run.
+The judge grades the agent's answers, so it costs money on every run. The first `casebench run` builds its cases from the corpus: two extraction models each read a sample of decisions, and only what both find becomes a case, so they cost money once, when that suite is built.
 
 - Find which models the agent itself uses, from the model names in its code or settings.
-- `casebench models --json` lists the catalog's providers, with the variable each one's key is read from; `casebench models PROVIDER --json` lists that provider's models, with their family, price per million tokens and context. Take both ids from there.
-- Propose a strong model from a different family than the agent's models, through a provider whose key you found in step 3. A judge from the agent's own family tends to favour its answers.
-- **Ask the user once** to confirm the provider and model, and say the provider will be billed for each run. This is the only question you ask the user, apart from keys whose files disagree.
+- `casebench models --json` lists the catalog's providers, with the variable each one's key is read from; `casebench models PROVIDER --json` lists that provider's models, with their family, price per million tokens and context. Take every id from there.
+- Propose a strong judge from a different family than the agent's models, through a provider whose key you found in step 3. A judge from the agent's own family tends to favour its answers.
+- Propose two extraction models from two different families, the same way, through providers whose keys you found in step 3.
+- **Ask the user once** to confirm the judge and the two extraction models, and say what each provider is billed for: the judge on each run, the extraction models when the first run builds its suite, after it shows what that costs. This is the only question you ask the user, apart from keys whose files disagree.
 
-Both ids are the model catalog's (models.dev), as `casebench models` lists them.
+Every id is the model catalog's (models.dev), as `casebench models` lists them.
 
 ## 5. Write the setup
 
 ```
 casebench init --entry .casebench/target.py:answer --corpus none \
-  --judge-provider PROVIDER --judge-model MODEL --no-extract --no-routes --no-live --yes \
+  --judge-provider PROVIDER --judge-model MODEL \
+  --extract PROVIDER_1 MODEL_1 --extract PROVIDER_2 MODEL_2 --no-routes --no-live --yes \
   [--key NAME=FILE ...]
 ```
 
-This writes `casebench.yaml`: the target, the judge, and under `keys` the name and file of each key, never a value. Model calls need no route for a Python target: Casebench records each call where the agent sends it.
+This writes `casebench.yaml`: the target, the judge, the two extraction models, and under `keys` the name and file of each key, never a value. Model calls need no route for a Python target: Casebench records each call where the agent sends it.
 
 Then make sure `agent_models:` in `casebench.yaml` lists each model the agent calls, with its family as `casebench models PROVIDER --json` gives it; init lists the ones it found in the code. Every run checks the judge's family against them, and looks up each one's price where it is sold to report what the agent's calls cost:
 
@@ -163,7 +165,7 @@ When the target part says Casebench refused a call to a host, find where the age
 Run `git status --short`. Only `casebench.yaml` and `.casebench/` may appear. Then tell the user:
 
 - what the adapter calls and which settings it loads;
-- the judge you set and that it is billed per run;
+- the judge you set and that it is billed per run, and the two extraction models, billed when the first run builds its suite;
 - the corpus you connected;
 - each host under `network: allow:`, and where in the code the agent calls it;
 - the result of `casebench check`;
