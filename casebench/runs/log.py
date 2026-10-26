@@ -32,6 +32,10 @@ class RunInfo(FrozenRecord):
     # would change with every release.
     casebench_version: str = Field(default_factory=lambda: __version__)
     commit: str | None = Field(default=None, description="The code's commit (decision 0048).")
+    unattributed_calls: int = Field(
+        default=0,
+        description="Calls the proxy recorded that no case could claim (decision 0019).",
+    )
 
 
 class Result(FrozenRecord):
@@ -74,6 +78,17 @@ class RunLog:
     @property
     def info(self) -> RunInfo:
         return RunInfo.model_validate_json((self.folder / RUN_FILE).read_text(encoding="utf-8"))
+
+    def count_unattributed(self, calls: int) -> None:
+        """Add the calls a session recorded that no case could claim to those `run.json`
+        counts, so a resumed run counts them all; the file is rewritten only when there are
+        some (decision 0019)."""
+        if calls <= 0:
+            return
+        info = self.info
+        counted = info.model_copy(update={"unattributed_calls": info.unattributed_calls + calls})
+        written = keys.scrub(counted.model_dump_json(indent=2))
+        (self.folder / RUN_FILE).write_text(written + "\n", encoding="utf-8")
 
     def append(self, result: Result) -> None:
         """Persist one result before the next case starts."""

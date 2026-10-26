@@ -64,10 +64,18 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     stored = log.results()
     failed = sum(1 for result in stored if result.error)
     steps = sum(len(result.steps) for result in stored)
-    return (
+    said = (
         f"run {log.folder.name}: {len(sent)} cases sent, {len(stored)} stored, "
         f"{failed} failed, {steps} steps captured\n{log.folder}"
     )
+    unattributed = log.info.unattributed_calls
+    if unattributed:
+        said += (
+            f"\n{unattributed} call{'s' if unattributed != 1 else ''} could not be attributed "
+            "to a case, so no case shows their steps: run one case at a time, or have the "
+            "agent pass on the trace context it is given"
+        )
+    return said
 
 
 @click.command()

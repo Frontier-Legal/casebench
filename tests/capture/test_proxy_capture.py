@@ -7,14 +7,17 @@ import sys
 from pathlib import Path
 
 import httpx2
+from click.testing import CliRunner
 
 from casebench.capture.config import CaptureConfig, routes_for
 from casebench.capture.redirect import FOLLOW, followed
 from casebench.capture.session import CaptureSession
 from casebench.capture.step import NO_DIAGNOSTIC, StepKind
+from casebench.cli import main
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
+from casebench.suites.freeze import freeze
 from casebench.targets.load import target_from_config
 from tests.capture.openai_upstream import start_openai
 from tests.capture.upstreams import start_upstream
@@ -214,3 +217,35 @@ def test_a_route_whose_variable_already_points_at_the_proxy_forwards_to_its_upst
 
     assert session.routes["anthropic"].upstream == base
     assert answered.json()["content"][0]["text"] == "The dismissal is invalid."
+
+
+def test_a_run_says_how_many_calls_it_could_not_attribute_to_a_case(tmp_path: Path):
+    upstream = start_upstream()
+    stages = tmp_path / "stages"
+    stages.mkdir()
+    agent = Path(__file__).resolve().parent / "concurrent_agent.py"
+    config = tmp_path / "casebench.yaml"
+    config.write_text(
+        f"target: {{type: command, run: '{sys.executable} {agent} {stages} 2'}}\n"
+        "capture:\n  routes:\n"
+        f"    - {{name: anthropic, upstream: 'http://127.0.0.1:{upstream.server_port}'}}\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "suite"
+    freeze("concurrent", [case("c1", "Valid?"), case("c2", "Void?")], suite)
+    try:
+        printed = CliRunner().invoke(
+            main,
+            [
+                "run",
+                *("--suite", str(suite), "--config", str(config)),
+                *("--max-concurrency", "2", "--runs-dir", str(tmp_path / "runs")),
+                *("--run-id", "r1"),
+            ],
+        )
+    finally:
+        upstream.shutdown()
+
+    assert printed.exit_code == 0, printed.output
+    assert "2 calls could not be attributed to a case" in printed.output
+    assert RunLog(tmp_path / "runs" / "r1").info.unattributed_calls == 2
