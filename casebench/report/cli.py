@@ -138,7 +138,11 @@ def compare_command(first: Path, second: Path) -> None:
         click.echo("the two score sets were produced differently:")
     for change in found:
         click.echo(f"  {change.setting}: {change.first} -> {change.second}")
-    scores = [RunLog.read_scores(path) for path in sets]
+    # The scores the report and the gate show: a lawyer's verdict replaces the judge's (0047).
+    scores = [
+        lawyers_win(RunLog.read_scores(path), read_reviews(folder))
+        for path, folder in zip(sets, (first, second), strict=True)
+    ]
     # Lawyers' blind preferences, kept in the second run's folder (decision 0054).
     given = latest(read_preferences(second), info.run_id)
     areas = {s.case_id: s.practice_area for s in scores[1]}
