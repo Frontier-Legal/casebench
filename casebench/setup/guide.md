@@ -129,7 +129,17 @@ For an HTTP API:
 
    `--name` is how reports name the store, such as the provider's name, in lowercase letters, digits and hyphens, such as `frontier-legal`; without it, a name is made from its host.
 
-For a folder of decisions, use `casebench corpus add folder`; for an MCP server, `casebench corpus add mcp`. Run either with `--help` for its flags.
+For an MCP server, use `casebench corpus add mcp`; run it with `--help` for its flags.
+
+For a folder of decisions, which holds one JSON file per decision with its `id`, `jurisdiction`, `court`, `date` and `text`, add its block to `casebench.yaml` under `corpora:`. `PATH` is the folder, absolute or relative to the project's folder, and `CODE` each jurisdiction it covers:
+
+```yaml
+corpora:
+  decisions:
+    connector: folder
+    options: {path: PATH}
+    jurisdictions: [CODE]
+```
 
 ## 7. Check, and fix what fails
 
