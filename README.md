@@ -19,7 +19,7 @@ Casebench measures the legal accuracy of an AI system against real court decisio
 uvx casebench demo
 ```
 
-The demo runs a small bundled suite with no key, no data and no network, and opens the workbench on its failed answers, each beside the passage it cited. Its cases, decisions and answers are written for the demo, not taken from real law.
+The demo runs a small bundled suite with no key and no data, and opens the workbench on its failed answers, each beside the passage it cited. Its cases, decisions and answers are written for the demo, not taken from real law.
 
 ## Set it up
 

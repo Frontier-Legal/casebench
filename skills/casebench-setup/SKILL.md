@@ -59,4 +59,4 @@ Lawyers who review on another machine need a team server: the workbench with sig
 
 ## Without a project of its own
 
-`uvx casebench demo` runs a bundled suite with no key and no network, and opens the workbench on it. Use it when the user wants to see Casebench before connecting their agent.
+`uvx casebench demo` runs a bundled suite with no key and asks no model, and opens the workbench on it. Like every run, it reads two public price lists. Use it when the user wants to see Casebench before connecting their agent.
