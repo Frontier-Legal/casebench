@@ -12,6 +12,7 @@ from casebench.corpus.corpora import Corpora, NoSuchCorpus
 from casebench.corpus.interface import ListingNotSupported
 from casebench.corpus.probe_cli import probe
 from casebench.perimeter import enforce
+from casebench.setup.checks import probe_queries
 
 
 @click.group()
@@ -35,7 +36,8 @@ corpus.add_command(probe)
     "--query",
     "queries",
     multiple=True,
-    help="A search that finds documents, for a store that cannot list them.",
+    help="A search that finds documents, for a store that cannot list them; the corpus's "
+    "probe search when none is given.",
 )
 @click.option("--size", type=click.IntRange(min=1), default=SAMPLE_SIZE, show_default=True)
 @click.option("--corpus", "corpus_name", help="Which corpus, when the config names several.")
@@ -51,6 +53,7 @@ def check_command(
         store = Corpora(config.corpora).only(corpus_name)
     except NoSuchCorpus as error:
         raise click.ClickException(str(error)) from error
+    queries = tuple(queries or probe_queries(config.corpora[store.name].probe))
     paid = store.connector.keep_searches
     if paid and queries:
         kept = sum(store.connector.search_cached(query, size) for query in queries)

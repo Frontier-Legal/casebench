@@ -43,7 +43,7 @@ Chosen option 1, because it takes the project knowledge from the coding agent, w
   - `casebench corpus probe http` runs one search and one fetch, and prints both responses so the coding agent can map the fields. The key is found by name in the shell or the project's `.env` files, as in 0043.
   - `corpus add` and `init` take `--key NAME=FILE`, which records where a key is read from, so a script never exports a key's value.
   - When a key is in several files that disagree, a command with no terminal stops and names the files and the flag. It never waits on a prompt.
-- **A corpus keeps its probe.** `corpus add` stores the search it probed with as the corpus block's `probe`. `casebench check` uses it when no `--query` is given.
+- **A corpus keeps its probe.** `corpus add` stores the search it probed with as the corpus block's `probe`. `casebench check` and `casebench corpus check` use it when no `--query` is given.
 - **A call is recorded where it goes, and goes where the agent sends it.**
   - Before, a parser's default route pointed its SDK's variable, such as `OPENAI_BASE_URL`, at the proxy and forwarded to the parser's default host. A project whose own settings set that variable for another provider kept the proxy's value, so its calls and its key went to the default host. That was measured on 2026-10-14 with a sample project: its provider key reached `api.openai.com`.
   - A Python target's worker now sends every call through the proxy's follow path, which carries the call's own scheme and host, and the proxy forwards it there unchanged. The worker keeps the project's own value of each variable a default route sets. A route the config gives its own upstream keeps its variable.

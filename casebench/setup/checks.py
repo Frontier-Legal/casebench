@@ -311,7 +311,7 @@ def team_server_check(cloud: CloudConfig, root: Path) -> Check:
     return Check(TEAM_SERVER, Status.PASSED, f"{cloud.url} took the key as an engineer's")
 
 
-def _probe(probe: str | None) -> list[str]:
+def probe_queries(probe: str | None) -> list[str]:
     """The search a corpus was added with, run when no other is given (decision 0044)."""
     return [probe] if probe else []
 
@@ -327,7 +327,7 @@ def live(
     checks = []
     corpora = Corpora(config.corpora)
     checks += [
-        _corpus(corpora, name, queries or _probe(config.corpora[name].probe), size)
+        _corpus(corpora, name, queries or probe_queries(config.corpora[name].probe), size)
         for name in corpora.names
     ]
     if config.target is not None:

@@ -171,6 +171,17 @@ def test_corpus_behind_a_licensed_api(api: str, tmp_path: Path):
     assert Corpus(settings, name).search("E. 2023/1234 K. 2024/567", 1) == ["127-0-0-1:101"]
 
 
+def test_corpus_check_searches_a_store_that_cannot_list_with_its_probe(api: str, tmp_path: Path):
+    config = tmp_path / "casebench.yaml"
+    add_http(config, api)
+
+    checked = invoke("corpus", "check", "--config", str(config))
+
+    assert checked.exit_code == 0, checked.output
+    assert "sampled 1 documents" in checked.output
+    assert "search results, as the judge sees them to match a citation:" in checked.output
+
+
 def test_any_http_api_or_mcp_server(api: str, tmp_path: Path):
     config = tmp_path / "casebench.yaml"
     add_http(config, api)
