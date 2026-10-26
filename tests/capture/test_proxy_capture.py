@@ -249,3 +249,17 @@ def test_a_run_says_how_many_calls_it_could_not_attribute_to_a_case(tmp_path: Pa
     assert printed.exit_code == 0, printed.output
     assert "2 calls could not be attributed to a case" in printed.output
     assert RunLog(tmp_path / "runs" / "r1").info.unattributed_calls == 2
+
+
+def test_a_capture_routes_upstream_may_name_a_variable(tmp_path: Path, monkeypatch):
+    upstream = start_upstream()
+    monkeypatch.setenv("MODEL_URL", f"http://127.0.0.1:{upstream.server_port}")
+    try:
+        results = run(tmp_path, upstream_routes("${MODEL_URL}"))
+    finally:
+        upstream.shutdown()
+
+    for result in results:
+        assert result.error is None, result.error
+        assert result.output == "The dismissal is invalid."
+        assert len([s for s in result.steps if s.kind is StepKind.LLM]) == 2

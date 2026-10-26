@@ -12,6 +12,7 @@ import yaml
 from click.testing import CliRunner
 
 from casebench.cli import main
+from casebench.corpus.connectors.mcp import Connector as McpConnector
 from tests.corpus.document_api import KEY, DocumentApi, start_document_api
 from tests.corpus.profiles import FIELDS, http_options, profile
 
@@ -149,6 +150,23 @@ def test_a_profile_reaches_a_hosted_mcp_server_that_needs_a_key(keyed_mcp: str, 
 
     assert added.exit_code == 0, added.output
     assert "fetched document 101" in added.output
+
+
+def test_a_hosted_mcp_servers_address_may_name_a_variable(
+    keyed_mcp: str, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setenv("MCP_URL", keyed_mcp)
+    connector = McpConnector(
+        url="${MCP_URL}",
+        headers={"Authorization": "Bearer ${DOC_KEY}"},
+        search_tool="search",
+        search_ids="$.hits[*].document_id",
+        fetch_tool="get_document",
+    )
+    try:
+        assert connector.search("feshi", 1)
+    finally:
+        connector.close()
 
 
 def test_a_provider_that_refuses_the_key_says_which_key(

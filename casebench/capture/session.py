@@ -20,6 +20,7 @@ from casebench.capture.step import HttpExchange, Step
 from casebench.corpus.binding import CorpusConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
+from casebench.targets.placeholders import expand_env
 
 TRACES_ENDPOINT = "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
 
@@ -34,6 +35,13 @@ PROXY = "CASEBENCH_PROXY"
 # worker can keep the project's own (decision 0044).
 SHADOWED = "CASEBENCH_SHADOWED"
 PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
+
+
+def _upstream_read(route: Route) -> Route:
+    """A route whose upstream names a variable, such as `${MODEL_URL}`, forwards to its value,
+    read as a corpus's base URL is (decision 0044)."""
+    upstream = expand_env({"upstream": route.upstream})["upstream"]
+    return route if upstream == route.upstream else route.model_copy(update={"upstream": upstream})
 
 
 def _to_set_upstream(route: Route, port: int) -> Route:
@@ -99,7 +107,8 @@ class CaptureSession:
 
     async def start(self) -> dict[str, str]:
         self.routes = {
-            name: _to_set_upstream(route, self.port) for name, route in self.routes.items()
+            name: _to_set_upstream(_upstream_read(route), self.port)
+            for name, route in self.routes.items()
         }
         app = make_app(list(self.routes.values()), self.recorder, self.hook_for)
         self.server = ProxyServer(app, self.port)

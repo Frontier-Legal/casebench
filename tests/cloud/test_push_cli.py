@@ -7,7 +7,8 @@ import pytest
 from click.testing import CliRunner
 
 from casebench.cli import main
-from casebench.config import load_config
+from casebench.cloud.client import connect
+from casebench.config import CloudConfig, load_config
 from casebench.perimeter import hosts_of
 
 
@@ -31,3 +32,11 @@ def test_the_server_joins_the_allow_list(tmp_path: Path):
     hosts = hosts_of(load_config(config(tmp_path)))
 
     assert "casebench.firm.example" in hosts
+
+
+def test_the_team_servers_address_may_name_a_variable(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("TEAM_URL", "https://casebench.firm.example/")
+    monkeypatch.setenv("CASEBENCH_CLOUD_KEY", "cb-test-key")
+
+    with connect(CloudConfig(url="${TEAM_URL}")) as client:
+        assert str(client.base_url) == "https://casebench.firm.example"

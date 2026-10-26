@@ -22,15 +22,16 @@ from casebench import network
 from casebench.core.model import Record
 from casebench.corpus.mapping import record_fields
 from casebench.corpus.results import SearchResult, results_of
-from casebench.targets.placeholders import expand_headers
+from casebench.targets.placeholders import expand_env, expand_headers
 
 Result = TypeVar("Result")
 
 
 class McpCorpusConfig(Record):
     """`command` starts a server over stdio; `url` reaches one over Streamable HTTP, sending
-    `headers` (with `${VAR}` read from the environment) on every request. Tool arguments may
-    hold `{text}`, `{limit}` and `{id}`. `search_results` and `result_fields` read each
+    `headers` (with `${VAR}` read from the environment) on every request. `url` may name a
+    variable too, read as the http connector's `base_url` is (decision 0044). Tool arguments
+    may hold `{text}`, `{limit}` and `{id}`. `search_results` and `result_fields` read each
     result's id and description, as for the http connector (decision 0037)."""
 
     command: list[str] | None = None
@@ -93,7 +94,8 @@ class Connector:
 
     def __init__(self, server: Any = None, **options: Any) -> None:
         self.config = McpCorpusConfig.model_validate(options)
-        target = server or self.config.url
+        url = expand_env({"url": self.config.url})["url"] if self.config.url else None
+        target = server or url
         if target is None and self.config.command:
             command, *arguments = self.config.command
             # The server's log goes to the terminal Casebench was started from, even when

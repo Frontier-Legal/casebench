@@ -6,6 +6,7 @@ import httpx2
 
 from casebench import keys, network
 from casebench.config import CloudConfig
+from casebench.targets.placeholders import expand_env
 
 
 class CloudError(RuntimeError):
@@ -13,14 +14,20 @@ class CloudError(RuntimeError):
 
 
 def connect(cloud: CloudConfig) -> httpx2.Client:
+    """A client for the server at `cloud.url`, whose `${NAME}`s are read as a corpus's base
+    URL is (decision 0044)."""
     key = keys.get(cloud.key_env)
     if not key:
         raise CloudError(
             f"no API key in {cloud.key_env}; an admin creates one on the Team page, and you set "
             "it in the environment or a .env file"
         )
+    try:
+        url = expand_env({"url": cloud.url})["url"]
+    except KeyError as missing:
+        raise CloudError(missing.args[0]) from None
     return network.client(
-        base_url=cloud.url.rstrip("/"),
+        base_url=url.rstrip("/"),
         headers={"Authorization": f"Bearer {key}"},
         timeout=120,
     )
