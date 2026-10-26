@@ -6,13 +6,17 @@ import socket
 import sys
 from pathlib import Path
 
+import httpx2
+
 from casebench.capture.config import CaptureConfig, routes_for
+from casebench.capture.redirect import FOLLOW, followed
 from casebench.capture.session import CaptureSession
 from casebench.capture.step import NO_DIAGNOSTIC, StepKind
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
 from casebench.targets.load import target_from_config
+from tests.capture.openai_upstream import start_openai
 from tests.capture.upstreams import start_upstream
 
 AGENT = Path(__file__).resolve().parent / "plain_http_agent.py"
@@ -149,3 +153,32 @@ def test_a_started_http_agent_runs_under_the_capture_wrapper(tmp_path: Path):
     assert result.output == "The dismissal is invalid."
     [call] = [s for s in result.steps if s.kind is StepKind.LLM]
     assert (call.provider, call.input_tokens, call.output_tokens) == ("anthropic", 200, 40)
+
+
+def test_a_streamed_call_a_python_agent_sends_to_an_openai_compatible_host_reports_its_tokens():
+    upstream = start_openai()
+    session = CaptureSession(routes_for(None))
+    asked = {"model": "gpt-5", "stream": True, "messages": [{"role": "user", "content": "Q?"}]}
+
+    async def call() -> list:
+        await session.start()
+        try:
+            session.recorder.begin("c1")
+            here = f"http://127.0.0.1:{upstream.server_port}/v1/chat/completions"
+            url = followed(here, session.env[FOLLOW])
+            assert url is not None
+            async with httpx2.AsyncClient() as client:
+                (await client.post(url, json=asked)).raise_for_status()
+            return session.recorder.end("c1")
+        finally:
+            await session.stop()
+
+    try:
+        [exchange] = asyncio.run(call())
+    finally:
+        upstream.shutdown()
+
+    [step] = session.parse(exchange)
+    assert (step.provider, step.input_tokens, step.output_tokens) == ("openai", 30, 4)
+    added = exchange.request_body.pop("stream_options")
+    assert (added, exchange.request_body) == ({"include_usage": True}, asked)

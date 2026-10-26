@@ -2,7 +2,6 @@
 
 import json
 import os
-from typing import Any
 from urllib.parse import urlsplit
 
 from casebench import keys
@@ -11,7 +10,7 @@ from casebench.capture.config import CaptureConfig, routes_for
 from casebench.capture.corpus_routes import corpus_routes
 from casebench.capture.functions import STEP_FUNCTIONS, StepFunction
 from casebench.capture.interface import CaptureParser
-from casebench.capture.proxy.forward import make_app
+from casebench.capture.proxy.forward import Prepare, make_app
 from casebench.capture.proxy.routes import Route, default_routes, environment
 from casebench.capture.proxy.server import ProxyServer
 from casebench.capture.recorder import Recorder
@@ -81,14 +80,22 @@ class CaptureSession:
         self.env: dict[str, str] = {}
         self._previous: dict[str, str | None] = {}
 
+    def hook_for(self, route: Route | None, url: str) -> Prepare | None:
+        """The request hook of the parser that reads a call, found as `parse` finds it: by the
+        call's route, or for a followed call the route at its host, or else the parser whose
+        API the call is (decision 0044)."""
+        route = route or self._route_at(url)
+        if route is not None:
+            return getattr(self.parsers.get(route.name), "prepare", None)
+        for parser in self.all_parsers:
+            reads = getattr(parser, "reads", None)
+            if reads is not None and reads(url):
+                return getattr(parser, "prepare", None)
+        return None
+
     async def start(self) -> dict[str, str]:
-        prepare: dict[str, Any] = {
-            name: parser.prepare  # type: ignore[attr-defined]
-            for name, parser in self.parsers.items()
-            if hasattr(parser, "prepare")
-        }
         self.routes = {name: _to_set_upstream(route) for name, route in self.routes.items()}
-        app = make_app(list(self.routes.values()), self.recorder, prepare)
+        app = make_app(list(self.routes.values()), self.recorder, self.hook_for)
         self.server = ProxyServer(app, self.port)
         self.port = await self.server.start()
         self.env = environment(list(self.routes.values()), self.port)
