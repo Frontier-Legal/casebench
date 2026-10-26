@@ -29,6 +29,7 @@ from casebench.report.render import (
     warning_lines,
 )
 from casebench.runs.log import RunLog
+from casebench.runs.offline import TARGET as OFFLINE
 from casebench.workbench.sources import Workspace
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -96,7 +97,8 @@ def report_command(run_dir: Path, target: Path | None, suite_dirs: tuple[Path, .
         click.echo(line)
     for line in corpus_lines(report.produced_by):
         click.echo(line)
-    for line in error_lines(report.scoring_errors, run_dir.name):
+    offline = RunLog(run_dir).info.target == OFFLINE
+    for line in error_lines(report.scoring_errors, run_dir.name, offline):
         click.echo(line)
     # Lawyers' verdicts given since the run was scored count here too (decision 0047).
     shown = lawyers_win(report.scores, read_reviews(run_dir))

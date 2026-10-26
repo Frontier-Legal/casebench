@@ -61,6 +61,31 @@ def test_offline_answers_for_a_closed_tool(project: Path):
     assert len(off_line) == 8
 
 
+def test_an_offline_run_left_unscored_says_to_import_its_answers_again(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+):
+    (project / "answers.csv").write_text(
+        "case_id,repeat,answer\ncase-000,0,Upheld.\n", encoding="utf-8"
+    )
+
+    def unscored(metric: object, case: object, result: object) -> None:
+        raise TimeoutError("the judge did not answer")
+
+    monkeypatch.setattr("casebench.runs.rescore.score", unscored)
+    imported = CliRunner().invoke(
+        main, ["import", "answers.csv", "--suite", "suite", "--runs-dir", "runs"]
+    )
+    [offline] = list((project / "runs").iterdir())
+    reported = CliRunner().invoke(main, ["report", str(offline)])
+
+    for shown in (imported, reported):
+        assert shown.exit_code == 0, shown.output
+        [hint] = [line for line in shown.output.splitlines() if line.startswith("scoring errors")]
+        # Running it again would send the unanswered cases to the config's target.
+        assert "--run-id" not in hint
+        assert "import the answers sheet again with `casebench import SHEET --suite DIR`" in hint
+
+
 def test_a_bad_answer_row_is_named(project: Path):
     (project / "answers.csv").write_text(
         "case_id,repeat,answer\nno-such-case,0,Upheld.\n", encoding="utf-8"

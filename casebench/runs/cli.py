@@ -22,6 +22,7 @@ from casebench.runs import first
 from casebench.runs.commit import current_commit
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
+from casebench.runs.offline import TARGET as OFFLINE
 from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
 from casebench.runs.scoring import Scored, prepare, score
@@ -222,7 +223,8 @@ def show_scored(log: RunLog, scored: Scored, suite_id: str, runs_dir: Path) -> N
         click.echo(line)
     for line in render.corpus_lines(RunLog.read_producer(scored.score_set)):
         click.echo(line)
-    for line in render.error_lines(scored.errors, log.folder.name):
+    offline = log.info.target == OFFLINE
+    for line in render.error_lines(scored.errors, log.folder.name, offline):
         click.echo(line)
     for line in render.error_rate_lines(error_rates(scored.scores, suite_id)):
         click.echo(line)
