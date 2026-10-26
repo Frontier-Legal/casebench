@@ -87,11 +87,11 @@ casebench init --entry .casebench/target.py:answer --corpus none \
 
 This writes `casebench.yaml`: the target, the judge, and under `keys` the name and file of each key, never a value. Model calls need no route for a Python target: Casebench records each call where the agent sends it.
 
-Then add to `casebench.yaml` each model the agent calls, with its family and its price per million tokens as `casebench models PROVIDER --json` gives them. Every run checks the judge's family against them and reports what the agent's calls cost:
+Then make sure `agent_models:` in `casebench.yaml` lists each model the agent calls, with its family as `casebench models PROVIDER --json` gives it; init lists the ones it found in the code. Every run checks the judge's family against them, and looks up each one's price where it is sold to report what the agent's calls cost:
 
 ```yaml
 agent_models:
-  - {model: MODEL_ID, family: FAMILY, price: {input: INPUT, output: OUTPUT}}
+  - {model: MODEL_ID, family: FAMILY}
 ```
 
 ## 6. Connect the document store
