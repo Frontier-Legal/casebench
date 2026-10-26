@@ -66,6 +66,28 @@ jobs:
       # The team server's build of the web app, with its screens from ee/web (decision 0058).
       - run: npm run build:team
 
+  site:
+    name: site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      # The build fails on a broken link or anchor (starlight-links-validator).
+      - run: npm run build
+
   test:
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
@@ -143,7 +165,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint, workflows, workbench, test, team, image]
+    needs: [lint, workflows, workbench, site, test, team, image]
     runs-on: ubuntu-latest
     permissions: {}
     steps:

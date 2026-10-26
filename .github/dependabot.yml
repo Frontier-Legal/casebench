@@ -25,3 +25,16 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+    # A release must be a week old before it is proposed, zizmor's dependabot-cooldown default.
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "docs(deps)"
+    groups:
+      site:
+        patterns: ["*"]
