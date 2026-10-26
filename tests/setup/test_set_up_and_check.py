@@ -111,6 +111,22 @@ def test_init_refuses_an_entry_that_does_not_exist(checkout: Path):
     assert not (checkout / "casebench.yaml").exists()
 
 
+def test_an_adapter_that_imports_its_function_passes_check(checkout: Path):
+    (checkout / "adapter.py").write_text(
+        "from agent import answer\nfrom agent import answer as reply\n", encoding="utf-8"
+    )
+    (checkout / "every.py").write_text("from agent import *\n", encoding="utf-8")
+    checked = []
+    for number, entry in enumerate(("adapter.py:answer", "adapter.py:reply", "every.py:answer")):
+        target = {"type": "python", "entry": entry}
+        (checkout / f"{number}.yaml").write_text(yaml.safe_dump({"target": target}), "utf-8")
+        checked.append(CliRunner().invoke(main, ["check", "--config", f"{number}.yaml"]))
+
+    for each in checked:
+        assert each.exit_code == 0, each.output
+        assert 'target   passed: answered "The appeal is upheld."' in each.output
+
+
 def test_checked_and_run_where_it_is_reachable(checkout: Path):
     upstream = start_upstream()
     judge = start_fake_judge()

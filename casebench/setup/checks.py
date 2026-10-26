@@ -120,6 +120,16 @@ def _entry_defined(entry: str) -> str | None:
             for target in node.targets
             if isinstance(target, ast.Name)
         }
+        # An import binds its alias, or the module's first part: `import a.b` binds `a`.
+        imported = [
+            alias
+            for node in tree.body
+            if isinstance(node, ast.Import | ast.ImportFrom)
+            for alias in node.names
+        ]
+        names |= {alias.asname or alias.name.split(".")[0] for alias in imported}
+        if any(alias.name == "*" for alias in imported):
+            return None  # what a star import binds is known only by running it
         return None if function in names else f"{path} defines no {function!r}"
     try:
         found = importlib.util.find_spec(location)
