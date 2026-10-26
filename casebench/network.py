@@ -48,7 +48,7 @@ def host_of(url: str) -> str:
     return (urlsplit(url).hostname or "").lower()
 
 
-def _loopback(host: str) -> bool:
+def is_loopback(host: str) -> bool:
     if host in LOOPBACK_NAMES:
         return True
     try:
@@ -65,7 +65,7 @@ class Perimeter:
 
     def allows(self, host: str) -> bool:
         host = host.lower()
-        if _loopback(host) or host in self.hosts:
+        if is_loopback(host) or host in self.hosts:
             return True
         return any(entry.startswith("*.") and host.endswith(entry[1:]) for entry in self.hosts)
 

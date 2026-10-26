@@ -182,3 +182,35 @@ def test_a_streamed_call_a_python_agent_sends_to_an_openai_compatible_host_repor
     assert (step.provider, step.input_tokens, step.output_tokens) == ("openai", 30, 4)
     added = exchange.request_body.pop("stream_options")
     assert (added, exchange.request_body) == ({"include_usage": True}, asked)
+
+
+def test_a_route_whose_variable_already_points_at_the_proxy_forwards_to_its_upstream(
+    monkeypatch,
+):
+    upstream = start_upstream()
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    # The shell exported the lines `casebench proxy env` prints for this port.
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", f"http://127.0.0.1:{port}/anthropic")
+    base = f"http://127.0.0.1:{upstream.server_port}"
+    session = CaptureSession(routes_for(CaptureConfig(routes=upstream_routes(base))), port)
+    asked = {"model": "claude-sonnet-5-5", "max_tokens": 512, "messages": []}
+
+    async def call() -> httpx2.Response:
+        await session.start()
+        try:
+            async with httpx2.AsyncClient() as client:
+                return await client.post(
+                    f"{session.env['ANTHROPIC_BASE_URL']}/v1/messages", json=asked
+                )
+        finally:
+            await session.stop()
+
+    try:
+        answered = asyncio.run(call())
+    finally:
+        upstream.shutdown()
+
+    assert session.routes["anthropic"].upstream == base
+    assert answered.json()["content"][0]["text"] == "The dismissal is invalid."

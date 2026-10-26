@@ -4,7 +4,7 @@ import json
 import os
 from urllib.parse import urlsplit
 
-from casebench import keys
+from casebench import keys, network
 from casebench.capture.backend import backend_step
 from casebench.capture.config import CaptureConfig, routes_for
 from casebench.capture.corpus_routes import corpus_routes
@@ -36,10 +36,12 @@ SHADOWED = "CASEBENCH_SHADOWED"
 PROXY_VARIABLES = "CASEBENCH_PROXY_VARIABLES"
 
 
-def _to_set_upstream(route: Route) -> Route:
+def _to_set_upstream(route: Route, port: int) -> Route:
     """A route through a variable forwards to the base URL that variable already has here, in
     the shell or a .env file named under `keys`, not to the parser's default host: a key is
-    sent only to the host the project chose (decision 0044)."""
+    sent only to the host the project chose (decision 0044). A variable that already points
+    at this proxy, as after exporting the lines `casebench proxy env` prints, names no host,
+    so the route keeps its own upstream, as when the variable is unset."""
     if route.env is None:
         return route
     current = keys.get(route.env)
@@ -47,6 +49,8 @@ def _to_set_upstream(route: Route) -> Route:
         return route
     parts = urlsplit(current)
     if parts.scheme not in ("http", "https") or not parts.netloc:
+        return route
+    if port and parts.port == port and network.is_loopback(parts.hostname or ""):
         return route
     update = {"upstream": f"{parts.scheme}://{parts.netloc}", "env_suffix": parts.path.rstrip("/")}
     return route.model_copy(update=update)
@@ -94,7 +98,9 @@ class CaptureSession:
         return None
 
     async def start(self) -> dict[str, str]:
-        self.routes = {name: _to_set_upstream(route) for name, route in self.routes.items()}
+        self.routes = {
+            name: _to_set_upstream(route, self.port) for name, route in self.routes.items()
+        }
         app = make_app(list(self.routes.values()), self.recorder, self.hook_for)
         self.server = ProxyServer(app, self.port)
         self.port = await self.server.start()
