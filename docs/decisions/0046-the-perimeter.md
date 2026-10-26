@@ -38,7 +38,7 @@ Chosen option 1, because a host the config names for the target, a judge or a co
 - **When it applies.** In every command that calls out for a configured setup: `run`, `check`, `target check`, `corpus check`, `extract`, `generate`, `case new`, `case resolve`, and the check that ends `init`. Until that last check, `init`, and `corpus add`, `corpus probe` and `models`, choose hosts or read the public model catalog: they call the hosts the user names on the command line, before there is an allowlist to read.
 - **Redirects.** A response that redirects to another host is refused, in every client Casebench sends through, the proxy included, and stops the run as a refused host does. Casebench's own clients follow no redirect. The model catalog's client follows a redirect within its own host only.
 - **Setting it up.** The guide has the coding agent list under `network: allow:` the hosts it finds the agent calling in its code and settings, and show them to the user. A host refused during `check` is added only when the agent's code calls it.
-- **Keys.** Every line a run writes (`run.json`, `results.jsonl`, each score set, `report.json`) is scrubbed before it is written:
+- **Keys.** Every line a run writes (`run.json`, `results.jsonl`, each score set, `report.json`, the judge's replies in `judge.jsonl`) is scrubbed before it is written:
   - each key read from a `.env` file (0043);
   - each variable a header or a provider's key names in `casebench.yaml`;
   - each credential a call carried: the value of an `Authorization`, `Proxy-Authorization`, `x-api-key`, `api-key` or `x-goog-api-key` header that Casebench sent or the proxy forwarded, kept in memory for the run.

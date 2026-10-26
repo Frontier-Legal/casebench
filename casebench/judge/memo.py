@@ -6,6 +6,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from casebench import keys
+
 MEMO_FILE = "judge.jsonl"
 
 
@@ -16,7 +18,8 @@ def memo_key(provider: str, model: str, system: str, user: str) -> str:
 
 class Memo:
     """One line per question: its key, the judge's parsed reply and, since decision 0051, the
-    model and tokens of the call that made it, so the run can say what grading cost."""
+    model and tokens of the call that made it, so the run can say what grading cost. Every
+    line is scrubbed of keys before it is written (decision 0046)."""
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -36,7 +39,7 @@ class Memo:
         with self.lock:
             self.replies[key] = reply
             with self.path.open("a", encoding="utf-8") as out:
-                out.write(json.dumps(line, ensure_ascii=False) + "\n")
+                out.write(keys.scrub(json.dumps(line, ensure_ascii=False)) + "\n")
 
 
 def usages(path: Path) -> list[dict[str, Any]]:

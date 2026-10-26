@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from casebench import keys
 from casebench.cli import main
 from casebench.core.case import Case, Reference, ReferenceSource, Task
+from casebench.judge.memo import MEMO_FILE, Memo
 from casebench.runs.log import RunLog
 from casebench.suites.freeze import freeze
 from tests.corpus.document_api import KEY, DocumentApi, start_document_api
@@ -270,3 +271,12 @@ def test_redirects_do_not_escape(project: Path):
     for kind in ("http", "python"):
         assert ran[kind].exit_code != 0, ran[kind].output
         assert "refused a redirect from 127.0.0.1 to elsewhere.example" in ran[kind].output
+
+
+def test_a_judge_reply_kept_beside_the_run_holds_no_key(project: Path):
+    keys.hold("JUDGE_TOKEN", JUDGE_KEY)
+    memo = Memo(project / MEMO_FILE)
+    memo.put("k", {"reason": f"the answer quotes {JUDGE_KEY}"}, {"model": "judge-model"})
+
+    assert JUDGE_KEY not in (project / MEMO_FILE).read_text(encoding="utf-8")
+    assert Memo(project / MEMO_FILE).get("k") == {"reason": "the answer quotes ${JUDGE_TOKEN}"}
