@@ -26,6 +26,7 @@ from casebench.config import load_config
 from casebench.runs.first import SAMPLE
 from casebench.runs.log import RunInfo, RunLog
 from casebench.runs.runner import run_cases
+from casebench.suites.freeze import freeze
 from casebench.targets.load import target_from_config
 from tests.capture.openai_upstream import start_openai
 from tests.capture.test_proxy_capture import case
@@ -337,6 +338,30 @@ def test_an_adapter_in_casebench_reaches_the_projects_code(
         assert checked.exit_code == 0, checked.output
         assert checked.output.startswith("target   passed")
         assert "no call was recorded" in checked.output  # this adapter calls no model
+
+
+def test_an_adapter_given_with_python_reaches_the_projects_code(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+):
+    write(project / ".casebench" / "target.py", ADAPTER)
+    write(project / "casebench.yaml", yaml.safe_dump({"target": {"type": "command", "run": "x"}}))
+    freeze("s", [case("c1", "Is the dismissal valid?")], project / "suite")
+    elsewhere = project.parent / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    ran = invoke(
+        "run", "--config", str(project / "casebench.yaml"),
+        "--python", str(project / ".casebench" / "target.py:answer"),
+        "--suite", str(project / "suite"), "--runs-dir", "runs", "--run-id", "r", "--no-capture",
+    )  # fmt: skip
+    helped = " ".join(invoke("run", "--help").output.split())
+
+    assert ran.exit_code == 0, ran.output
+    [result] = RunLog(elsewhere / "runs" / "r").results()
+    assert result.error is None, result.error
+    assert result.output == "production: the dismissal is invalid"
+    assert "in this process" not in helped and "in worker processes" in helped
 
 
 def test_a_hard_coded_url_is_still_recorded(project: Path):

@@ -37,11 +37,14 @@ def _config(path: Path, python: str | None) -> CasebenchConfig:
     if path.is_file():
         config = load_config(path)
     elif python is not None:
-        config = CasebenchConfig(target={"type": "python", "entry": python})
+        config = CasebenchConfig()
     else:
         raise click.ClickException(f"{path} does not exist; pass --config or --python")
     if python is not None:
-        config = config.model_copy(update={"target": {"type": "python", "entry": python}})
+        # As for a configured Python target, the config's folder is first on the agent's
+        # import path (decision 0044).
+        target = {"type": "python", "entry": python, "root": str(path.resolve().parent)}
+        config = config.model_copy(update={"target": target})
     # Priced from the sellers' lists before the run is held to its hosts (decision 0069).
     config = priced(config, lookup())
     enforce(config)
@@ -84,7 +87,8 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--python",
     "python",
     metavar="AGENT.PY[:FUNCTION]",
-    help="Run a Python agent in this process; FUNCTION defaults to answer.",
+    help="Run a Python agent in worker processes, with the config's folder first on its "
+    "import path; FUNCTION defaults to answer.",
 )
 @click.option(
     "--max-concurrency",
