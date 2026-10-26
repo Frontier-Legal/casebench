@@ -58,7 +58,7 @@ def check_command(config_path: Path, queries: tuple[str, ...], size: int, as_jso
     enforce(config)
     checks = offline(config)
     if not checks:
-        checks = live(config, list(queries), size)
+        checks = live(config, list(queries), size, config_path.resolve().parent)
     passed = all(item.status is Status.PASSED for item in checks)
     if as_json:
         report = {

@@ -286,14 +286,15 @@ def model_check(name: str, model: JudgeConfig) -> Check:
     return Check(name, Status.PASSED, f"{model.provider} {model.model} answered{accepted}")
 
 
-def team_server_check(cloud: CloudConfig) -> Check:
-    """The team server answers, and takes the key as an engineer's (decision 0064)."""
+def team_server_check(cloud: CloudConfig, root: Path) -> Check:
+    """The team server answers, and takes the key as an engineer's (decision 0064); `root`
+    is the project's folder, whose .env files may hold the key."""
     key_step = (
         f"ask the team server's admin for an API key with the engineer role, made on its Team "
         f"page, and set it as {cloud.key_env} here, in the environment or a .env file"
     )
     try:
-        with connect(cloud) as http:
+        with connect(cloud, root) as http:
             response = http.post(TEAM_PROBE, json={"suites": [], "runs": []})
     except CloudError as error:
         return Check(TEAM_SERVER, Status.FAILED, str(error), key_step)
@@ -316,10 +317,13 @@ def _probe(probe: str | None) -> list[str]:
 
 
 def live(
-    config: CasebenchConfig, queries: list[str] | None = None, size: int = SETUP_SAMPLE
+    config: CasebenchConfig,
+    queries: list[str] | None = None,
+    size: int = SETUP_SAMPLE,
+    root: Path = Path("."),
 ) -> list[Check]:
     """One check for each part the config names: the corpus, the target, each model and the
-    team server."""
+    team server. `root` is the project's folder, whose .env files may hold the server's key."""
     checks = []
     corpora = Corpora(config.corpora)
     checks += [
@@ -330,5 +334,5 @@ def live(
         checks.append(_target(config))
     checks += [model_check(name, model) for name, model in models_of(config)]
     if config.cloud is not None:
-        checks.append(team_server_check(config.cloud))
+        checks.append(team_server_check(config.cloud, root))
     return checks

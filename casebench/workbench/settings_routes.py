@@ -5,6 +5,7 @@ catalog (decision 0063).
 """
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import httpx2
@@ -132,7 +133,8 @@ def router(
             raise HTTPException(422, "there is no casebench.yaml to check; run casebench init")
         enforce(config)
         try:
-            found = offline(config) or live(config)
+            root = settings.path.resolve().parent if settings.path else Path(".")
+            found = offline(config) or live(config, root=root)
         finally:
             network.release()
         return [
