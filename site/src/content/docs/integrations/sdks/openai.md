@@ -54,7 +54,7 @@ For a command or HTTP target, `casebench init` offers this route, named after th
 
 ## Streams report tokens through a route
 
-For a streaming request through a route that does not ask for usage, the proxy adds `stream_options.include_usage`, so the stream reports its tokens. It changes nothing else. A Python agent's followed calls are forwarded as sent, so a stream that does not ask for usage is recorded without token counts.
+For a streaming chat completion that does not ask for usage, the proxy adds `stream_options.include_usage`, so the stream reports its tokens. It does so for a route's calls and for a Python agent's calls alike, and changes nothing else.
 
 ## Not read
 

@@ -116,7 +116,7 @@ keys:
 - `--search-body` takes a JSON body for an API that searches by `POST`.
 - `--key-header` names the header that carries the key. With the default, `Authorization`, the key goes as a bearer token.
 - `--name` is lower-case letters, digits and hyphens, such as `court-api`. A name `casebench.yaml` would reject is refused before anything is searched.
-- `probe` is the search the corpus was added with. `casebench check` runs it when you give no `--query`.
+- `probe` is the search the corpus was added with. `casebench check` and `corpus check` run it when you give no `--query`.
 
 At a terminal, without the field flags, `corpus add` shows each field with its path and a sample value and lets you pick. With `--yes` it takes only what it can suggest from the values: the id field is the one whose value is the fetched id, the text is the longest string, and a date is a value in ISO form. It suggests no id inside a search result, so give `--result-field id=...` with `--results`, or `--ids` alone for a search that returns only ids.
 
@@ -177,7 +177,7 @@ The folder's search counts matching words, which is enough to resolve a citation
 corpus   passed: 1 document sampled
 ```
 
-`casebench corpus check` samples more, up to 200 documents by default, and reports each required field as present or missing. It lists documents when the store can list them. A document API can list only when its corpus block names `list_path` and `list_ids`, which `corpus add` does not write, so give it searches with `--query`; the corpus's `probe` is not used here:
+`casebench corpus check` samples more, up to 200 documents by default, and reports each required field as present or missing. It lists documents when the store can list them. A document API can list only when its corpus block names `list_path` and `list_ids`, which `corpus add` does not write. Without `--query`, it searches with the corpus's `probe`; give `--query` for other searches:
 
 ```sh
 casebench corpus check --query "written notice"

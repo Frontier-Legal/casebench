@@ -23,7 +23,7 @@ A refused host stops the run. The proxy answers the agent with 403, the case is 
 
 ## Keys never reach a file
 
-Every line a run writes, `run.json`, `results.jsonl`, each score set and `report.json`, is scrubbed before it is written: each key read from a `.env` file and each variable the config names becomes `${NAME}`, and a credential seen only in a header becomes `[credential]`. Recorded calls never hold request headers.
+Every line a run writes, `run.json`, `results.jsonl`, `judge.jsonl`, each score set and `report.json`, is scrubbed before it is written: each key read from a `.env` file and each variable the config names becomes `${NAME}`, and a credential seen only in a header becomes `[credential]`. Recorded calls never hold request headers.
 
 A key read from a `.env` file stays in Casebench's own memory and is never put in the environment, so your agent and every other child process start without it. A model key goes only to its provider's configured address, and a corpus key only in that corpus's configured headers.
 

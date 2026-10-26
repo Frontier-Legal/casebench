@@ -33,7 +33,7 @@ These are the places a config names a variable:
 | --- | --- |
 | A judge's or extraction model's key | `options: { api_key_env: OPENAI_API_KEY }` |
 | A header of an HTTP corpus, an MCP corpus or an HTTP target | `Authorization: Bearer ${DOCS_API_KEY}` |
-| An HTTP corpus's address | `base_url: ${DOCS_URL}` |
+| An address: an HTTP corpus's `base_url`, the `url` of an HTTP target, an MCP corpus or the team server, a capture route's `upstream` | `base_url: ${DOCS_URL}` |
 | The team server's key | `cloud: { key_env: CASEBENCH_CLOUD_KEY }`, the default |
 
 A `${NAME}` that neither the shell nor a `keys:` file sets is an error that names the variable.

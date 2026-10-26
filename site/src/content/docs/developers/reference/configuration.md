@@ -126,7 +126,7 @@ The command prints the answer on standard output. A non-zero exit fails the case
 | `search_filters` | map | `{}` | Per kind of citation, `statute` or `decision`, the parameters a search adds |
 | `metered` | string | `none` | `search`, `fetch` or `none`: what the provider charges for |
 | `keep` | list | see below | `documents`, `searches`: what may be kept on disk. Left out, documents are kept, and searches when `metered: search`. |
-| `probe` | string | | A search known to find a document. `corpus add` stores the one it was added with, and `casebench check` runs it when no `--query` is given. |
+| `probe` | string | | A search known to find a document. `corpus add` stores the one it was added with, and `casebench check` and `corpus check` run it when no `--query` is given. |
 | `link` | string | | Where a person reads a document on the provider's site, with `{id}` for its id. A review spreadsheet links each court fact to its decision through it. |
 | `profile` | string | | The profile the options came from. Recorded, never read again. |
 | `connector_source` | string | | The distribution to load when two register the same connector |
@@ -137,7 +137,7 @@ A corpus whose URL is the HTTP target's own endpoint is refused: a system must n
 
 | Key | Meaning |
 | --- | --- |
-| `path` | A folder of JSON files, one [document](/developers/reference/formats/document/) each, relative to the folder you run Casebench from |
+| `path` | A folder of JSON files, one [document](/developers/reference/formats/document/) each, relative to the folder that holds `casebench.yaml` |
 
 ### HTTP options
 

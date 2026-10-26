@@ -192,7 +192,7 @@ Fetch a sample by id and report which required fields are present or missing.
 | Option | Description |
 | --- | --- |
 | `--config FILE` | [default: casebench.yaml] |
-| `--query TEXT` | A search that finds documents, for a store that cannot list them. |
+| `--query TEXT` | A search that finds documents, for a store that cannot list them; the corpus's probe search when none is given. |
 | `--size INTEGER RANGE` | [default: 200; x>=1] |
 | `--corpus TEXT` | Which corpus, when the config names several. |
 
@@ -232,7 +232,7 @@ One search, one fetch, or both, printed as JSON with the key used by name and ne
 casebench demo [OPTIONS]
 ```
 
-Run a bundled suite with no key, no data and no network, and open the workbench.
+Run a bundled suite with no key and no data, and open the workbench. Like every run, it reads two public price lists; nothing of yours is sent, and no model is asked.
 
 | Option | Description |
 | --- | --- |
@@ -546,7 +546,7 @@ Send every case of a frozen suite to the target, store each result and score the
 | --- | --- |
 | `--suite DIRECTORY` | The frozen suite; without it, .casebench/suites/first, built on the first run (decision 0061). |
 | `--config FILE` | [default: casebench.yaml] |
-| `--python AGENT.PY[:FUNCTION]` | Run a Python agent in this process; FUNCTION defaults to answer. |
+| `--python AGENT.PY[:FUNCTION]` | Run a Python agent in worker processes, with the config's folder first on its import path; FUNCTION defaults to answer. |
 | `--max-concurrency INTEGER RANGE` | Cases at once; overrides the target's setting. [x>=1] |
 | `--run-id TEXT` | Name the run; an existing run of that name resumes. |
 | `--runs-dir DIRECTORY` | [default: .casebench/runs] |

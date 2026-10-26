@@ -72,7 +72,7 @@ corpora:
     probe: notice period
 ```
 
-`probe` is the search the corpus was added with. `casebench check` runs it when no `--query` is given.
+`probe` is the search the corpus was added with. `casebench check` and `corpus check` run it when no `--query` is given.
 
 | Placeholder | Filled with |
 | --- | --- |

@@ -14,7 +14,7 @@ Casebench reads a credential only from a variable your config names.
 | `OPENAI_API_KEY` | The `openai` provider, unless its `api_key_env` names another, such as `OPENROUTER_API_KEY` |
 | `ANTHROPIC_API_KEY` | The `anthropic` provider, unless its `api_key_env` names another |
 | `CASEBENCH_CLOUD_KEY` | `casebench push`, `invite` and `pull`, and `check` when `cloud:` is set, unless `cloud.key_env` names another |
-| any `${NAME}` | The headers of an HTTP target, an HTTP corpus or an MCP corpus, and an HTTP corpus's `base_url`. A variable set nowhere is an error naming it. |
+| any `${NAME}` | The headers of an HTTP target, an HTTP corpus or an MCP corpus; the address of an HTTP target, an HTTP corpus, an MCP corpus or the team server; and a capture route's `upstream`. A variable set nowhere is an error naming it. |
 
 The `google`, `bedrock` and `azure` providers call through the vendor's SDK, which reads its own variables and sign-in from the environment, as your project already set them up.
 

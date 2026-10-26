@@ -106,7 +106,7 @@ Set the variables in the agent's environment only. If the shell that runs Casebe
 
 ## Streams report tokens through a route
 
-For a streaming request through a route with the `openai` parser that does not ask for usage, the proxy adds `stream_options.include_usage`, so the stream still reports its tokens. It changes nothing else.
+For a streaming chat completion that does not ask for usage, the proxy adds `stream_options.include_usage`, so the stream still reports its tokens. It does so for a route's calls and for a Python agent's calls alike, and changes nothing else.
 
 A Python agent's followed calls are forwarded exactly as sent. A streamed Chat Completions call that does not ask for usage is recorded without token counts.
 

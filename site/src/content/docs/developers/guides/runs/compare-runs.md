@@ -29,7 +29,7 @@ qa · criteria: 61% -> 100% over 7 cases, difference +11% to +75%, significant
 
 Casebench pairs the two runs' scores case by case and bootstraps the mean difference. A difference whose interval contains zero is marked not significant. Seven cases leave wide intervals, as above.
 
-`compare` reads each run's latest score set as the judge scored it, and counts every case, approved or not. [`casebench gate`](/developers/guides/runs/gate-in-ci/) is the stricter comparison: it applies lawyers' verdicts over the judge's and, by default, pairs only lawyer-approved cases.
+`compare` reads each run's latest score set, with a lawyer's verdict on a criterion in place of the judge's, and counts every case, approved or not. [`casebench gate`](/developers/guides/runs/gate-in-ci/) is the stricter comparison: by default it pairs only lawyer-approved cases.
 
 ## Lawyers' blind preferences
 

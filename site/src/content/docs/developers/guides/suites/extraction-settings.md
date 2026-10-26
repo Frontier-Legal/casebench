@@ -28,7 +28,7 @@ tokens are rough: 4 characters per token, and it varies by language
 nothing was sent
 ```
 
-The output limit dominates the upper bound, so set `max_tokens` to what an extraction needs. A model with no `max_tokens` leaves the range with no upper bound, and the dry run names it. With no decision cached yet, the input is unknown, and the lower bound counts none of it: run `casebench corpus check` first to fetch a sample.
+The output limit dominates the upper bound, so set `max_tokens` to what an extraction needs. A model with no `max_tokens` leaves the range with no upper bound, and the dry run names it. With no decision cached yet, the input is unknown, so the dry run says the lower bound is unknown and gives only what the output alone may cost: run `casebench corpus check` first to fetch a sample.
 
 ### Where the prices come from
 

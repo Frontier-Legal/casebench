@@ -16,9 +16,7 @@ casebench init --profile provider.yaml
 
 The workbench's Jurisdictions page takes a profile too, as a source for a country.
 
-Casebench first checks that every variable the profile names is set in the shell. `corpus add profile` does not read `keys:`, so export the key for this step even if `casebench.yaml` reads it from a `.env` file afterwards. It then makes one live search with the profile's `probe` and one fetch with your key, and stops before writing anything if a required field comes back empty. Then it writes the profile's options into `casebench.yaml` under `corpora:`, along with `profile:`, the file's name, so the config stays reproducible if the profile changes later. It also writes the profile's `metered`, `search_filters` and `keep` when the profile sets them. A profile is read from a local file only; Casebench never fetches one from a URL.
-
-The corpus block does not carry the profile's `probe`. For a store that cannot list its documents, add `probe:` to the block, or pass `--query TEXT` to `casebench check`.
+Casebench first checks that every variable the profile names is set, in the shell or in the `.env` file `keys:` names for it. It then makes one live search with the profile's `probe` and one fetch with your key, and stops before writing anything if a required field comes back empty. Then it writes the profile's options into `casebench.yaml` under `corpora:`, along with `profile:`, the file's name, so the config stays reproducible if the profile changes later. It also writes the profile's `probe`, and its `metered`, `search_filters` and `keep` when the profile sets them, so `casebench check` and `corpus check` can search a store that cannot list its documents. A profile is read from a local file only; Casebench never fetches one from a URL.
 
 `--jurisdiction` covers only the jurisdictions you give instead of the profile's, and `--name` names the corpus. `init --profile` can be given once for each provider.
 

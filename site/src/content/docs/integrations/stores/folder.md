@@ -16,7 +16,7 @@ corpora:
       path: decisions
 ```
 
-`casebench init --corpus folder --corpus-path decisions` writes the same block, without `jurisdictions`; add it to route citations by jurisdiction. On the workbench's Jurisdictions page, a folder of sample files is the last source offered for a country. `path` is read relative to the folder you run Casebench from.
+`casebench init --corpus folder --corpus-path decisions` writes the same block, without `jurisdictions`; add it to route citations by jurisdiction. On the workbench's Jurisdictions page, a folder of sample files is the last source offered for a country. A relative `path` is read from the folder that holds `casebench.yaml`.
 
 ## Ids
 

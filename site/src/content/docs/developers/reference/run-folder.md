@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-A run is a folder under `--runs-dir`, `.casebench/runs/` by default, named by its run id. Every file is plain JSON or JSON Lines, so any language can read it and a diff shows what changed. Casebench replaces each key's value in what it writes to `run.json`, `results.jsonl`, the score sets, `report.json`, `reviews.jsonl` and `preferences.jsonl`.
+A run is a folder under `--runs-dir`, `.casebench/runs/` by default, named by its run id. Every file is plain JSON or JSON Lines, so any language can read it and a diff shows what changed. Casebench replaces each key's value in what it writes to `run.json`, `results.jsonl`, `judge.jsonl`, the score sets, `report.json`, `reviews.jsonl` and `preferences.jsonl`.
 
 ```text
 .casebench/runs/after-prompt-fix/
@@ -23,7 +23,7 @@ The examples on this page come from that run, scored by Casebench 0.5.1 with a s
 
 ## `run.json`
 
-What ran against what, written once when the run starts.
+What ran against what, written when the run starts.
 
 ```json
 {
@@ -32,11 +32,12 @@ What ran against what, written once when the run starts.
   "suite_hash": "sha256:645a2d35171a6a412f5667ded0befc78a9e222b9d076b6c7e8d3321e9f6e61bc",
   "target": "python",
   "casebench_version": "0.5.1",
-  "commit": null
+  "commit": null,
+  "unattributed_calls": 0
 }
 ```
 
-`commit` is the commit the agent's code was at: `--commit`, else `GITHUB_SHA`, else the commit checked out in the folder the run started from, else `null`. A run made with `casebench import` from a spreadsheet of answers has `offline` as its target.
+`commit` is the commit the agent's code was at: `--commit`, else `GITHUB_SHA`, else the commit checked out in the folder the run started from, else `null`. `unattributed_calls` counts the captured calls no case could claim, which happens when several cases run at once and a call carries no trace context; the run's last lines say so when it is above zero. A run made with `casebench import` from a spreadsheet of answers has `offline` as its target.
 
 ## `results.jsonl`
 

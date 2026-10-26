@@ -39,7 +39,7 @@ When several cases run at once, steps must not mix:
 
 - **Python targets** run one case at a time per worker, and each worker's calls carry its own prefix, so each call is attributed exactly.
 - **HTTP and command targets** receive the case's W3C trace context, as a `traceparent` header or the `TRACEPARENT` variable. A call or span carrying a known trace id belongs to its case.
-- Otherwise a step belongs to the only case running, and with several running it is kept as unattributed. The report says how many.
+- Otherwise a step belongs to the only case running, and with several running it is kept as unattributed. The run says how many as it ends, and keeps the count in `run.json`.
 
 ## What capture does not do
 

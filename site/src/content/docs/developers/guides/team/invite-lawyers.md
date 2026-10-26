@@ -26,9 +26,9 @@ The server's host joins the hosts a run may call.
 
 ## Set the key
 
-An admin creates an API key with the engineer role on the server's Team page. Set it on your machine as `CASEBENCH_CLOUD_KEY`, in the shell or in a `.env` file. `casebench.yaml` never holds it.
+An admin creates an API key with the engineer role on the server's Team page. Set it on your machine as `CASEBENCH_CLOUD_KEY`, in the shell or in a `.env` file in the project. `casebench.yaml` never holds it.
 
-A key in a `.env` file is read only when `keys:` names that file for it:
+When the shell does not set it, Casebench reads it from the file `keys:` names for it, or else from the project's `.env` files. When two files hold different values, the command stops and names both by fingerprint; name the current one under `keys:`:
 
 ```yaml title="casebench.yaml"
 keys:

@@ -118,7 +118,7 @@ The guide limits calls that cost money. These are the only commands it runs that
 | --- | --- |
 | `casebench corpus probe http` | 1 search for 1 result with `--query`, 1 document with `--fetch` |
 | `casebench corpus add http` | 1 search for 1 result, and 1 document |
-| `casebench check` | 1 search for 1 result and 1 document, 1 message to the agent ("Hi. How are you?"), and 1 short call to each judge |
+| `casebench check` | 1 search for 1 result and 1 document, 1 message to the agent ("Hi. How are you?"), and 1 short call to each judge and each extraction model |
 
 The guide forbids `casebench corpus check` and `casebench run` during setup.
 
@@ -127,22 +127,23 @@ The guide forbids `casebench corpus check` and `casebench run` during setup.
 1. Find the function production calls with a legal question, and what production does before it can run.
 2. Write `.casebench/target.py` and `.casebench/.gitignore`.
 3. Run `casebench keys NAME --json` for each variable Casebench reads itself: the judge's key, the store's key, and the store's URL when the project keeps it in a variable.
-4. Propose a judge from a different model family than the agent's models, using a provider whose key it found. This is the one question you are asked. Say yes, or name another; the provider bills each run.
+4. Propose a judge from a different model family than the agent's models, and two extraction models from two different families, using providers whose keys it found. This is the one question you are asked. Say yes, or name others; the judge is billed on each run, the extraction models once, when the first run builds its suite.
 5. Run `casebench init` with flags only:
 
    ```sh
    casebench init --entry .casebench/target.py:answer --corpus none \
-     --judge-provider PROVIDER --judge-model MODEL --no-extract --no-routes --no-live --yes
+     --judge-provider PROVIDER --judge-model MODEL \
+     --extract PROVIDER_1 MODEL_1 --extract PROVIDER_2 MODEL_2 --no-routes --no-live --yes
    ```
 
-   Then add the agent's own models under `agent_models:`, with their families from `casebench models PROVIDER --json`. Each run checks the judge's family against them.
-6. Connect the document store with `casebench corpus probe http`, then `casebench corpus add http` with the JSONPaths it read from the two responses.
+   Then it makes sure `agent_models:` lists the agent's own models, with their families from `casebench models PROVIDER --json` and no price. Each run checks the judge's family against them and looks their prices up.
+6. Connect the document store: for a document API, `casebench corpus probe http`, then `casebench corpus add http` with the JSONPaths it read from the two responses; for an MCP server, `casebench corpus add mcp`; for a folder of decisions, a `corpora:` block in `casebench.yaml`.
 7. Run `casebench check --json` and fix what fails. Each host the agent calls on its own, such as its model API, goes under `network: allow:`, taken from the agent's code. See [Allow the hosts your agent calls](/developers/guides/setup/network/).
 8. Run `git status --short` and tell you what it set: the adapter, the judge, the corpus, each allowed host and where the code calls it, and the result of `check`.
 
 ## After setup
 
-The coding agent stops at a passing `check`. The guide sets no extraction models, so a first `casebench run` with no suite stops and asks for `extract:` in the config. Add two extraction models, on the workbench's Models page or with `casebench init --extract PROVIDER MODEL` twice, and `casebench run` then builds a suite from your corpus after it says what that costs and you agree; see [Run a suite, and resume one](/developers/guides/runs/run-and-resume/). Lawyers can write cases instead; see [Add lawyer-written cases](/developers/guides/suites/lawyer-cases/).
+The coding agent stops at a passing `check`. A first `casebench run` with no suite then builds one from your corpus with the two extraction models, after it says what that costs and you agree; see [Run a suite, and resume one](/developers/guides/runs/run-and-resume/). Lawyers can write cases instead; see [Add lawyer-written cases](/developers/guides/suites/lawyer-cases/).
 
 After a first evaluation, the guide has the coding agent ask once whether lawyers will review on a team server. With an address, it runs `casebench init --team-server URL --no-routes --yes`, asks you to set `CASEBENCH_CLOUD_KEY` yourself, and runs `casebench check`. It never asks for the key. See [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/).
 
