@@ -11,6 +11,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+from casebench import keys
 from casebench.cli import main
 from casebench.corpus.connectors.mcp import Connector as McpConnector
 from tests.corpus.document_api import KEY, DocumentApi, start_document_api
@@ -109,8 +110,28 @@ def test_a_profile_whose_key_is_not_set_writes_nothing(
     added = invoke("corpus", "add", "profile", str(path))
 
     assert added.exit_code == 1
-    assert "DOC_KEY is not set in this shell" in added.output
+    assert "DOC_KEY is set neither in this shell nor in a .env file that `keys:`" in added.output
+    assert "name its file there as DOC_KEY: FILE" in added.output
     assert not (tmp_path / "casebench.yaml").exists()
+
+
+def test_a_profile_key_kept_in_a_dot_env_file_that_keys_names_is_used(
+    api: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("DOC_KEY")
+    monkeypatch.setattr(keys, "_held", {})
+    (tmp_path / "secrets").mkdir()
+    (tmp_path / "secrets" / "eval.env").write_text(f"DOC_KEY={KEY}\n", encoding="utf-8")
+    (tmp_path / "casebench.yaml").write_text("keys:\n  DOC_KEY: secrets/eval.env\n", "utf-8")
+    path = profile(tmp_path, "http", http_options(api))
+
+    added = invoke("corpus", "add", "profile", str(path))
+
+    assert added.exit_code == 0, added.output
+    assert "Test Provider: searched 'feshi' and fetched document 101" in added.output
+    written = (tmp_path / "casebench.yaml").read_text(encoding="utf-8")
+    assert "provider" in yaml.safe_load(written)["corpora"]
+    assert KEY not in added.output and KEY not in written
 
 
 def test_a_profile_that_does_not_match_the_provider_fails_before_writing(api: str, tmp_path: Path):
