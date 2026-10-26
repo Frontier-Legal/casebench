@@ -23,7 +23,7 @@ from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
-from casebench.providers.call import KeyRefused
+from casebench.providers.call import KeyRefused, MissingApiKey
 from casebench.providers.interface import Message
 from casebench.providers.settings import settings_of
 from casebench.setup.catalog import installed
@@ -248,11 +248,11 @@ def _target(config: CasebenchConfig) -> Check:
     return Check("target", Status.PASSED, f"answered {_quoted(result.output)}, {said}")
 
 
-def _refused(error: BaseException) -> bool:
-    """Whether a provider refused the key, anywhere in the chain of causes."""
+def _caused_by(error: BaseException, kind: type[BaseException]) -> bool:
+    """Whether an error of `kind` is anywhere in the chain of causes."""
     seen: BaseException | None = error
     while seen is not None:
-        if isinstance(seen, KeyRefused):
+        if isinstance(seen, kind):
             return True
         seen = seen.__cause__ or seen.__context__
     return False
@@ -266,14 +266,19 @@ def model_check(name: str, model: JudgeConfig) -> Check:
         Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
         named = getattr(Judge(model).provider, "api_key_env", None)
+        if named and _caused_by(error, MissingApiKey):
+            # Nothing was sent, so the settings were never put to the provider.
+            unset = f"{named} is not set, in the shell or in a .env file `keys:` names"
+            found = f"set {named}; `casebench keys {named}` says which .env files hold it"
+            return Check(name, Status.FAILED, unset, found)
         refused = (
             f"the provider refused the key: check that {named} holds a key for this provider; "
             f"`casebench keys {named}` says where it is read from"
             if named
             else "the provider refused the credentials it found here"
         )
-        failed = _failure(name, error, refused if _refused(error) else NEXT_MODEL)
-        if settings and failed.status is Status.FAILED and not _refused(error):
+        failed = _failure(name, error, refused if _caused_by(error, KeyRefused) else NEXT_MODEL)
+        if settings and failed.status is Status.FAILED and not _caused_by(error, KeyRefused):
             refused = f"refused the call with {shown}: {failed.detail}"
             failed = Check(name, Status.FAILED, refused, f"drop {shown} from its options")
         return failed
