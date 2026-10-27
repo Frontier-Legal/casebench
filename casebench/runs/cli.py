@@ -83,7 +83,8 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--suite",
     "suite_dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    help=f"The frozen suite; without it, {first.FIRST}, built on the first run (decision 0061).",
+    help=f"The frozen suite; without it, {first.FIRST.as_posix()}, built on the first run"
+    " (decision 0061).",
 )
 @click.option(
     "--config",
