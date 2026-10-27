@@ -121,14 +121,21 @@ def url_for(path: Path) -> str:
 
 
 def migrate(engine: Engine) -> None:
-    """Bring the database to the newest schema, as the app starts."""
+    """Bring the database to the newest schema, as the app starts. On SQLite the upgrade holds
+    the database's write lock from its first statement, so a second workbench starting at
+    the same moment waits for it, then finds the schema current."""
     config = Config()
     config.set_main_option(
         "script_location", str(resources.files("casebench.workbench") / "migrations")
     )
-    with engine.begin() as connection:
+    with engine.connect() as connection:
+        if connection.dialect.name == "sqlite":
+            # The SQLite driver opens no transaction before a CREATE TABLE, so two upgrades
+            # would each create the tables; this one takes the lock before reading the version.
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
         config.attributes["connection"] = connection
         command.upgrade(config, "head")
+        connection.commit()
 
 
 class Store:

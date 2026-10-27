@@ -1,0 +1,119 @@
+---
+title: Your first review
+description: Sign in, read the AI's answer beside the evidence, confirm or overrule the grading model on each point, and move to the next answer. About fifteen minutes.
+sidebar:
+  order: 1
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+In this tutorial you review answers the AI gave to employment-law questions. For each one you check the points a correct answer must make and the citations it relies on. Where the grading model got it wrong, you overrule it. Your verdicts then count in every report in place of the model's.
+
+The screens show a small sample suite about the fictional jurisdiction of Examplia. Your firm's cases look the same.
+
+## Sign in
+
+<Steps>
+
+1. Open the invitation email and click the sign-in link. The link works once, within 15 minutes. If it has expired, enter your email on the sign-in page and ask for a new one.
+
+	<Screenshot
+		name="team-sign-in"
+		alt="The sign-in page, asking for the email the admin invited."
+		caption="If the link has expired, ask for a new one with the email your admin invited."
+		width={900}
+	/>
+
+2. You land in your queue. On a colleague's machine, where you type your name instead of signing in, three short cards first explain how reviewing works. Read them, then choose **Start reviewing**.
+
+	<Screenshot
+		name="tour-1"
+		alt="A card titled 'The evidence is beside every answer', over the dimmed workbench."
+		caption="The evidence is on the left, the AI's answer on the right."
+		width={900}
+	/>
+
+</Steps>
+
+## Open the first answer
+
+The queue lists what waits for you. Answers that failed a point, or where two grading models disagreed, come first. The first one is already open.
+
+<Screenshot
+	name="review-answer"
+	alt="An answer under review: the question at the top, a summary of the judge's verdicts and citations, the question and the answer key on the left, the AI's answer with its citation on the right."
+	caption="One answer under review. The summary line says the judge passed 1 of 2 points and the one citation is misused."
+/>
+
+Read the page in this order:
+
+1. **The question** at the top, as the AI was asked it.
+2. **Checked against**, on the left: the court's finding, or the answer your colleague wrote, with the passage it comes from.
+3. **The AI's answer**, on the right. Each citation is underlined in its colour, and listed under the answer with its verdict.
+
+## Check the citation
+
+Click the citation under the answer. The source opens on the left, with the passage the citation was matched to highlighted.
+
+<Screenshot
+	name="citation-passage"
+	alt="The source panel for citation CA 2024/02, marked Misused, showing the claim it was cited for and the decision's text with its holding highlighted."
+	caption="CA 2024/02 exists, but it decides forced resignations. It says nothing about compensation, so the citation is misused."
+	frame="plain"
+	width={560}
+/>
+
+Here the AI cited a real decision for something it does not say. On a page this looks like a correct answer. It is the kind of error Casebench is built to catch.
+
+## Give your verdict on each point
+
+Below the answer, each point a correct answer must make has the grading model's suggestion filled in, with the passage of the answer it relied on.
+
+<Screenshot
+	name="verdict-judge-suggestion"
+	alt="The verdict panel with two points. The first, worth 3, has Pass selected as the judge suggested; the second, worth 1, has Fail selected."
+	caption="The judge's suggestion is selected. Keep it, or choose the other answer."
+	frame="plain"
+	width={560}
+/>
+
+<Steps>
+
+1. Read the first point: *States at least four months' wages.* The judge passed it, because the answer states the figure.
+
+2. Decide whether you agree. The figure is right, but the answer rests it on a decision that does not say it. If you would not accept that from a junior, choose **Fail**, or press <kbd>2</kbd>.
+
+3. A box asks why you overrule the judge. Write one or two sentences. The note is required, and it is kept with your verdict and your name.
+
+	<Screenshot
+		name="verdict-overrule"
+		alt="The first point now marked Overruled with Fail selected, and a note explaining why."
+		caption="An overruled point needs a note. Everything is saved as you go."
+		frame="plain"
+		width={560}
+	/>
+
+4. The second point, *Mentions that the employee chooses between reinstatement and compensation*, the judge failed: the answer does not mention reinstatement. Keep it.
+
+</Steps>
+
+## Finish and move on
+
+Choose **Finish and next**, or press <kbd>⌘</kbd> <kbd>Enter</kbd> (<kbd>Ctrl</kbd> <kbd>Enter</kbd> on Windows). Your verdicts are recorded and the next answer opens.
+
+<Screenshot
+	name="review-recorded"
+	alt="The next answer open, with a confirmation that 2 verdicts were recorded, 1 overruling the judge."
+	caption="The confirmation counts your verdicts. This next answer cites a decision that does not exist, underlined in red."
+/>
+
+## What you did
+
+You read an answer beside its evidence, opened a citation's source, overruled the grading model where it was wrong and said why. Your verdict now replaces the model's in the reports, in the history charts, and in the check engineers run before they ship a change.
+
+## Next
+
+- [Review an answer](/lawyers/guides/review-an-answer/) covers the rest: the keyboard, phones, and items others are working on.
+- [What a citation verdict means](/lawyers/concepts/citation-verdicts/).
+- [Write your first case](/lawyers/tutorials/first-case/).

@@ -29,21 +29,24 @@ RUN_ID = "demo"
 @click.option("--port", type=click.IntRange(1024, 65535), default=PORT, show_default=True)
 @click.pass_context
 def demo_command(ctx: click.Context, folder: Path | None, no_serve: bool, port: int) -> None:
-    """Run a bundled suite with no key, no data and no network, and open the workbench."""
+    """Run a bundled suite with no key and no data, and open the workbench. Like every run,
+    it reads two public price lists; nothing of yours is sent, and no model is asked."""
     if folder is None:
         folder = Path(tempfile.mkdtemp(prefix="casebench-demo-"))
     elif folder.exists() and any(folder.iterdir()):
         raise click.ClickException(f"{folder} is not empty; name a new folder with --dir")
+    # Resolved here, since a relative path would be read again inside the folder itself.
+    folder = folder.resolve()
     folder.mkdir(parents=True, exist_ok=True)
     # Everything the demo writes, its corpus cache included, stays in its own folder.
     with contextlib.chdir(folder):
-        _demo(ctx, folder.resolve(), no_serve, port)
+        _demo(ctx, folder, no_serve, port)
 
 
 def _demo(ctx: click.Context, folder: Path, no_serve: bool, port: int) -> None:
     click.echo(
         "The demo's cases, court decisions and answers are written for it: none is a real "
-        "decision or legal advice. Its judge's replies are kept with it, so nothing is sent."
+        "decision or legal advice. Its judge's replies are kept with it, so no model is asked."
     )
     for part in ("suite", "corpus"):
         shutil.copytree(PROJECT / part, folder / part)

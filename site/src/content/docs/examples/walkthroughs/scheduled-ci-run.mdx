@@ -1,0 +1,145 @@
+---
+title: A nightly run in CI
+description: Run a frozen suite every night in GitHub Actions, gate it against a baseline, push it to the team server for lawyers and the history charts, and gate pull requests with the Casebench action.
+sidebar:
+  order: 4
+---
+
+A team wants to know every morning whether its agent still holds up on an approved suite, and wants lawyers to see each night's answers. This workflow runs the suite, gates it against a saved baseline, keeps the run folder, and pushes the run to the team server. Casebench needs nothing from the CI system except Python, the keys, and network access to the agent, the corpus, the judge's provider and the team server.
+
+The agent is a Python project managed with uv. Its repository holds `casebench.yaml`, the adapter in `.casebench/target.py`, the suite in `suites/employment/` and a baseline run in `baselines/employment/`.
+
+## The nightly workflow
+
+```yaml title=".github/workflows/casebench-nightly.yml"
+name: casebench nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # every night, 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    env:
+      CASEBENCH: uv run --with casebench==0.5.1 casebench
+      RUN: nightly-${{ github.run_number }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      COURTS_API_KEY: ${{ secrets.COURTS_API_KEY }}
+      CASEBENCH_CLOUD_KEY: ${{ secrets.CASEBENCH_CLOUD_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --locked
+      - run: $CASEBENCH check
+      - id: run
+        run: $CASEBENCH run --suite suites/employment --run-id "$RUN"
+      - id: gate
+        run: |
+          $CASEBENCH gate baselines/employment ".casebench/runs/$RUN" --markdown gate.md
+      - name: Show the gate in the job summary
+        if: ${{ !cancelled() && steps.run.outcome == 'success' }}
+        run: if [ -f gate.md ]; then cat gate.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Push the run to the team server
+        if: ${{ !cancelled() && steps.run.outcome == 'success' }}
+        run: $CASEBENCH push "$RUN" --traces
+      - uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with:
+          name: casebench-${{ env.RUN }}
+          path: .casebench/runs/${{ env.RUN }}/
+```
+
+Pin each action to a full commit SHA in your own repository; the tags above keep the example readable.
+
+## Why each step
+
+- `uv run --with casebench==0.5.1 casebench` runs Casebench inside the project's own environment, so the adapter imports the agent's packages, and the project's lockfile stays as it is. Pin the version so a release does not change the measurement overnight.
+- `casebench check` fails the job early when a key is missing, a host is refused or the corpus is unreachable, before any case is sent. With `cloud:` set it also checks that the team server takes `CASEBENCH_CLOUD_KEY`.
+- The run id names the run after the workflow run, so each night's run folder has its own name. `run.json` records `GITHUB_SHA` as the commit the run ran at.
+- `casebench gate` exits 1 when a metric fell significantly below the baseline and 2 when it cannot judge, such as after a change of judge. Either fails the job. See [Gate a pull request on a run](/developers/guides/runs/gate-in-ci/).
+- The push runs whether the gate passed or failed, as long as the run finished, so lawyers and the history charts see every night. `--traces` sends each answer's steps as ids and numbers only, for the harness view on the server.
+- The run folder is uploaded even when a step fails, so the stored results are never lost. It holds `judge.jsonl`, the text the judge read; keep the artifact where your firm keeps such text.
+
+The team server never scores. Every number it shows, and the gate's result, was computed in this job.
+
+## The baseline
+
+A baseline is a run folder of the same suite, with the same judge, corpus and extraction models. Keep one in the repository:
+
+```sh
+cp -R .casebench/runs/nightly-118 baselines/employment
+git add baselines/employment
+```
+
+When you change the judge or the suite, the gate exits 2 until you replace the baseline with a run made with the new settings. When lawyers approve drafts on the team server, `casebench pull` changes the suite and its hash; run it on your machine, commit the suite, and make a new baseline from the next run.
+
+## Lawyers' verdicts reach the gate
+
+The gate applies lawyers' verdicts over the judge's. Lawyers give them on the team server after each push. Pull matches runs by the id in their `run.json`, not by folder name, so on your machine you can pull straight into the baseline:
+
+```sh
+casebench pull --runs-dir baselines
+git add baselines/employment
+```
+
+The baseline's run must have been pushed for the server to hold verdicts on it. Pull also writes any suite lawyers changed, so check `git status` before you commit. See [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/#pull-their-decisions-back).
+
+## Keep the corpus cache between runs
+
+Fetched documents are cached under `.casebench/corpus-cache/`. Caching that folder between workflow runs saves a fetch per document per night. Check your provider's terms first: a profile's `keep` says what may be stored.
+
+## Hosts the job calls
+
+A run calls only the hosts `casebench.yaml` names and those under `network: allow:`. Before that, it reads two public price lists, `https://openrouter.ai/api/v1/models` and `https://models.dev/api.json`, to price what it spends. A runner whose egress is restricted needs those, the agent's hosts, the corpus, the judge's provider and the team server.
+
+## Gate pull requests too
+
+The Casebench repository is also a GitHub Action. It runs the suite on a pull request, gates it against the baseline and posts or updates one comment with the gate's table:
+
+```yaml title=".github/workflows/casebench-gate.yml"
+name: casebench gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      COURTS_API_KEY: ${{ secrets.COURTS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: Frontier-Legal/casebench@v0.5.1
+        with:
+          suite: suites/employment
+          baseline: baselines/employment
+          casebench: uv run --with casebench==0.5.1 casebench
+```
+
+The action installs uv itself. Its inputs are in [Gate a pull request on a run](/developers/guides/runs/gate-in-ci/#with-the-github-action).
+
+## Compare two nights
+
+Download two nights' artifacts into `.casebench/runs/` and run:
+
+```sh
+uv run --with casebench==0.5.1 casebench compare .casebench/runs/nightly-117 .casebench/runs/nightly-118
+```
+
+Both runs must have run the same suite. The comparison names any setting that changed between them, such as a new judge, before it shows the figures. On the team server, the **History** page charts every metric and error rate of the suite night by night.

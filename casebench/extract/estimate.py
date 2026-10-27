@@ -12,8 +12,9 @@ from casebench.judge.config import PER_PRICE, JudgeConfig
 @dataclass(frozen=True)
 class Estimate:
     """`input_tokens` is per call, from the decisions already cached; None when none is.
-    `low` counts the input alone and `high` adds each call's output limit; a model with no
-    price leaves both unknown, and one with no output limit leaves `high` unknown."""
+    `low` counts the input alone, and is unknown with the input; `high` adds each call's
+    output limit, and is the output's alone when the input is unknown. A model with no price
+    leaves both unknown, and one with no output limit leaves `high` unknown."""
 
     decisions: int
     models: int
@@ -37,10 +38,19 @@ class Estimate:
                 "decisions already cached"
             )
         if self.unpriced:
-            out.append(f"cost: unknown, {', '.join(self.unpriced)} has no price in the config")
-        elif self.low is not None:
+            out.append(
+                f"cost: unknown, {', '.join(self.unpriced)} has no price in the price lists "
+                "or the config"
+            )
+        else:
             high = f"${self.high:.2f}" if self.high is not None else "no upper bound"
-            out.append(f"cost, an estimate: from ${self.low:.2f} (input alone) to {high}")
+            if self.low is not None:
+                out.append(f"cost, an estimate: from ${self.low:.2f} (input alone) to {high}")
+            else:
+                output = f"the output alone costs at most {high}" if self.high is not None else high
+                out.append(
+                    f"cost, an estimate: lower bound unknown until decisions are fetched; {output}"
+                )
             if self.unbounded:
                 out.append(f"  no upper bound: {', '.join(self.unbounded)} has no max_tokens")
         out += [
@@ -74,9 +84,10 @@ def estimate(cache_folder: Path, models: list[JudgeConfig], decisions: int) -> E
     ]
     low = high = None
     if not unpriced:
-        low = sum(decisions * (each or 0) * m.price.input / PER_PRICE for m in models if m.price)
+        if each is not None:
+            low = sum(decisions * each * m.price.input / PER_PRICE for m in models if m.price)
         if not unbounded:
-            high = low + sum(
+            high = (low or 0) + sum(
                 decisions * int(m.options["max_tokens"]) * m.price.output / PER_PRICE
                 for m in models
                 if m.price

@@ -22,6 +22,7 @@ from casebench.runs import first
 from casebench.runs.commit import current_commit
 from casebench.runs.dry_run import estimate
 from casebench.runs.log import Result, RunInfo, RunLog
+from casebench.runs.offline import TARGET as OFFLINE
 from casebench.runs.progress import Progress
 from casebench.runs.runner import run_cases
 from casebench.runs.scoring import Scored, prepare, score
@@ -37,11 +38,14 @@ def _config(path: Path, python: str | None) -> CasebenchConfig:
     if path.is_file():
         config = load_config(path)
     elif python is not None:
-        config = CasebenchConfig(target={"type": "python", "entry": python})
+        config = CasebenchConfig()
     else:
         raise click.ClickException(f"{path} does not exist; pass --config or --python")
     if python is not None:
-        config = config.model_copy(update={"target": {"type": "python", "entry": python}})
+        # As for a configured Python target, the config's folder is first on the agent's
+        # import path (decision 0044).
+        target = {"type": "python", "entry": python, "root": str(path.resolve().parent)}
+        config = config.model_copy(update={"target": target})
     # Priced from the sellers' lists before the run is held to its hosts (decision 0069).
     config = priced(config, lookup())
     enforce(config)
@@ -60,10 +64,18 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     stored = log.results()
     failed = sum(1 for result in stored if result.error)
     steps = sum(len(result.steps) for result in stored)
-    return (
+    said = (
         f"run {log.folder.name}: {len(sent)} cases sent, {len(stored)} stored, "
         f"{failed} failed, {steps} steps captured\n{log.folder}"
     )
+    unattributed = log.info.unattributed_calls
+    if unattributed:
+        said += (
+            f"\n{unattributed} call{'s' if unattributed != 1 else ''} could not be attributed "
+            "to a case, so no case shows their steps: run one case at a time, or have the "
+            "agent pass on the trace context it is given"
+        )
+    return said
 
 
 @click.command()
@@ -71,7 +83,8 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--suite",
     "suite_dir",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    help=f"The frozen suite; without it, {first.FIRST}, built on the first run (decision 0061).",
+    help=f"The frozen suite; without it, {first.FIRST.as_posix()}, built on the first run"
+    " (decision 0061).",
 )
 @click.option(
     "--config",
@@ -84,7 +97,8 @@ def _summary(log: RunLog, sent: list[Result]) -> str:
     "--python",
     "python",
     metavar="AGENT.PY[:FUNCTION]",
-    help="Run a Python agent in this process; FUNCTION defaults to answer.",
+    help="Run a Python agent in worker processes, with the config's folder first on its "
+    "import path; FUNCTION defaults to answer.",
 )
 @click.option(
     "--max-concurrency",
@@ -218,7 +232,8 @@ def show_scored(log: RunLog, scored: Scored, suite_id: str, runs_dir: Path) -> N
         click.echo(line)
     for line in render.corpus_lines(RunLog.read_producer(scored.score_set)):
         click.echo(line)
-    for line in render.error_lines(scored.errors, log.folder.name):
+    offline = log.info.target == OFFLINE
+    for line in render.error_lines(scored.errors, log.folder.name, offline):
         click.echo(line)
     for line in render.error_rate_lines(error_rates(scored.scores, suite_id)):
         click.echo(line)

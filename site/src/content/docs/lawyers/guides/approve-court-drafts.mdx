@@ -1,0 +1,56 @@
+---
+title: Approve court drafts
+description: Check a case Casebench drafted from a court decision, fact by fact against the highlighted passage, then approve, edit or reject each fact.
+sidebar:
+  order: 3
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+Casebench builds test cases from court decisions your firm holds. Two AI models read each decision. The outcome is kept only where both name the same one, and the statutes or precedents only where every one of them is backed by a passage both models quoted. Even so, no case drawn from a decision counts as approved until a lawyer has checked it. That is this step. It needs the editor role.
+
+## Open a draft
+
+In the review queue, choose the **Approvals** tab. Each item is a court draft, with the suite it belongs to.
+
+<Screenshot
+	name="court-draft"
+	alt="A court draft: the decision's text on the left with two passages highlighted, and on the right the drafted question and two facts, each with Approve, Edit and Reject."
+	caption="The decision on the left, its passages highlighted. The drafted question and facts on the right."
+/>
+
+## Decide each fact
+
+<Steps>
+
+1. Read the first fact against its highlighted passage. Ask: is this what the court held, in words a correct answer must reach?
+
+2. Choose one:
+	- **Approve** (<kbd>1</kbd>) when the fact is right as drafted.
+	- **Edit** (<kbd>2</kbd>) when it is right but badly put. Write the fact as it should read, and why you changed it.
+	- **Reject** (<kbd>3</kbd>) when it is wrong or beside the point. The points graded on it go with it.
+
+	<Screenshot
+		name="court-draft-edit"
+		alt="The first fact approved; the second being edited, with the fact rewritten and a reason given."
+		caption="An edit needs the fact as it should read and a reason."
+		frame="plain"
+		width={620}
+	/>
+
+3. When every fact is decided, choose **Approve the case and next**.
+
+</Steps>
+
+The case joins the answer key, approved, with you as its approver. A fact you kept still points at its passage; a fact you edited is recorded as yours, with your reason.
+
+## What to check
+
+- **The question** must be one the decision answers. A decision that turned on procedure does not answer a substantive question.
+- **Nothing in the facts given to the AI may reveal the ruling.** "The court found the dismissal unfair" in the facts turns the test into a reading exercise.
+- **Each fact** must be something the court held, not something it mentioned.
+
+## Drafts can be run before you approve them
+
+Your team may run a suite while drafts wait. In the report's tables their results sit in their own **unreviewed** row, apart from approved cases. The error rates on the Reports page count every answer, drafts included; the report exported for partners counts approved cases only.

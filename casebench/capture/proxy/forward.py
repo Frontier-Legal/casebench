@@ -35,6 +35,8 @@ NOT_FORWARDED = HOP_BY_HOP | {"host", "content-length", "accept-encoding"}
 NOT_RETURNED = HOP_BY_HOP | {"content-length", "content-encoding"}
 
 Prepare = Callable[[Any], Any]
+# The request hook for a call, by its route, or None and its URL for a followed call.
+HookFor = Callable[[Route | None, str], Prepare | None]
 
 
 def _json(raw: bytes) -> Any:
@@ -44,10 +46,10 @@ def _json(raw: bytes) -> Any:
         return None
 
 
-def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare]) -> Starlette:
-    """`prepare` maps a route name to its parser's request hook, such as asking for usage. A
-    call outside the perimeter, or a redirect to another host, is answered with 403 and kept
-    on the recorder, which stops the run (decision 0046)."""
+def make_app(routes: list[Route], recorder: Recorder, hook_for: HookFor) -> Starlette:
+    """`hook_for` gives the request hook of the parser that reads a call, such as asking for
+    usage. A call outside the perimeter, or a redirect to another host, is answered with 403
+    and kept on the recorder, which stops the run (decision 0046)."""
     by_name = {route.name: route for route in routes}
     client = network.async_client(timeout=None)
 
@@ -69,7 +71,7 @@ def make_app(routes: list[Route], recorder: Recorder, prepare: dict[str, Prepare
             url = f"{url}?{request.url.query}"
         raw = await request.body()
         body = _json(raw)
-        hook = prepare.get(route.name) if route is not None else None
+        hook = hook_for(route, url)
         if hook is not None and body is not None:
             body = hook(body)
             raw = json.dumps(body).encode()

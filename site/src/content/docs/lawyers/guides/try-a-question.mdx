@@ -1,0 +1,28 @@
+---
+title: Try a question
+description: Ask the AI one question, read its answer with every citation checked, see what it cost, and keep it as a case.
+sidebar:
+  order: 5
+---
+
+import Screenshot from '../../../../components/Screenshot.astro';
+
+Sometimes you want to see how the AI handles one point before anyone writes a test for it. **Try a question** asks it, and checks every citation in the answer against your sources, as a run would.
+
+## Ask
+
+Choose **Try a question**, type the question as the AI's users would put it, and choose **Ask** or press <kbd>⌘</kbd> <kbd>Enter</kbd>.
+
+<Screenshot
+	name="try-answer"
+	alt="Try a question: the daily limit, today's spend and what is left; a question about unpaid overtime; the AI's answer citing CA 2022/31, marked Misused."
+	caption="The answer says two years and cites CA 2022/31, which holds five. The citation is marked misused."
+/>
+
+## What it costs
+
+Each question calls the AI and the grading model, and costs money. The top of the page shows today's limit, what has been spent today and what is left. When the limit is reached, nothing more is sent that day; the page says so. Your engineer sets the team's limit. On a team server, an admin can also set one per person.
+
+## Keep it as a case
+
+When the question is worth testing every time, an editor can choose **Save as case** and the suite to add it to. The form opens with the question filled in; add the answer you expect and its key points, as in [Write your first case](/lawyers/tutorials/first-case/).

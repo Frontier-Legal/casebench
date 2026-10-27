@@ -191,7 +191,8 @@ def test_a_gate_before_approvals_exist(project: Path):
     assert RunLog(project / "runs" / "new").info.commit == COMMIT
 
 
-def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest.MonkeyPatch):
+def judged_twice(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A baseline and a new run of twelve criteria cases, which the judge passes in both."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     server = start_fake_judge()
     judge = {
@@ -204,8 +205,11 @@ def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest
     run(project, "upheld", "baseline", "judged.yaml")
     run(project, "upheld", "new", "judged.yaml")
     server.shutdown()
-    held = gate(project)
-    for n in range(8):
+
+
+def overrule(project: Path, cases: int) -> None:
+    """A lawyer fails the criterion the judge passed, in the first `cases` of the new run."""
+    for n in range(cases):
         CliRunner().invoke(
             main,
             [
@@ -215,6 +219,12 @@ def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest
             ],
         )  # fmt: skip
 
+
+def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest.MonkeyPatch):
+    judged_twice(project, monkeypatch)
+    held = gate(project)
+    overrule(project, 8)
+
     overruled = gate(project)
 
     assert held.exit_code == 0, held.output
@@ -222,3 +232,16 @@ def test_a_lawyers_verdict_counts_in_the_gate(project: Path, monkeypatch: pytest
     assert overruled.exit_code == 1, overruled.output
     assert "qa · criteria: 100% -> 33% over 12 cases" in overruled.output
     assert "  failed outcome criteria: 0 -> 8" in overruled.output
+
+
+def test_a_lawyers_verdict_counts_in_compare(project: Path, monkeypatch: pytest.MonkeyPatch):
+    judged_twice(project, monkeypatch)
+    overrule(project, 8)
+    runs = project / "runs"
+
+    compared = CliRunner().invoke(main, ["compare", str(runs / "baseline"), str(runs / "new")])
+
+    assert compared.exit_code == 0, compared.output
+    # The same scores the gate reads: a lawyer's verdict replaces the judge's (0047).
+    assert "qa · criteria: 100% -> 33% over 12 cases" in compared.output
+    assert "significant" in compared.output and "not significant" not in compared.output

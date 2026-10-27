@@ -1,0 +1,98 @@
+---
+title: An agent in TypeScript
+description: Test a Node.js legal research agent over HTTP, started and stopped by Casebench, with its Anthropic calls recorded through the proxy.
+sidebar:
+  order: 1
+---
+
+import { FileTree } from '@astrojs/starlight/components';
+
+A small Node.js service answers legal questions with the Anthropic TypeScript SDK. Casebench starts it, sends each case over HTTP, records every model call through its proxy, and stops it at the end. The agent's code knows nothing about Casebench.
+
+<FileTree>
+- research-agent/
+  - package.json
+  - server.mjs
+  - casebench.yaml
+  - suites/
+    - tenancy/ written by lawyers in the workbench
+</FileTree>
+
+## The agent
+
+```js title="server.mjs"
+import { createServer } from 'node:http';
+import Anthropic from '@anthropic-ai/sdk';
+
+// Reads ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL from the environment.
+const client = new Anthropic();
+const port = Number(process.env.PORT ?? 3000);
+
+async function answer(question) {
+	const reply = await client.messages.create({
+		model: 'claude-sonnet-5-5',
+		max_tokens: 1500,
+		system: 'You are a tenancy lawyer. Answer briefly and cite each statute and decision you rely on.',
+		messages: [{ role: 'user', content: question }],
+	});
+	return reply.content.filter((block) => block.type === 'text').map((block) => block.text).join('\n');
+}
+
+createServer(async (req, res) => {
+	if (req.method !== 'POST' || req.url !== '/ask') {
+		res.writeHead(404).end();
+		return;
+	}
+	let body = '';
+	for await (const chunk of req) body += chunk;
+	const { question } = JSON.parse(body);
+	const text = await answer(question);
+	res.writeHead(200, { 'content-type': 'application/json' });
+	res.end(JSON.stringify({ answer: text }));
+}).listen(port, '127.0.0.1');
+```
+
+## The config
+
+```yaml title="casebench.yaml"
+target:
+  type: http
+  url: http://127.0.0.1:3000/ask
+  start: node server.mjs
+  body: { question: "{{question}}" }
+  answer: $.answer
+  max_concurrency: 1
+corpus:
+  connector: http
+  jurisdictions: ["NO"]
+  options: { ... }            # written by `casebench corpus add http`
+judge:
+  provider: openai
+  model: gpt-5.5
+  options: { api_key_env: OPENAI_API_KEY, family: gpt }
+agent_models:
+  - { model: claude-sonnet-5-5, family: claude-sonnet }
+network:
+  allow: [api.anthropic.com]
+```
+
+- Casebench runs `node server.mjs` with its proxy's variables set, so `ANTHROPIC_BASE_URL` points at the proxy and every call is recorded. The proxy forwards each call to the address `ANTHROPIC_BASE_URL` had before, in your shell or in a `.env` file `keys:` names, or else to `https://api.anthropic.com`.
+- It waits until `http://127.0.0.1:3000/ask` answers before sending the first case, and stops the service when the run ends.
+- `max_concurrency: 1` keeps model calls attributed without trace context. To run cases in parallel, pass the `traceparent` header the request arrives with on to outgoing calls, which OpenTelemetry's Node instrumentation does.
+- A run calls only the hosts the config names. The target is on loopback, and the judge's and the corpus's hosts are named. The agent's own model API is not, so `network: allow:` lists `api.anthropic.com`. Without it the run stops at the agent's first model call and names the host.
+- `"NO"` is quoted. YAML reads a bare `NO` as false, and `casebench.yaml` then fails to load.
+- `agent_models:` names the model the agent calls with its catalog family. The run checks that the judge is from another family, and prices the agent's calls.
+
+## Run it
+
+```sh
+export ANTHROPIC_API_KEY=... OPENAI_API_KEY=...
+casebench check
+casebench run --suite suites/tenancy --run-id node-1
+```
+
+`casebench init` finds `@anthropic-ai/sdk` in `package.json` and names it. For a Node agent you write the target block yourself, as above. A command target or an HTTP target runs in its own process, so Casebench records its model calls only through the variables it sets, such as `ANTHROPIC_BASE_URL`. A client that ignores that variable is neither recorded nor held to the allowed hosts; only your firewall binds it.
+
+## What to read
+
+The report for lawyer-written cases has a `qa · criteria` table and, with a corpus, a `qa · citation_integrity` table, a citations section and the error rates. The spend lines price the agent's Claude calls apart from the judge's. Every captured model call is in `results.jsonl` under each case's `steps`, with model, tokens and duration, and `casebench ui` shows each answer's calls in time order in the engineering view.

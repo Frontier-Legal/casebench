@@ -105,14 +105,19 @@ def suite_line(suite_id: str | None, suite_hash: str | None) -> str:
     return f"suite {suite_id} at {suite_hash}"
 
 
-def error_lines(errors: list[ScoringError], run_id: str) -> list[str]:
-    """Each result a metric could not score, and how to finish them (decision 0037)."""
+def error_lines(errors: list[ScoringError], run_id: str, offline: bool = False) -> list[str]:
+    """Each result a metric could not score, and how to finish them (decision 0037). An
+    offline run is finished by importing its answers again: running it again would send the
+    cases it left unanswered to the config's target (decision 0061)."""
     if not errors:
         return []
-    out = [
-        f"scoring errors: {len(errors)} results have no score yet; run again with "
-        f"--run-id {run_id} to score only what is missing"
-    ]
+    finish = (
+        "import the answers sheet again with `casebench import SHEET --suite DIR`, which "
+        "scores it as a new run and asks no agent"
+        if offline
+        else f"run again with --run-id {run_id} to score only what is missing"
+    )
+    out = [f"scoring errors: {len(errors)} results have no score yet; {finish}"]
     out += [f"  {e.case_id} · {e.metric}: {e.error}" for e in errors]
     return out
 

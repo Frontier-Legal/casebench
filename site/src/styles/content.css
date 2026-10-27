@@ -1,0 +1,196 @@
+/* How pages read: the header, the sidebar, prose, tables and code, on top of Starlight's defaults. */
+
+html {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: var(--cb-accent-soft);
+	color: var(--sl-color-white);
+}
+
+/* Header: translucent over the page, one hairline below. */
+header.header {
+	backdrop-filter: saturate(1.4) blur(12px);
+	-webkit-backdrop-filter: saturate(1.4) blur(12px);
+	border-bottom: 1px solid var(--cb-border);
+}
+
+/* Page title in the display face; section headings stay in the text face. */
+.content-panel h1#_top {
+	font-family: var(--cb-font-display);
+	font-weight: 560;
+	letter-spacing: -0.015em;
+	font-optical-sizing: auto;
+}
+
+.sl-markdown-content :is(h2, h3, h4) {
+	letter-spacing: -0.01em;
+	font-weight: 620;
+	scroll-margin-top: calc(var(--sl-nav-height) + 1.5rem);
+}
+
+.sl-markdown-content h2 {
+	padding-top: 0.5rem;
+}
+
+.sl-markdown-content p,
+.sl-markdown-content li {
+	color: var(--sl-color-gray-2);
+}
+
+.sl-markdown-content strong {
+	color: var(--sl-color-white);
+	font-weight: 620;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.2em;
+	text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+	transition: text-decoration-color 120ms ease;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+	text-decoration-color: currentColor;
+}
+
+/* Inline code: quiet, with a hairline. */
+.sl-markdown-content :not(pre, .expressive-code *) > code {
+	border: 1px solid var(--cb-border);
+	border-radius: var(--cb-radius-sm);
+	padding: 0.1em 0.35em;
+	font-size: 0.86em;
+	color: var(--sl-color-white);
+}
+
+/* Tables: full width, hairline rows, a header that reads as a header. */
+.sl-markdown-content table:not(:where(.not-content *)) {
+	display: table;
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--cb-border);
+	border-radius: var(--cb-radius);
+	overflow: hidden;
+	font-size: var(--sl-text-sm);
+}
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+	border-bottom: 1px solid var(--cb-border);
+	padding: 0.6rem 0.85rem;
+	vertical-align: top;
+}
+
+.sl-markdown-content tr:last-child td:not(:where(.not-content *)) {
+	border-bottom: 0;
+}
+
+.sl-markdown-content th:not(:where(.not-content *)) {
+	background: var(--cb-surface);
+	color: var(--sl-color-white);
+	font-weight: 600;
+	text-align: start;
+}
+
+/* Wide tables scroll inside their own box on small screens instead of the page. */
+@media (max-width: 50rem) {
+	.sl-markdown-content table:not(:where(.not-content *)) {
+		display: block;
+		overflow-x: auto;
+	}
+}
+
+/* Sidebar: the current page is marked by colour and a soft fill, not by a heavy block. */
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover {
+	background: var(--cb-accent-soft);
+	color: var(--sl-color-text-accent);
+	font-weight: 600;
+}
+
+.sidebar-content .large {
+	font-weight: 640;
+	color: var(--sl-color-white);
+}
+
+/* Asides: thin border, tinted ground. */
+.starlight-aside {
+	border-radius: var(--cb-radius);
+	border-inline-start-width: 3px;
+}
+
+/* Cards: hairline and a lift on hover. */
+.card,
+.sl-link-card {
+	border-radius: var(--cb-radius-lg) !important;
+	border-color: var(--cb-border) !important;
+	background: var(--cb-surface) !important;
+	transition:
+		border-color 150ms ease,
+		transform 150ms ease;
+}
+
+.sl-link-card:hover {
+	border-color: var(--sl-color-accent) !important;
+	transform: translateY(-1px);
+}
+
+/* Steps: the counter in the accent. */
+.sl-steps > li::before {
+	background-color: var(--cb-accent-soft) !important;
+	color: var(--sl-color-text-accent) !important;
+	box-shadow: inset 0 0 0 1px var(--cb-border) !important;
+}
+
+/* Keyboard keys in the lawyer guides. */
+kbd {
+	font-family: var(--sl-font-mono);
+	font-size: 0.8em;
+	border: 1px solid var(--cb-border);
+	border-bottom-width: 2px;
+	border-radius: var(--cb-radius-sm);
+	padding: 0.05em 0.4em;
+	background: var(--cb-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		transition: none !important;
+		animation: none !important;
+	}
+}
+
+/* Site title beside the mark. */
+.site-title {
+	color: var(--sl-color-white) !important;
+	font-weight: 650 !important;
+	letter-spacing: -0.015em;
+	gap: 0.6rem !important;
+}
+
+.site-title img {
+	height: 1.65rem !important;
+}
+
+/* The home page uses the full width the splash layout gives it. */
+[data-has-hero='false'] .landing,
+.landing {
+	max-width: 76rem;
+	margin-inline: auto;
+}
+
+:root:has(.landing) .content-panel {
+	padding-top: 0;
+}
+
+:root:has(.landing) .content-panel:not(:has(.landing)) {
+	display: none;
+}
+
+/* The glow behind the hero image may spread past the edge; the page must not scroll sideways. */
+.landing {
+	overflow-x: clip;
+}

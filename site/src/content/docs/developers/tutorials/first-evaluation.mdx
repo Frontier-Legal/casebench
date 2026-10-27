@@ -1,0 +1,215 @@
+---
+title: Your first evaluation
+description: Set Casebench up for a small Python agent, let the first run build a suite from a folder of court decisions, and open the results in the workbench. About twenty minutes.
+sidebar:
+  order: 2
+---
+
+import { Aside, FileTree, Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+In this tutorial you evaluate a small employment-law agent. Casebench reads its code, you confirm three choices, and the first run turns a folder of court decisions into test cases, sends them to the agent and grades the answers. You finish in the workbench, where a lawyer can review what failed.
+
+<FileTree>
+- labour-agent/
+  - agent.py the agent under test
+  - pyproject.toml
+  - decisions/ a few court decisions, one JSON file each
+  - casebench.yaml written by `casebench init`
+  - .casebench/
+    - casebench.schema.json so your editor checks casebench.yaml
+    - suites/first/ built by the first run
+    - runs/ every run's answers, scores and report
+</FileTree>
+
+## Before you start
+
+- Python 3.11 or later and [uv](https://docs.astral.sh/uv/).
+- Keys for the models: here the agent uses Anthropic, and the judge and one extraction model use OpenAI. Set them in your shell, or keep them in a `.env` file; see [Keep keys out of the config](/developers/guides/setup/keys/).
+- A few court decisions in the [document format](/developers/reference/formats/document/), one JSON file each, in `decisions/`. Use decisions you are allowed to process. Casebench ships no corpus.
+
+## The agent
+
+```python title="agent.py"
+import os
+
+from anthropic import Anthropic
+
+client = Anthropic(base_url=os.environ.get("ANTHROPIC_BASE_URL"))
+
+
+def answer(question: str) -> str:
+    reply = client.messages.create(
+        model="claude-sonnet-5-5",
+        max_tokens=1024,
+        system="You are a careful employment lawyer. Cite the statutes and decisions you rely on.",
+        messages=[{"role": "user", "content": question}],
+    )
+    return reply.content[0].text
+```
+
+A function that takes a `question` and returns text is all a Python target needs. Casebench calls it in worker processes and records every call it makes, without a change to this code.
+
+## Set up
+
+<Steps>
+
+1. Run `init` in the project. Casebench runs with the project's own dependencies and changes nothing else:
+
+	```sh
+	uv run --with casebench casebench init
+	```
+
+	At a terminal, `init` reads your project, then asks where to set up: **Quick start** takes what it found and asks only what is missing, **Custom** asks every part, and **In the browser** opens the workbench's setup guide instead. Every question also has a flag. With flags, the run below asks nothing:
+
+	```sh
+	uv run --with casebench casebench init --target python --entry agent.py:answer \
+	  --corpus folder --corpus-path decisions \
+	  --judge-provider openai --judge-model gpt-5.5 \
+	  --extract openai gpt-5.5-mini --extract anthropic claude-haiku-5-5 --yes
+	```
+
+	```text frame="terminal"
+	◆ Reading your project
+	│  SDKs     anthropic, read by the anthropic parser
+	│  agent    agent.py:answer, as given; 1 could be called
+	│  clients  anthropic.Anthropic in 1 place
+	│  models   claude-sonnet-5-5
+	│  scanned  read 1 Python files as text: names and literals only, no variable's value, and nothing was sent
+	│
+	◆ Recording your agent's calls
+	│  each model and search call is recorded where it goes; no route is needed
+	│
+	◆ The judge
+	│  OpenAI · gpt-5.5, through the openai provider
+	│  ✓ key OPENAI_API_KEY, set in this shell
+	╭─ casebench.yaml will hold ────────────────────────────────────────╮
+	│ target         agent.py:answer                                    │
+	│ corpus folder  folder decisions                                   │
+	│ judge          openai gpt-5.5 · key OPENAI_API_KEY                │
+	│ extraction 1   openai gpt-5.5-mini · key OPENAI_API_KEY           │
+	│ extraction 2   anthropic claude-haiku-5-5 · key ANTHROPIC_API_KEY │
+	╰───────────────────────────────────────────────────────────────────╯
+	│  ✓ wrote casebench.yaml, checked by editors against .casebench/casebench.schema.json
+	```
+
+	The judge is from another model family than the agent's on purpose: a model grading its own family's answers favours them. The two extraction models must differ too, because a court decision becomes a test only where both read the same thing in it.
+
+2. Open the file it wrote:
+
+	```yaml title="casebench.yaml"
+	# yaml-language-server: $schema=.casebench/casebench.schema.json
+	# Written by casebench init. It holds no secrets: API keys are read from the
+	# environment variables named here, or from the .env files `keys:` names for them,
+	# so this file can be committed and deployed.
+	target:
+	  type: python
+	  entry: agent.py:answer
+	corpora:
+	  folder:
+	    connector: folder
+	    options:
+	      path: decisions
+	judge:
+	  provider: openai
+	  model: gpt-5.5
+	  options:
+	    api_key_env: OPENAI_API_KEY
+	    family: gpt
+	  context_window: 1050000
+	agent_models:
+	- model: claude-sonnet-5-5
+	  family: claude-sonnet
+	extract:
+	  models:
+	  - provider: openai
+	    model: gpt-5.5-mini
+	    options:
+	      api_key_env: OPENAI_API_KEY
+	      family: openai
+	  - provider: anthropic
+	    model: claude-haiku-5-5
+	    options:
+	      api_key_env: ANTHROPIC_API_KEY
+	      family: claude-haiku
+	      max_tokens: 128000
+	    context_window: 1000000
+	```
+
+	`agent_models` lists the models `init` found in your code, so a run can warn when the judge shares their family. Prices are not written here: Casebench looks each model's price up when a run needs it.
+
+3. Allow the agent's model host. A run calls only the hosts `casebench.yaml` names: the judge's and extraction models' providers, the corpora, the target. Your agent calls Anthropic itself, so add its host:
+
+	```yaml title="casebench.yaml" ins={1-2}
+	network:
+	  allow: [api.anthropic.com]
+	```
+
+	Without it, the agent's first call is refused with a message that names the host and this setting. See [Allow the hosts your agent calls](/developers/guides/setup/network/).
+
+4. Check every part from here:
+
+	```sh
+	uv run --with casebench casebench check
+	```
+
+	It searches the corpus once and fetches one document, sends the agent "Hi. How are you?", and asks each model one short question. Each part prints `passed` or `failed` with the reason, and the command exits non-zero when one fails.
+
+</Steps>
+
+## Run
+
+<Steps>
+
+1. Start the first run:
+
+	```sh
+	uv run --with casebench casebench run
+	```
+
+	With no suite yet, it says what building one will cost and spends nothing until you agree:
+
+	```text frame="terminal"
+	no suite yet: the first run builds .casebench/suites/first from corpus folder
+	  extract: 20 decisions, 40 model calls (one per decision for each of the 2 models)
+	  input: unknown until decisions are fetched; none of this corpus is cached
+	  ...
+	  nothing was sent
+	  then up to 10 cases are generated and each is sent to your agent
+	```
+
+	At a terminal it asks for a yes. In a script, pass `--yes`. `--sample` and `--cases` change the 20 decisions and 10 cases.
+
+2. Casebench extracts answer keys from the decisions, freezes a suite of cases from them, sends each case to your agent, and scores the answers. Every result is stored before the next case starts, so if the run stops, run the same command again and it resumes.
+
+3. The report prints as the run ends: one table per task and metric with its interval, the citations by verdict, the error rates, and what the run spent per model. It ends with the command that opens it in the workbench.
+
+</Steps>
+
+<Aside>
+Court-derived cases start as drafts. Their results sit in their own **unreviewed** row until a lawyer approves each case in the workbench.
+</Aside>
+
+## Open the results
+
+```sh
+uv run --with casebench casebench ui
+```
+
+The workbench opens on this machine with no login. The review queue lists the failed answers first, each beside its evidence. The Reports page shows the error rates, and Settings shows what each part costs.
+
+<Screenshot
+	name="eng-home"
+	alt="The workbench's Home page for an engineer: the setup with each part marked done, and the next steps."
+	caption="Home, for an engineer: each part of the setup and what comes next."
+/>
+
+## What you did
+
+Casebench read your code without running it, recorded your agent's model calls without a change to its code, built test cases from court decisions, and graded the answers against them. Nothing left your machine except calls to your agent's model, the judge, the extraction models and your corpus, and two requests for public model price lists that carry nothing of yours.
+
+## Next
+
+- Ask a lawyer to review the failures and approve the drafts: [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/), or let them use this machine.
+- [Gate a change in CI](/developers/guides/runs/gate-in-ci/) so a drop in accuracy fails a build.
+- [Build a suite from court decisions](/developers/tutorials/court-suite/) step by step, for larger suites.

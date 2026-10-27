@@ -1,0 +1,465 @@
+openapi: 3.1.0
+info:
+  title: Capture server API
+  version: '0.x'
+  summary: The local HTTP server Casebench starts for a run, to record what the agent does.
+  description: |
+    During `casebench run`, `casebench check` and `casebench target check`, Casebench listens on
+    `127.0.0.1`. It forwards each request to the real upstream, streams the reply back unchanged, and
+    records the exchange against the case that caused it. The same server receives OpenTelemetry spans.
+
+    Calls reach it in two ways. A Python target's worker rewrites every call the agent makes through
+    httpx2, httpx or requests to the follow path, `/w/{worker}/~/{scheme}/{netloc}/{path}`, which
+    carries the call's own scheme and host. A command or HTTP target reaches it through routes,
+    `/{route}/{path}`, because Casebench points variables such as `OPENAI_BASE_URL` at the route.
+
+    Every forward is held to the run's perimeter: a host `casebench.yaml` does not name, or a redirect
+    to another host, is answered with 403 and stops the run.
+
+    The server binds only to the loopback address and lives as long as the run. Nothing here is a
+    hosted service. Casebench chooses a free port unless `capture.port` in `casebench.yaml` names one,
+    which you do when the agent is already running and you point it at the server yourself
+    (`casebench proxy env` prints the variables to set).
+
+    A path segment written `{path}` below may contain slashes: the server forwards the rest of the URL
+    as it is.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: http://127.0.0.1:{port}
+    description: The run's capture server.
+    variables:
+      port:
+        default: '8790'
+        description: The port Casebench chose for the run, or `capture.port` from casebench.yaml. 8790 is only an example.
+tags:
+  - name: Trace intake
+    description: OTLP/HTTP trace export, for agents that already emit OpenTelemetry spans.
+  - name: Recording proxy
+    description: |
+      The follow path forwards a call to the host its path names. A route forwards to its upstream:
+      a client whose base URL is `http://127.0.0.1:<port>/<route>` reaches the route's upstream
+      through the proxy.
+paths:
+  /v1/traces:
+    post:
+      operationId: exportTraces
+      tags: [Trace intake]
+      summary: Receive spans
+      description: |
+        The OTLP/HTTP traces endpoint. Point an OpenTelemetry exporter here with
+        `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`; Casebench sets that variable for the agents it starts when
+        `capture.traces` is `true`.
+
+        A span joins the case whose W3C trace context it carries. Casebench maps these spans to steps:
+
+        - `gen_ai.operation.name` of `chat`, `text_completion` or `generate_content`, or
+          `openinference.span.kind` `LLM`: a model call, with provider, model and token counts.
+        - `execute_tool` or `TOOL`: a tool call named by `gen_ai.tool.name` or `tool.name`.
+        - `retrieval` or `RETRIEVER`: a retrieval, with ids from `gen_ai.retrieval.documents[*].id` or
+          `retrieval.documents.N.document.id`.
+        - `rerank`, `RERANKER`, or a span with `casebench.rerank.output_ids`: a rerank, with ids in and out.
+
+        Other spans are ignored. When the proxy also recorded a model call, the proxy's record is kept
+        and the span's is dropped, so no call is counted twice.
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: string
+              format: binary
+              description: An `ExportTraceServiceRequest` message, as the OTLP specification defines it.
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportTraceServiceRequest'
+            example:
+              resourceSpans:
+                - scopeSpans:
+                    - spans:
+                        - traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                          spanId: 00f067aa0ba902b7
+                          name: search decisions
+                          startTimeUnixNano: '1761490800000000000'
+                          endTimeUnixNano: '1761490800240000000'
+                          attributes:
+                            - key: gen_ai.operation.name
+                              value: { stringValue: retrieval }
+                            - key: gen_ai.retrieval.documents
+                              value: { stringValue: '[{"id": "2024-1234"}, {"id": "2023-0871"}]' }
+      responses:
+        '200':
+          description: The spans were read. The body is empty, as exporters expect.
+          content:
+            application/x-protobuf:
+              schema:
+                type: string
+                format: binary
+                maxLength: 0
+            application/json:
+              schema:
+                type: object
+                maxProperties: 0
+              example: {}
+  /~/{scheme}/{netloc}/{path}:
+    parameters:
+      - $ref: '#/components/parameters/Scheme'
+      - $ref: '#/components/parameters/Netloc'
+      - $ref: '#/components/parameters/Path'
+    post:
+      operationId: followPost
+      tags: [Recording proxy]
+      summary: Forward a call to the host it names
+      description: |
+        Forwards the request to `{scheme}://{netloc}/{path}` with its query, unchanged, and streams
+        the response back as it arrives. Casebench records the method, the URL without its credentials,
+        the request body, the status, and the response body or its events. Request headers are never
+        recorded.
+
+        A followed call is read by the route at its host, if there is one; otherwise by each parser
+        in turn, each of which reads only its own API's paths; otherwise as a search of a store whose
+        API Casebench knows, such as Qdrant's `points/search` and `points/query`. The request is
+        forwarded as sent: no parser's hook changes it.
+
+        A Python worker sends its calls under its own prefix, `/w/{worker}/~/...`. This path without
+        the prefix is the same, with the call attributed by trace context.
+
+        `GET` is shown separately; `PUT`, `PATCH`, `DELETE`, `HEAD` and `OPTIONS` are forwarded the
+        same way.
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+      requestBody:
+        description: Sent to the upstream as it is.
+        content:
+          application/json:
+            schema: {}
+            example:
+              model: claude-sonnet-4-5
+              max_tokens: 1024
+              messages:
+                - role: user
+                  content: Is a dismissal after a single late arrival valid?
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoScheme'
+        default:
+          $ref: '#/components/responses/Upstream'
+    get:
+      operationId: followGet
+      tags: [Recording proxy]
+      summary: Forward a read to the host it names
+      description: |
+        Forwards a `GET` to `{scheme}://{netloc}/{path}`, such as a document fetch. When a route at
+        that host names a `fetch_path` such as `/documents/{id}` and the URL matches it, the exchange
+        is recorded as a fetch of that document id. Casebench adds such a route for each HTTP corpus.
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoScheme'
+        default:
+          $ref: '#/components/responses/Upstream'
+  /w/{worker}/~/{scheme}/{netloc}/{path}:
+    parameters:
+      - $ref: '#/components/parameters/Worker'
+      - $ref: '#/components/parameters/Scheme'
+      - $ref: '#/components/parameters/Netloc'
+      - $ref: '#/components/parameters/Path'
+    post:
+      operationId: followWorkerPost
+      tags: [Recording proxy]
+      summary: Forward a Python worker's call to the host it names
+      description: |
+        The follow path, from one of the worker processes that run a Python target. The worker
+        rewrites each call the agent makes through httpx2, httpx or requests to this path, so a call
+        to `https://api.anthropic.com/v1/messages` from worker 0 arrives as
+        `/w/0/~/https/api.anthropic.com/v1/messages`. Each worker answers one case at a time, so a call
+        is attributed to its case exactly. You never set this prefix yourself.
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoScheme'
+        default:
+          $ref: '#/components/responses/Upstream'
+    get:
+      operationId: followWorkerGet
+      tags: [Recording proxy]
+      summary: Forward a Python worker's read to the host it names
+      description: The same as following a read, from a Python worker process.
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoScheme'
+        default:
+          $ref: '#/components/responses/Upstream'
+  /{route}/{path}:
+    parameters:
+      - $ref: '#/components/parameters/Route'
+      - $ref: '#/components/parameters/Path'
+    post:
+      operationId: forwardPost
+      tags: [Recording proxy]
+      summary: Forward a request
+      description: |
+        Forwards the request to the route's upstream at the same path and query, and streams the
+        response back as it arrives, server-sent events included. Casebench records the method, the URL
+        without its credentials, the request body, the status, and the response body or its events.
+        Request headers are never recorded.
+
+        A route through a variable forwards to the address that variable held before Casebench
+        pointed it at the proxy, in the shell or a `.env` file under `keys:`, and to the route's
+        `upstream` when it held none.
+
+        For a streaming request through a route with the `openai` parser that does not ask for usage,
+        the proxy adds `stream_options.include_usage` so the stream still reports its tokens. It
+        changes nothing else.
+
+        `GET` is shown separately; `PUT`, `PATCH`, `DELETE`, `HEAD` and `OPTIONS` are forwarded the
+        same way.
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+      requestBody:
+        description: Sent to the upstream as it is.
+        content:
+          application/json:
+            schema: {}
+            example:
+              model: claude-sonnet-4-5
+              max_tokens: 1024
+              messages:
+                - role: user
+                  content: Is a dismissal after a single late arrival valid?
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoRoute'
+        default:
+          $ref: '#/components/responses/Upstream'
+    get:
+      operationId: forwardGet
+      tags: [Recording proxy]
+      summary: Forward a read
+      description: |
+        Forwards a `GET`, such as a document fetch from a backend route. When the route names a
+        `fetch_path` such as `/documents/{id}` and the URL matches it, the exchange is recorded as a
+        fetch of that document id rather than as a retrieval.
+      parameters:
+        - $ref: '#/components/parameters/TraceParent'
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoRoute'
+        default:
+          $ref: '#/components/responses/Upstream'
+  /w/{worker}/{route}/{path}:
+    parameters:
+      - $ref: '#/components/parameters/Worker'
+      - $ref: '#/components/parameters/Route'
+      - $ref: '#/components/parameters/Path'
+    post:
+      operationId: forwardWorkerPost
+      tags: [Recording proxy]
+      summary: Forward a request from a Python worker
+      description: |
+        The same as forwarding a request, from one of the worker processes that run a Python target.
+        A Python agent's calls usually arrive on the follow path instead. This path serves a route
+        under `capture.routes` that has its own `upstream` and `env`: the worker keeps that variable
+        pointed at the proxy, with its own prefix, so the call is attributed to its case. You never set
+        this prefix yourself.
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoRoute'
+        default:
+          $ref: '#/components/responses/Upstream'
+    get:
+      operationId: forwardWorkerGet
+      tags: [Recording proxy]
+      summary: Forward a read from a Python worker
+      description: The same as forwarding a read, from a Python worker process.
+      responses:
+        '2XX':
+          $ref: '#/components/responses/Upstream'
+        '403':
+          $ref: '#/components/responses/Refused'
+        '404':
+          $ref: '#/components/responses/NoRoute'
+        default:
+          $ref: '#/components/responses/Upstream'
+components:
+  parameters:
+    Worker:
+      name: worker
+      in: path
+      required: true
+      description: The worker process that made the call. Casebench sets this prefix itself.
+      schema:
+        type: string
+        examples: ['0']
+    Scheme:
+      name: scheme
+      in: path
+      required: true
+      description: The followed call's scheme. Any other than `http` or `https` is answered with 404.
+      schema:
+        type: string
+        enum: [http, https]
+        examples: [https]
+    Netloc:
+      name: netloc
+      in: path
+      required: true
+      description: The followed call's host, with its port when the call named one.
+      schema:
+        type: string
+        examples: [api.anthropic.com]
+    Route:
+      name: route
+      in: path
+      required: true
+      description: |
+        A route's name. The built-in parsers declare `openai` (to `https://api.openai.com`, variable
+        `OPENAI_BASE_URL`, with `/v1` appended), `anthropic` (to `https://api.anthropic.com`,
+        `ANTHROPIC_BASE_URL`) and `gemini` (to `https://generativelanguage.googleapis.com`,
+        `GOOGLE_GEMINI_BASE_URL`). `capture.routes` in casebench.yaml adds routes or changes these.
+      schema:
+        type: string
+        examples: [anthropic]
+    Path:
+      name: path
+      in: path
+      required: true
+      description: The rest of the upstream URL, slashes included, such as `v1/messages`.
+      schema:
+        type: string
+        examples: [v1/messages]
+    TraceParent:
+      name: traceparent
+      in: header
+      required: false
+      description: |
+        The W3C trace context Casebench gave the case. An HTTP target receives it on each request and
+        should pass it on; a command target receives it as the `TRACEPARENT` variable. Without it, an
+        exchange belongs to the only case running, or is kept as unattributed when several run at once.
+        A call on a worker's prefix needs none: the worker answers one case at a time.
+      schema:
+        type: string
+        examples: [00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01]
+  responses:
+    Upstream:
+      description: |
+        The upstream's response, status and headers as it sent them, minus connection-specific
+        headers, streamed as it arrives.
+      content:
+        application/json:
+          schema: {}
+        text/event-stream:
+          schema:
+            type: string
+    Refused:
+      description: |
+        The host is outside the run's perimeter: `casebench.yaml` does not name it and
+        `network: allow:` does not list it. Or the upstream redirected to another host. The run stops
+        with the same reason. A 403 the upstream itself sends passes through as any other status, as
+        `application/json` or whatever the upstream sent.
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: 'Casebench refused a call to api.anthropic.com, which casebench.yaml does not name; if the run may call it, add it under `network: allow:` in casebench.yaml'
+    NoScheme:
+      description: The follow path names a scheme other than `http` or `https`.
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: no scheme 'ftp'
+    NoRoute:
+      description: No route has this name.
+      content:
+        text/plain:
+          schema:
+            type: string
+          example: no route 'anthropc'
+  schemas:
+    ExportTraceServiceRequest:
+      type: object
+      description: |
+        OTLP/JSON, as the OpenTelemetry protocol specification defines it. Trace and span ids are hex
+        strings, and 64-bit integers may be strings. Only the fields Casebench reads are listed.
+      properties:
+        resourceSpans:
+          type: array
+          items:
+            type: object
+            properties:
+              scopeSpans:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    spans:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Span'
+    Span:
+      type: object
+      required: [traceId, name, startTimeUnixNano, endTimeUnixNano]
+      properties:
+        traceId:
+          type: string
+          description: 32 hex characters; the case's trace id.
+        spanId:
+          type: string
+        name:
+          type: string
+          description: Used as the step's name when no tool name is given.
+        startTimeUnixNano:
+          type: [string, integer]
+        endTimeUnixNano:
+          type: [string, integer]
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyValue'
+    KeyValue:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+        value:
+          type: object
+          description: One of `stringValue`, `intValue`, `doubleValue`, `boolValue`, `bytesValue`, `arrayValue` or `kvlistValue`.

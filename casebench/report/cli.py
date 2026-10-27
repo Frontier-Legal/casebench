@@ -29,6 +29,7 @@ from casebench.report.render import (
     warning_lines,
 )
 from casebench.runs.log import RunLog
+from casebench.runs.offline import TARGET as OFFLINE
 from casebench.workbench.sources import Workspace
 
 RUN = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -96,7 +97,8 @@ def report_command(run_dir: Path, target: Path | None, suite_dirs: tuple[Path, .
         click.echo(line)
     for line in corpus_lines(report.produced_by):
         click.echo(line)
-    for line in error_lines(report.scoring_errors, run_dir.name):
+    offline = RunLog(run_dir).info.target == OFFLINE
+    for line in error_lines(report.scoring_errors, run_dir.name, offline):
         click.echo(line)
     # Lawyers' verdicts given since the run was scored count here too (decision 0047).
     shown = lawyers_win(report.scores, read_reviews(run_dir))
@@ -136,7 +138,11 @@ def compare_command(first: Path, second: Path) -> None:
         click.echo("the two score sets were produced differently:")
     for change in found:
         click.echo(f"  {change.setting}: {change.first} -> {change.second}")
-    scores = [RunLog.read_scores(path) for path in sets]
+    # The scores the report and the gate show: a lawyer's verdict replaces the judge's (0047).
+    scores = [
+        lawyers_win(RunLog.read_scores(path), read_reviews(folder))
+        for path, folder in zip(sets, (first, second), strict=True)
+    ]
     # Lawyers' blind preferences, kept in the second run's folder (decision 0054).
     given = latest(read_preferences(second), info.run_id)
     areas = {s.case_id: s.practice_area for s in scores[1]}

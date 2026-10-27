@@ -1,0 +1,95 @@
+---
+title: Set up in the workbench
+description: Set Casebench up in the browser with the setup guide, then manage jurisdictions, models, settings and runs from the workbench's pages. Every change is saved to casebench.yaml.
+sidebar:
+  order: 2
+---
+
+import Screenshot from '../../../../../components/Screenshot.astro';
+
+Everything `casebench init` asks at a terminal, the workbench asks in the browser, with the same results: every choice is saved to `casebench.yaml`, which the command line and CI read. Use it when you prefer forms to flags, or when the person setting up does not use a terminal.
+
+## Open it
+
+Either answer **In the browser** to the first question of `casebench init`, or open the workbench yourself in the agent's project:
+
+```sh
+uv run --with casebench casebench ui
+```
+
+It binds to `127.0.0.1`, has no login, and opens your browser. Choose **I build or run the AI system** for the engineering view. When the project has no `casebench.yaml`, the setup guide starts.
+
+## The setup guide
+
+Five steps, each saved as you go. You can skip a step and come back; the guide resumes from the file.
+
+<Screenshot
+	name="eng-guide-agent"
+	alt="Step 2 of the setup guide, Your agent: what the code scan found, the function agent.py:answer offered, and the other ways to reach an agent."
+	caption="The agent step offers the functions the code scan found, or an HTTP endpoint, or a command."
+/>
+
+1. **Welcome**: what Casebench does and what it will send where.
+2. **Your agent**: a function the code scan found, another Python function, an HTTP endpoint or a command.
+3. **Jurisdictions**: each country and the source of its decisions and statutes.
+4. **The judge**: picked from the public model catalog, from another family than your agent's models.
+5. **Check**: one call to the agent, each source and each model, with what to fix.
+
+## Home
+
+Until the setup is complete, the workbench opens on Home: each part with whether it is done, what is missing and the button that does it, then the first run and the review queue.
+
+<Screenshot
+	name="eng-home"
+	alt="Home: the setup with the agent, jurisdictions, judge, keys and check, and the next steps."
+	caption="Home lists what is set up and what comes next."
+/>
+
+## Jurisdictions
+
+Each jurisdiction lists the sources that cover it, whether they hold decisions, statutes or both, and a test search. To add one, pick the country by name, then a source: a document API, an MCP server, a provider's profile, a source already connected, or a folder of sample files.
+
+For an API or an MCP server the workbench makes one search and shows the first result field by field, with its values. You pick which field is the id, and optionally the citation, the type and the passage. It then fetches one document and suggests its id, text and date from their values. Nobody writes a JSONPath, and nothing is guessed from a field's name.
+
+<Screenshot
+	name="eng-jurisdictions"
+	alt="The Jurisdictions page with one folder source and a button to add a jurisdiction."
+	caption="Jurisdictions and the sources that cover them."
+/>
+
+## Models
+
+Each model Casebench calls itself is a card that says what it does: the judge, an optional second judge from another family, and the two extraction models. Change one by picking it from the model catalog; its limits come with it. Set its key and test it on the card, alone. A second judge of the first judge's family is refused, as a run refuses it.
+
+<Screenshot
+	name="eng-models"
+	alt="The Models page: the judge's card with its family, price, key status and a test button, and an optional second judge."
+	caption="Each model with what it is for, its key and a test."
+/>
+
+## Settings
+
+Settings shows what each part is for, what it costs and the key it reads, and edits every section of `casebench.yaml`: agent, corpus, judge, extraction, limits, network, keys, team server, and the file itself.
+
+<Screenshot
+	name="eng-settings"
+	alt="The Settings overview: a table of each part, what it is used for, which model or source, its price and its key."
+	caption="What is used for what, with prices and keys."
+/>
+
+- **Saving.** A section is saved whole and validated as the command line reads the file. A save that does not validate changes nothing. The file is rewritten with its header, so comments you added are lost; the page warns before the first save of a file that has them.
+- **Keys.** The page never shows a key's value, only whether it is set in the shell, read from a file, or missing. A key typed here goes to the `.env` file `keys:` names for it when git ignores that file, otherwise to `.casebench/.env`, which `.casebench/.gitignore` keeps out of git. See [Keep keys out of the config](/developers/guides/setup/keys/).
+
+## Run
+
+The Run page shows what a run will send and cost before anything is sent: the dry run for a suite that exists, or the first run's extraction estimate when there is none. Starting it needs a confirmation. The run is `casebench run` started by the workbench, so it captures, resumes and scores exactly as at a terminal. The page follows its progress and can stop it. One run at a time.
+
+<Screenshot
+	name="eng-run"
+	alt="The Run page: the suite to run and what the run will send, counted before anything is sent."
+	caption="The calls a run will make, counted before it starts."
+/>
+
+## On a team server
+
+A team server shows none of these pages: it never edits settings or runs a suite, because it never computes a run's scores. Its only model calls are lawyers' Try a question. Its admins have their own Team page for people, keys and spend limits. See [Run a team server](/developers/guides/team/team-server/).

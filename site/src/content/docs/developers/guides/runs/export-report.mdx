@@ -1,0 +1,68 @@
+---
+title: Export a report for partners
+description: Write a scored run's report as one HTML file, a PDF or a Word document, with each measure by task and practice area, the error rates, worked examples and who approved the answer key.
+sidebar:
+  order: 5
+---
+
+import Screenshot from '../../../../../components/Screenshot.astro';
+
+`casebench report RUN --export FILE` writes a run's report for people who read PDF and Word, not JSON. The file's extension picks the format:
+
+```text frame="terminal"
+$ casebench report .casebench/runs/after-prompt-fix --export report.pdf
+wrote the report for partners to report.pdf
+```
+
+| Extension | Format |
+| --- | --- |
+| `.html` | One file with its styles inline. It loads no script, font or image from elsewhere, so it opens from disk or an email attachment. |
+| `.pdf` | A4, with the Noto Sans font embedded, so letters such as ğ, ş and ı print. It covers Latin, Greek and Cyrillic scripts. |
+| `.docx` | A Word document, to edit before sending |
+
+Any other extension is refused: `export as html, pdf, docx, not txt`.
+
+The workbench's **Reports** page downloads the same three files from **Export for partners**.
+
+<Screenshot
+	name="report-export"
+	alt="The Reports page for run after-prompt-fix, with the Export for partners menu open on PDF, Word and Web page, one file."
+	caption="Reports shows each error rate and opens the answers behind it. Export for partners writes the same file the command does."
+/>
+
+## What it holds
+
+1. The suite, its hash, the run, the date it was scored and exported, and the target.
+2. A short note on how to read it: every figure counts only lawyer-approved cases, each comes with its 95% interval, and no figure mixes tasks or practice areas. Unreviewed cases are left out and counted, as [the gate](/developers/guides/runs/gate-in-ci/) counts them.
+3. The error rates: fabricated citation, unsupported claim, wrong outcome and wrong statute, each with its rate, interval and the answers it covers. A rate appears when the run had answers it applies to.
+4. Each metric by task and practice area, with the number of cases, the score and its interval.
+5. Worked examples: for each error with failures, up to three failing answers, each with the question, the answer, and its evidence. The evidence is the citation and what the corpus found for it, or the court's passage or the lawyer's reference the criterion rests on.
+6. Who approved the answer key: each approver and how many cases they approved, cases whose approver is not recorded, and the unreviewed cases.
+
+A lawyer's verdict replaces the judge's before anything is counted, so an export made after lawyers reviewed the run reflects their verdicts.
+
+A case's practice area comes from the suite. Cases without one are reported under "no practice area".
+
+## When the export is refused
+
+The export reads the suite at the hash the run ran. When the suite has changed since, the export is refused:
+
+```text frame="terminal"
+Error: suite employment changed since run after-prompt-fix ran it; export the report from a run of the suite as it is
+```
+
+After a change, the export could no longer say who approved the answer key the run was scored against. Run the suite again, and export the new run.
+
+The suite is found by its id in the current folder and below. When it lives elsewhere, name the folder:
+
+```sh
+casebench report .casebench/runs/after-prompt-fix --export report.html --suites suites
+```
+
+A run with no scores yet cannot be exported; score it first.
+
+## Related
+
+- [Run a suite, and resume one](/developers/guides/runs/run-and-resume/#what-the-report-prints).
+- [Report format](/developers/reference/formats/report/), for `report.json`.
+- [Read a report](/lawyers/tutorials/read-a-report/), for lawyers and partners.

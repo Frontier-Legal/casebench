@@ -1,0 +1,174 @@
+---
+title: Run a team server
+description: Install casebench-ee on a machine lawyers can reach, create the first admin with the one-time setup code, and set up sign-in, roles, API keys, spend limits and the audit log.
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../../../components/Screenshot.astro';
+
+`casebench ui` serves one machine, with no login. A team server is the same workbench for several lawyers and engineers, with sign-in, five roles and an audit log nothing can change. It runs on a machine lawyers can reach, such as a company server. Your machine keeps running the evaluations and sends their results to it; see [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/).
+
+The team server is the `casebench-ee` package, built from the `ee/` folder of the Casebench repository and licensed under the Elastic License 2.0. Everything else in Casebench is Apache-2.0. The engineer's machine needs only `casebench`.
+
+The server stores and shows what your machine computed. It has no route that scores or re-scores a run. The one exception that calls models is Try a question: it sends a lawyer's question to the configured target and checks the answer's citations with the configured judge, within the spend limits below.
+
+## Install and start it
+
+Install it from PyPI. It requires the `casebench` release of the same version and Python 3.11 or later. Start it in a folder that holds your runs, suites and `casebench.yaml`:
+
+```sh
+pip install casebench-ee
+CASEBENCH_DATABASE_URL=postgresql://casebench:secret@db.internal/casebench \
+CASEBENCH_PUBLIC_URL=https://casebench.firm.example \
+casebench-team serve --host 0.0.0.0
+```
+
+Without `CASEBENCH_DATABASE_URL`, the team is kept in `.casebench/team.db`, SQLite, which is enough for a trial. Use Postgres for a team.
+
+### Options
+
+Each option of `casebench-team serve` also reads an environment variable.
+
+| Option | Variable | Default | Meaning |
+| --- | --- | --- | --- |
+| `--database` | `CASEBENCH_DATABASE_URL` | `sqlite:///.casebench/team.db` | The team's database, such as `postgresql://user@host/db` |
+| `--public-url` | `CASEBENCH_PUBLIC_URL` | `http://127.0.0.1:8080` | Where people open the app. Sign-in links point here. |
+| `--host` | `CASEBENCH_HOST` | `127.0.0.1` | The address to listen on. `0.0.0.0` listens on every interface. |
+| `--port` | `CASEBENCH_PORT` | `8080` | The port |
+| `--runs-dir` | `CASEBENCH_RUNS` | `.casebench/runs` | Where runs are kept |
+| `--suites` | `CASEBENCH_SUITES` | `.` | Folders to find suites in, separated by the path separator |
+| `--config` | `CASEBENCH_CONFIG` | `casebench.yaml` | The config. The admin page shows its targets read-only. |
+
+The server speaks plain HTTP. Serve it over HTTPS through your firm's reverse proxy, and set `--public-url` to the HTTPS address people open.
+
+### The container image
+
+Build the image from the repository's root. It holds `casebench`, `casebench-ee` and the team's web app, runs as a user without root, and listens on port 8080:
+
+```sh
+docker build -f ee/Dockerfile -t casebench-team .
+docker run -p 8080:8080 \
+  -e CASEBENCH_DATABASE_URL=postgresql://casebench:secret@db.internal/casebench \
+  -e CASEBENCH_PUBLIC_URL=https://casebench.firm.example \
+  -v /srv/casebench:/data \
+  casebench-team
+```
+
+The image reads runs from `/data/runs`, suites from `/data/suites` and the config from `/data/casebench.yaml`, on the `/data` volume.
+
+## Create the first admin
+
+There is no default password. On its first start, a server with no one in it prints a one-time setup code to its log:
+
+```text frame="terminal"
+No one is in this team yet. Open https://casebench.firm.example and enter the setup code RS5H-8W49-PRGV to create the first admin.
+the team server is at https://casebench.firm.example
+```
+
+Open the public URL, enter the code, and give the first admin's name, email and password. The password needs 12 characters at least, and is refused when it is a common or default one, or contains the email's name. Passwords are stored as scrypt hashes. Once an admin exists, setup is closed.
+
+<Screenshot
+	name="team-setup"
+	alt="The Set up your team form: setup code, your name, email and password, with the note that the password needs 12 characters at least and no default or common password."
+	caption="The setup form asks for the code from the server's log, then the first admin."
+	frame="plain"
+	width={480}
+/>
+
+## Sign-in
+
+No one can sign up uninvited. An admin invites each person by email with a role, on the **Team** page or with [`casebench invite`](/developers/guides/team/invite-lawyers/#invite-lawyers). The person signs in with an emailed link, valid for 15 minutes and usable once, or with Google or Microsoft when the server has those clients and the email matches.
+
+A session is a random token in an HttpOnly, SameSite cookie, stored hashed, and lasts 14 days. Five failed password attempts on one email within 15 minutes lock it for 15 minutes.
+
+<Screenshot
+	name="team-sign-in"
+	alt="The Sign in page: an email field, Ask for a sign-in link, the note that this server sends no email, and I have a password."
+	caption="Without SMTP, the sign-in page says the admin gives out links from the Team page."
+	frame="plain"
+	width={480}
+/>
+
+### Email
+
+Set the SMTP server that sends sign-in links, usually the firm's own:
+
+| Variable | Meaning |
+| --- | --- |
+| `CASEBENCH_SMTP_HOST` | The SMTP server. Without it the server sends no email. |
+| `CASEBENCH_SMTP_PORT` | Default `465` with `tls`, else `587` |
+| `CASEBENCH_SMTP_USERNAME`, `CASEBENCH_SMTP_PASSWORD` | The login, read from the environment only |
+| `CASEBENCH_SMTP_FROM` | The sender. Default `casebench@` and the SMTP host. |
+| `CASEBENCH_SMTP_SECURITY` | `starttls` (the default), `tls` or `none` |
+
+Without SMTP, the admin sees each sign-in link on the Team page, and **New link** makes another, to pass on by hand.
+
+### Google and Microsoft
+
+| Variable | Meaning |
+| --- | --- |
+| `CASEBENCH_GOOGLE_CLIENT_ID`, `CASEBENCH_GOOGLE_CLIENT_SECRET` | Sign-in with Google, for invited emails Google has verified |
+| `CASEBENCH_MICROSOFT_CLIENT_ID`, `CASEBENCH_MICROSOFT_CLIENT_SECRET` | Sign-in with Microsoft, for invited emails Microsoft vouches for: personal accounts, or work accounts whose domain is verified |
+
+A provider is offered only when both its variables are set. Register the client with `<public URL>/auth/google/callback` or `<public URL>/auth/microsoft/callback` as its redirect address.
+
+## Roles
+
+Each role includes the one before it.
+
+| Role | Can |
+| --- | --- |
+| viewer | Read the queue, results, reports and comparisons |
+| reviewer | Also give verdicts, compare runs blind and try questions |
+| editor | Also change golden data, approve others' changes and approve court drafts, and read the audit log |
+| engineer | Also use the engineering view and the harness view, push runs and invite viewers, reviewers and editors |
+| admin | Also invite engineers and admins, change roles, create API keys and set spend limits |
+
+There is always one admin at least. When `workbench: second_approval: true` is set, a second editor's approval must come from a different signed-in person.
+
+<Screenshot
+	name="team-people"
+	alt="The Team page: an invite form with email, name and role, a sign-in link to send by hand because the server sends no email, and three people with roles admin, editor and reviewer."
+	caption="The Team page invites people, changes roles, makes new sign-in links and deactivates people."
+/>
+
+## API keys
+
+An admin creates a named key with a role on the Team page, under **API keys**. The key is shown once and stored hashed. A key's role is below admin. Scripts and CI send it as `Authorization: Bearer`.
+
+An engineer's machine uses a key with the engineer role as `CASEBENCH_CLOUD_KEY`, for `casebench push`, `invite` and `pull`. A key can be revoked on the same page.
+
+## Spend limits
+
+"Try a question" sends a lawyer's question to the agent and the judge, which costs money. On a team server an admin sets a daily limit for the team and a limit per person, in US dollars, on the Team page. They take the place of `workbench: try_daily_limit_usd:` in `casebench.yaml`. Changes to them are in the audit log.
+
+## The audit log
+
+Editors, engineers and admins read the **Audit log**: every verdict, change to golden data and team event, with who, when, what it was before and after, and why. Team events include invitations, role changes, sign-ins, API keys created or revoked, and limits changed.
+
+Nothing in it can be changed or removed. Database triggers refuse any update or delete of an event, in SQLite and in Postgres, so not even someone with access to the app can edit it.
+
+<Screenshot
+	name="team-audit"
+	alt="The Audit log page: events with when, who, what and change, such as Deniz Kaya inviting two people and Ayşe Yılmaz signing in with a link."
+	caption="The audit log, newest first, searchable by name, case or reason."
+/>
+
+## What stays in casebench.yaml
+
+The agent, the judge and the corpus are still set in `casebench.yaml`. The admin page shows the targets read-only. The server never runs a suite: runs happen on the engineer's machine or in CI and are pushed to it.
+
+## Erase a team
+
+```sh
+casebench-team erase --database URL --runs-dir DIR --suites DIR --confirm NAME
+```
+
+This removes every table in the team's database, with the audit log, and everything in its run and suite folders. `NAME` is the database's name, typed back. What is erased cannot be restored.
+
+## Related
+
+- [Invite lawyers to a team server](/developers/guides/team/invite-lawyers/).
+- [Roles](/lawyers/reference/roles/), for lawyers.
+- [Sign in](/lawyers/guides/sign-in/), the lawyer's side.

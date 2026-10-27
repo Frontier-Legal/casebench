@@ -1,0 +1,159 @@
+---
+/** The two ways into the documentation: setting Casebench up, and working with it as a lawyer. */
+
+interface Door {
+	audience: 'developers' | 'lawyers';
+	title: string;
+	lede: string;
+	points: string[];
+	href: string;
+	action: string;
+}
+
+const doors: Door[] = [
+	{
+		audience: 'developers',
+		title: 'You are setting it up',
+		lede: 'Connect your agent, your document store and a judge model. No change to the agent\'s code.',
+		points: [
+			'A Python function, an HTTP endpoint or any command as the target',
+			'Model and retrieval calls recorded through a local proxy',
+			'Suites, runs and reports as plain files, and a gate for CI',
+		],
+		href: '/developers/',
+		action: 'Developer documentation',
+	},
+	{
+		audience: 'lawyers',
+		title: 'You are a lawyer',
+		lede: 'Review the AI\'s answers and keep the answer key in the browser, on a laptop or a phone. Nothing to install.',
+		points: [
+			'Confirm or overrule the grading model, one key per verdict',
+			'See which citations hold up, which are misread, which do not exist',
+			'Your verdict always outranks the model that grades',
+		],
+		href: '/lawyers/',
+		action: 'Lawyer documentation',
+	},
+];
+---
+
+<section class="audiences not-content" aria-labelledby="audiences-title">
+	<h2 id="audiences-title" class="sr-only">Choose your documentation</h2>
+	{
+		doors.map((door) => (
+			<a class="door" href={door.href} data-audience={door.audience}>
+				<p class="tag">{door.audience === 'developers' ? 'For developers' : 'For lawyers'}</p>
+				<h3>{door.title}</h3>
+				<p class="lede">{door.lede}</p>
+				<ul>
+					{door.points.map((point) => (
+						<li>{point}</li>
+					))}
+				</ul>
+				<span class="action">
+					{door.action} <span aria-hidden="true">→</span>
+				</span>
+			</a>
+		))
+	}
+</section>
+
+<style>
+	.audiences {
+		display: grid;
+		gap: 1.25rem;
+		padding: 1rem 0 3rem;
+	}
+
+	@media (min-width: 50rem) {
+		.audiences {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	.door {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1.75rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-lg);
+		background: var(--cb-surface);
+		color: inherit;
+		text-decoration: none;
+		transition:
+			border-color 150ms ease,
+			transform 150ms ease;
+	}
+
+	.door:hover {
+		border-color: var(--sl-color-accent);
+		transform: translateY(-2px);
+	}
+
+	.door[data-audience='lawyers']:hover {
+		border-color: var(--cb-misgrounded);
+	}
+
+	.tag {
+		margin: 0;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--sl-color-text-accent);
+	}
+
+	[data-audience='lawyers'] .tag {
+		color: var(--cb-misgrounded);
+	}
+
+	h3 {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-weight: 560;
+		font-size: 1.6rem;
+		letter-spacing: -0.015em;
+		color: var(--sl-color-white);
+	}
+
+	.lede {
+		margin: 0;
+		color: var(--sl-color-gray-2);
+	}
+
+	ul {
+		margin: 0.25rem 0 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.45rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+	}
+
+	li {
+		position: relative;
+		padding-inline-start: 1.25rem;
+	}
+
+	li::before {
+		content: '';
+		position: absolute;
+		inset-inline-start: 0.2rem;
+		top: 0.6em;
+		width: 0.4rem;
+		height: 0.4rem;
+		border-radius: 999px;
+		background: var(--sl-color-gray-4);
+	}
+
+	.action {
+		margin-top: auto;
+		padding-top: 0.75rem;
+		font-weight: 600;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-white);
+	}
+</style>

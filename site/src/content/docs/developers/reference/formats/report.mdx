@@ -1,0 +1,89 @@
+---
+title: Report
+description: "A scored run's report.json: a table per task and metric, citation counts, error rates, spend, judge agreement and calibration, the authority funnel and every score."
+sidebar:
+  order: 4
+---
+
+import SchemaTables from '../../../../../components/SchemaTables.astro';
+
+`casebench.report/1.1`. The `report.json` a scored run writes in its run folder. It names its own format in `format`. It is the file to copy back from a machine that ran Casebench. Casebench reads every 1.x version, and `casebench report RUN_DIR` prints one again.
+
+## Reading it
+
+- `tables` holds one table per task type and metric, with a row per reference source, approval state and jurisdiction. There is no overall figure.
+- `produced_by` says what produced the scores; see [Comparable runs](/developers/concepts/comparable-runs/).
+- `scores` holds every score with its criteria verdicts and citation checks, so any figure in `tables` can be recomputed.
+- `citations` counts each citation label over the run, and `agreement` counts, per metric, how often two judges disagreed.
+- `funnel` follows each court authority through the captured steps.
+- `scoring_errors` lists the results a metric could not score. Scoring the run again finishes them.
+
+## What 1.1 adds
+
+| Field | Holds |
+| --- | --- |
+| `error_rates` | Four errors, each as the share of answers it could occur in, with an interval and the answers that have it: fabricated citation, unsupported claim, wrong outcome, wrong statute. An error no answer could have is left out. See [Labels](/developers/reference/labels/#error-rates). |
+| `spend` | What the run's model calls cost, per model, the agent's apart from the judge's. A total adds only priced calls, and `unpriced` names every model it leaves out. |
+| `warnings` | Such as a judge of the same model family as the agent |
+| `unevidenced` | Cases a metric they name did not score, because they have nothing to earn for it, such as criteria with no positive weight |
+| `calibration` | Per kind of criterion, how many verdicts lawyers gave and how many agreed with the judge |
+
+On a score, 1.1 adds `practice_area`. On a criterion verdict, it adds `kind` (the kind of fact the criterion comes from), `evidence` (the court's passage or the lawyer's value for each of those facts), `note` (why a verdict of met does not count, such as a quote the answer does not hold), and `reviewed_by` with `judge_met` when a lawyer's verdict replaced the judge's.
+
+## Example
+
+From a sample run, `after-prompt-fix`, scored by Casebench 0.5.1 with a scripted judge. Its figures show the shape, not a model's result.
+
+```json title="report.json (excerpt)"
+{
+  "format": "casebench.report/1.1",
+  "score_set": "20261026T195658Z-9fb4283b4adc4504aa607d33865261ba.jsonl",
+  "suite_id": "employment",
+  "citations": [
+    { "label": "verified", "count": 5, "rate": 0.7142857142857143 },
+    { "label": "misgrounded", "count": 1, "rate": 0.14285714285714285 },
+    { "label": "fabricated", "count": 1, "rate": 0.14285714285714285 },
+    { "label": "unchecked", "count": 0, "rate": 0.0 }
+  ],
+  "error_rates": [
+    {
+      "error": "fabricated citation",
+      "meaning": "cites a decision or statute the corpus does not hold",
+      "n": 7,
+      "rate": 0.14285714285714285,
+      "low": 0.0,
+      "high": 0.5714285714285714,
+      "failing": [{ "case_id": "forced-resignation", "repeat": 0 }]
+    },
+    {
+      "error": "unsupported claim",
+      "meaning": "cites an authority the corpus holds for something it does not say",
+      "n": 7,
+      "rate": 0.14285714285714285,
+      "low": 0.0,
+      "high": 0.5714285714285714,
+      "failing": [{ "case_id": "compensation", "repeat": 0 }]
+    }
+  ],
+  "spend": {
+    "models": [
+      { "whose": "judge", "model": "anthropic/demo-judge", "calls": 26, "input_tokens": 0, "output_tokens": 0, "cost": 0.0 }
+    ],
+    "agent": 0.0,
+    "judge": 0.0,
+    "total": 0.0,
+    "unpriced": []
+  },
+  "warnings": [],
+  "unevidenced": [],
+  "calibration": []
+}
+```
+
+The suite has no outcome or statute cases, so the report leaves out those two error rates.
+
+## Fields
+
+These tables are generated from the JSON Schema that ships with Casebench, at `casebench/formats/schemas/report/1.1.json`. `casebench schema export` writes a copy. The 1.0 schema ships beside it, at `report/1.0.json`.
+
+<SchemaTables format="report" version="1.1" />

@@ -14,7 +14,7 @@ from casebench.capture.context import current_traceparent
 from casebench.core.model import Record
 from casebench.targets.answer import Answer, to_answer
 from casebench.targets.interface import TargetDidNotStart
-from casebench.targets.placeholders import expand_headers, fill_json, split_command
+from casebench.targets.placeholders import expand_env, expand_headers, fill_json, split_command
 
 # Decision 0017: a start that completes between polls is seen at most this late.
 READY_POLL_SECONDS = 0.1
@@ -62,22 +62,29 @@ class Target:
         self.process: subprocess.Popen[bytes] | None = None
         self.client = network.async_client(timeout=self.config.timeout_s)
 
+    def _url(self) -> str:
+        """The endpoint, with its `${NAME}`s read as a corpus's base URL is (decision 0044)."""
+        return expand_env({"url": self.config.url})["url"]
+
     async def start(self, slots: int = 1) -> None:
         if self.config.start is None:
             return
+        try:
+            url = self._url()
+        except KeyError as missing:
+            raise StartFailed(missing.args[0]) from None
         self.process = subprocess.Popen(split_command(self.config.start))
-        await self._wait_until_ready()
+        await self._wait_until_ready(url)
 
-    async def _wait_until_ready(self) -> None:
+    async def _wait_until_ready(self, url: str) -> None:
         """Until the endpoint answers anything, the start command exits, or the user stops."""
         while True:
             if self.process is not None and self.process.poll() is not None:
                 raise StartFailed(
-                    f"the start command exited with {self.process.returncode} "
-                    f"before {self.config.url} answered"
+                    f"the start command exited with {self.process.returncode} before {url} answered"
                 )
             try:
-                await self.client.request("HEAD", self.config.url)
+                await self.client.request("HEAD", url)
                 return
             except httpx2.TransportError:
                 await asyncio.sleep(READY_POLL_SECONDS)
@@ -85,7 +92,7 @@ class Target:
     async def answer(self, inputs: Mapping[str, Any]) -> Answer:
         response = await self.client.request(
             self.config.method,
-            self.config.url,
+            self._url(),
             headers=_with_trace_context(expand_headers(self.config.headers)),
             json=fill_json(self.config.body, inputs),
         )

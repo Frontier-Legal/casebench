@@ -28,6 +28,8 @@ class ConfigError(ValueError):
 # The name a single `corpus:` is read under (decision 0036).
 SINGLE = "corpus"
 CorpusName = Annotated[str, StringConstraints(pattern=NAME)]
+# The built-in connector whose `path` option names a folder on this machine.
+FOLDER_CONNECTOR = "folder"
 # A judge and, optionally, a second one from another model family (decision 0035).
 MOST_JUDGES = 2
 
@@ -118,9 +120,22 @@ def relative_to(base: Path, entry: str) -> str:
     return f"{(base / location).resolve()}{colon}{function}"
 
 
+def folder_relative_to(base: Path, path: str) -> str:
+    """A folder corpus's `path`, made relative to the config's folder when it is relative;
+    an absolute path stays as written."""
+    return path if Path(path).is_absolute() else str((base / path).resolve())
+
+
+def _corpus_blocks(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every corpus block as written: the one under `corpus:` and each under `corpora:`."""
+    corpora = data.get("corpora")
+    found = [data.get(SINGLE), *(corpora.values() if isinstance(corpora, dict) else [])]
+    return [block for block in found if isinstance(block, dict)]
+
+
 def load_config(path: Path = DEFAULT_CONFIG) -> CasebenchConfig:
-    """`yaml.safe_load` only: a config never constructs Python objects. Script paths in it
-    are relative to the config file."""
+    """`yaml.safe_load` only: a config never constructs Python objects. Script paths and
+    folder corpus paths in it are relative to the config file."""
     if not path.is_file():
         raise ConfigError(f"{path} does not exist; run casebench init or pass --config")
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -146,6 +161,12 @@ def config_from(data: Any, base: Path, where: str) -> CasebenchConfig:
     for function in (data.get("capture") or {}).get("functions") or []:
         if isinstance(function, dict) and isinstance(function.get("function"), str):
             function["function"] = relative_to(base, function["function"])
+    for block in _corpus_blocks(data):
+        options = block.get("options")
+        if block.get("connector") != FOLDER_CONNECTOR or not isinstance(options, dict):
+            continue
+        if isinstance(options.get("path"), str):
+            options["path"] = folder_relative_to(base, options["path"])
     try:
         return CasebenchConfig.model_validate(data)
     except ValidationError as error:

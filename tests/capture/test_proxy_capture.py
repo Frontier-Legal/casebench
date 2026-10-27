@@ -6,13 +6,20 @@ import socket
 import sys
 from pathlib import Path
 
+import httpx2
+from click.testing import CliRunner
+
 from casebench.capture.config import CaptureConfig, routes_for
+from casebench.capture.redirect import FOLLOW, followed
 from casebench.capture.session import CaptureSession
 from casebench.capture.step import NO_DIAGNOSTIC, StepKind
+from casebench.cli import main
 from casebench.core.case import Case, Reference, ReferenceSource, Task
 from casebench.runs.log import Result, RunInfo, RunLog
 from casebench.runs.runner import run_cases
+from casebench.suites.freeze import freeze
 from casebench.targets.load import target_from_config
+from tests.capture.openai_upstream import start_openai
 from tests.capture.upstreams import start_upstream
 
 AGENT = Path(__file__).resolve().parent / "plain_http_agent.py"
@@ -149,3 +156,110 @@ def test_a_started_http_agent_runs_under_the_capture_wrapper(tmp_path: Path):
     assert result.output == "The dismissal is invalid."
     [call] = [s for s in result.steps if s.kind is StepKind.LLM]
     assert (call.provider, call.input_tokens, call.output_tokens) == ("anthropic", 200, 40)
+
+
+def test_a_streamed_call_a_python_agent_sends_to_an_openai_compatible_host_reports_its_tokens():
+    upstream = start_openai()
+    session = CaptureSession(routes_for(None))
+    asked = {"model": "gpt-5", "stream": True, "messages": [{"role": "user", "content": "Q?"}]}
+
+    async def call() -> list:
+        await session.start()
+        try:
+            session.recorder.begin("c1")
+            here = f"http://127.0.0.1:{upstream.server_port}/v1/chat/completions"
+            url = followed(here, session.env[FOLLOW])
+            assert url is not None
+            async with httpx2.AsyncClient() as client:
+                (await client.post(url, json=asked)).raise_for_status()
+            return session.recorder.end("c1")
+        finally:
+            await session.stop()
+
+    try:
+        [exchange] = asyncio.run(call())
+    finally:
+        upstream.shutdown()
+
+    [step] = session.parse(exchange)
+    assert (step.provider, step.input_tokens, step.output_tokens) == ("openai", 30, 4)
+    added = exchange.request_body.pop("stream_options")
+    assert (added, exchange.request_body) == ({"include_usage": True}, asked)
+
+
+def test_a_route_whose_variable_already_points_at_the_proxy_forwards_to_its_upstream(
+    monkeypatch,
+):
+    upstream = start_upstream()
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    # The shell exported the lines `casebench proxy env` prints for this port.
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", f"http://127.0.0.1:{port}/anthropic")
+    base = f"http://127.0.0.1:{upstream.server_port}"
+    session = CaptureSession(routes_for(CaptureConfig(routes=upstream_routes(base))), port)
+    asked = {"model": "claude-sonnet-5-5", "max_tokens": 512, "messages": []}
+
+    async def call() -> httpx2.Response:
+        await session.start()
+        try:
+            async with httpx2.AsyncClient() as client:
+                return await client.post(
+                    f"{session.env['ANTHROPIC_BASE_URL']}/v1/messages", json=asked
+                )
+        finally:
+            await session.stop()
+
+    try:
+        answered = asyncio.run(call())
+    finally:
+        upstream.shutdown()
+
+    assert session.routes["anthropic"].upstream == base
+    assert answered.json()["content"][0]["text"] == "The dismissal is invalid."
+
+
+def test_a_run_says_how_many_calls_it_could_not_attribute_to_a_case(tmp_path: Path):
+    upstream = start_upstream()
+    stages = tmp_path / "stages"
+    stages.mkdir()
+    agent = Path(__file__).resolve().parent / "concurrent_agent.py"
+    config = tmp_path / "casebench.yaml"
+    config.write_text(
+        f"target: {{type: command, run: '{sys.executable} {agent} {stages} 2'}}\n"
+        "capture:\n  routes:\n"
+        f"    - {{name: anthropic, upstream: 'http://127.0.0.1:{upstream.server_port}'}}\n",
+        encoding="utf-8",
+    )
+    suite = tmp_path / "suite"
+    freeze("concurrent", [case("c1", "Valid?"), case("c2", "Void?")], suite)
+    try:
+        printed = CliRunner().invoke(
+            main,
+            [
+                "run",
+                *("--suite", str(suite), "--config", str(config)),
+                *("--max-concurrency", "2", "--runs-dir", str(tmp_path / "runs")),
+                *("--run-id", "r1"),
+            ],
+        )
+    finally:
+        upstream.shutdown()
+
+    assert printed.exit_code == 0, printed.output
+    assert "2 calls could not be attributed to a case" in printed.output
+    assert RunLog(tmp_path / "runs" / "r1").info.unattributed_calls == 2
+
+
+def test_a_capture_routes_upstream_may_name_a_variable(tmp_path: Path, monkeypatch):
+    upstream = start_upstream()
+    monkeypatch.setenv("MODEL_URL", f"http://127.0.0.1:{upstream.server_port}")
+    try:
+        results = run(tmp_path, upstream_routes("${MODEL_URL}"))
+    finally:
+        upstream.shutdown()
+
+    for result in results:
+        assert result.error is None, result.error
+        assert result.output == "The dismissal is invalid."
+        assert len([s for s in result.steps if s.kind is StepKind.LLM]) == 2

@@ -23,7 +23,7 @@ from casebench.judge.client import Judge
 from casebench.judge.config import JudgeConfig
 from casebench.plugins import registry
 from casebench.plugins.kinds import kind_named
-from casebench.providers.call import KeyRefused
+from casebench.providers.call import KeyRefused, MissingApiKey
 from casebench.providers.interface import Message
 from casebench.providers.settings import settings_of
 from casebench.setup.catalog import installed
@@ -120,6 +120,16 @@ def _entry_defined(entry: str) -> str | None:
             for target in node.targets
             if isinstance(target, ast.Name)
         }
+        # An import binds its alias, or the module's first part: `import a.b` binds `a`.
+        imported = [
+            alias
+            for node in tree.body
+            if isinstance(node, ast.Import | ast.ImportFrom)
+            for alias in node.names
+        ]
+        names |= {alias.asname or alias.name.split(".")[0] for alias in imported}
+        if any(alias.name == "*" for alias in imported):
+            return None  # what a star import binds is known only by running it
         return None if function in names else f"{path} defines no {function!r}"
     try:
         found = importlib.util.find_spec(location)
@@ -238,11 +248,11 @@ def _target(config: CasebenchConfig) -> Check:
     return Check("target", Status.PASSED, f"answered {_quoted(result.output)}, {said}")
 
 
-def _refused(error: BaseException) -> bool:
-    """Whether a provider refused the key, anywhere in the chain of causes."""
+def _caused_by(error: BaseException, kind: type[BaseException]) -> bool:
+    """Whether an error of `kind` is anywhere in the chain of causes."""
     seen: BaseException | None = error
     while seen is not None:
-        if isinstance(seen, KeyRefused):
+        if isinstance(seen, kind):
             return True
         seen = seen.__cause__ or seen.__context__
     return False
@@ -256,14 +266,19 @@ def model_check(name: str, model: JudgeConfig) -> Check:
         Judge(model).ask(JUDGE_SYSTEM, JUDGE_QUESTION)
     except Exception as error:
         named = getattr(Judge(model).provider, "api_key_env", None)
+        if named and _caused_by(error, MissingApiKey):
+            # Nothing was sent, so the settings were never put to the provider.
+            unset = f"{named} is not set, in the shell or in a .env file `keys:` names"
+            found = f"set {named}; `casebench keys {named}` says which .env files hold it"
+            return Check(name, Status.FAILED, unset, found)
         refused = (
             f"the provider refused the key: check that {named} holds a key for this provider; "
             f"`casebench keys {named}` says where it is read from"
             if named
             else "the provider refused the credentials it found here"
         )
-        failed = _failure(name, error, refused if _refused(error) else NEXT_MODEL)
-        if settings and failed.status is Status.FAILED and not _refused(error):
+        failed = _failure(name, error, refused if _caused_by(error, KeyRefused) else NEXT_MODEL)
+        if settings and failed.status is Status.FAILED and not _caused_by(error, KeyRefused):
             refused = f"refused the call with {shown}: {failed.detail}"
             failed = Check(name, Status.FAILED, refused, f"drop {shown} from its options")
         return failed
@@ -271,14 +286,15 @@ def model_check(name: str, model: JudgeConfig) -> Check:
     return Check(name, Status.PASSED, f"{model.provider} {model.model} answered{accepted}")
 
 
-def team_server_check(cloud: CloudConfig) -> Check:
-    """The team server answers, and takes the key as an engineer's (decision 0064)."""
+def team_server_check(cloud: CloudConfig, root: Path) -> Check:
+    """The team server answers, and takes the key as an engineer's (decision 0064); `root`
+    is the project's folder, whose .env files may hold the key."""
     key_step = (
         f"ask the team server's admin for an API key with the engineer role, made on its Team "
         f"page, and set it as {cloud.key_env} here, in the environment or a .env file"
     )
     try:
-        with connect(cloud) as http:
+        with connect(cloud, root) as http:
             response = http.post(TEAM_PROBE, json={"suites": [], "runs": []})
     except CloudError as error:
         return Check(TEAM_SERVER, Status.FAILED, str(error), key_step)
@@ -295,25 +311,28 @@ def team_server_check(cloud: CloudConfig) -> Check:
     return Check(TEAM_SERVER, Status.PASSED, f"{cloud.url} took the key as an engineer's")
 
 
-def _probe(probe: str | None) -> list[str]:
+def probe_queries(probe: str | None) -> list[str]:
     """The search a corpus was added with, run when no other is given (decision 0044)."""
     return [probe] if probe else []
 
 
 def live(
-    config: CasebenchConfig, queries: list[str] | None = None, size: int = SETUP_SAMPLE
+    config: CasebenchConfig,
+    queries: list[str] | None = None,
+    size: int = SETUP_SAMPLE,
+    root: Path = Path("."),
 ) -> list[Check]:
     """One check for each part the config names: the corpus, the target, each model and the
-    team server."""
+    team server. `root` is the project's folder, whose .env files may hold the server's key."""
     checks = []
     corpora = Corpora(config.corpora)
     checks += [
-        _corpus(corpora, name, queries or _probe(config.corpora[name].probe), size)
+        _corpus(corpora, name, queries or probe_queries(config.corpora[name].probe), size)
         for name in corpora.names
     ]
     if config.target is not None:
         checks.append(_target(config))
     checks += [model_check(name, model) for name, model in models_of(config)]
     if config.cloud is not None:
-        checks.append(team_server_check(config.cloud))
+        checks.append(team_server_check(config.cloud, root))
     return checks

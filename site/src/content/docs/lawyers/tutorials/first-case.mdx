@@ -1,0 +1,71 @@
+---
+title: Write your first case
+description: Add a test case in Golden data with the question, the answer you expect and the weighted points a correct answer must make. About ten minutes.
+sidebar:
+  order: 2
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+A case is a question, the answer you would give, and the points a correct answer must make. Every time your team tests the AI, it is asked your question and graded on your points. In this tutorial you write one.
+
+You need the editor role. A reviewer can try questions and review answers, but not change the answer key.
+
+## Open Golden data
+
+Choose **Golden data** in the sidebar. It lists every case in each suite, with where its answer key came from and whether it is approved.
+
+<Screenshot
+	name="golden-data"
+	alt="Golden data: the employment suite with seven cases, six lawyer cases marked Approved and one court case marked Draft."
+	caption="Golden data, the answer key every score rests on. Six approved lawyer cases and one court draft."
+/>
+
+## Write the case
+
+<Steps>
+
+1. Choose **New case**. A form opens on the right.
+
+2. Pick the task. **Legal question** is the usual one: the AI answers a question. Research, drafting, editing and extraction tasks have fields of their own.
+
+3. Fill in the fields:
+
+	| Field | What to write |
+	| --- | --- |
+	| Question | The question, as the AI's users put it: for a research assistant, as a lawyer would |
+	| Facts | The facts the answer may rely on, if the question needs them |
+	| Reference answer | The answer you would give. The grading model reads it as your evidence. |
+	| Key points | One per line, each starting with its weight, such as `+3 Says the reduction needs written consent.` |
+	| Statutes, Precedents | One per line, as you would cite them |
+	| Practice area | Optional, such as `employment`. Reports give each figure by practice area. |
+
+	<Screenshot
+		name="golden-new"
+		alt="The New case form filled in: a question about reducing salary, a reference answer, three weighted key points and the practice area employment."
+		caption="Three key points: two that a correct answer earns, one that costs it."
+		frame="plain"
+		width={520}
+	/>
+
+4. Write the key points with care. They are what the AI is graded on.
+	- A positive weight is earned when the answer makes the point. Give the decisive point the largest weight.
+	- A negative weight is lost when the answer does something wrong, such as `-3 Says the employer may reduce pay unilaterally.`
+	- A line without a weight weighs 1.
+
+5. Choose **Save the case**.
+
+</Steps>
+
+## Who approves it
+
+Your case joins the suite as approved, with you as its approver, unless your team requires a second editor. In that case it waits as a draft in other editors' queues until one of them approves it, and nobody approves their own change. Either way, the change log keeps your name, the time and your note.
+
+The next time your team runs the suite, your question is asked and graded on your points.
+
+## Next
+
+- [Write a good answer key](/lawyers/guides/good-expected-answers/): how to word questions and key points so the grading is fair.
+- [Change a case](/lawyers/guides/change-a-case/).
+- [Approve court drafts](/lawyers/guides/approve-court-drafts/), cases Casebench drafts from decisions for you to check.

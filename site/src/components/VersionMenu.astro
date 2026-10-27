@@ -1,0 +1,94 @@
+---
+/**
+ * The documentation version in the header: the release being read, and a menu of archived releases when there are
+ * any. Works without JavaScript.
+ */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { projectVersion, versionMenu } from '../lib/versions';
+
+// Pages are rendered at build time from the site folder, which sits beside the package.
+const pyproject = readFileSync(resolve(process.cwd(), '..', 'pyproject.toml'), 'utf8');
+const listed = JSON.parse(readFileSync(resolve(process.cwd(), 'versions.json'), 'utf8'));
+const menu = versionMenu(projectVersion(pyproject), listed);
+---
+
+{
+	menu.archived.length === 0 ? (
+		<a class="version" href="/changelog/" title="What changed in each release">
+			v{menu.current}
+		</a>
+	) : (
+		<details class="version-menu">
+			<summary class="version">v{menu.current}</summary>
+			<ul>
+				<li>
+					<a href="/changelog/">v{menu.current}, this site</a>
+				</li>
+				{menu.archived.map((version) => (
+					<li>
+						<a href={version.url}>v{version.label}</a>
+					</li>
+				))}
+			</ul>
+		</details>
+	)
+}
+
+<style>
+	.version {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.15rem 0.5rem;
+		border: 1px solid var(--cb-border);
+		border-radius: 999px;
+		font-family: var(--sl-font-mono);
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+		text-decoration: none;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.version:hover {
+		color: var(--sl-color-white);
+	}
+
+	.version-menu {
+		position: relative;
+	}
+
+	.version-menu summary::-webkit-details-marker {
+		display: none;
+	}
+
+	ul {
+		position: absolute;
+		inset-inline-end: 0;
+		top: calc(100% + 0.4rem);
+		z-index: 10;
+		min-width: 10rem;
+		margin: 0;
+		padding: 0.35rem;
+		list-style: none;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius);
+		background: var(--sl-color-black);
+		box-shadow: var(--sl-shadow-md);
+	}
+
+	ul a {
+		display: block;
+		padding: 0.35rem 0.6rem;
+		border-radius: var(--cb-radius-sm);
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+	}
+
+	ul a:hover {
+		background: var(--cb-surface-raised);
+		color: var(--sl-color-white);
+	}
+</style>

@@ -23,6 +23,7 @@ from casebench.providers.call import complete
 from casebench.providers.interface import Message
 from casebench.setup import judge_question, models
 from casebench.targets.builtin.command import Target as CommandTarget
+from casebench.targets.placeholders import fill_json
 from tests.corpus.document_api import KEY, start_document_api
 
 CATALOG = Path(__file__).parent / "catalog.json"
@@ -297,3 +298,19 @@ def test_a_key_never_shows_or_leaves_casebench(project: Path):
     assert "invalid key Bearer ${OPENAI_API_KEY}" in str(refusal.value)
     assert "would write a key into casebench.yaml" in str(typed_in.value)
     assert SECRET not in str(typed_in.value)
+
+
+def test_the_http_body_prompt_shows_the_placeholder_a_run_fills(project: Path):
+    flags = ["--url", "http://127.0.0.1:9/ask", "--corpus", "none", "--no-judge", "--no-extract"]
+
+    typed = '{"q": "{{question}}"}'
+
+    made = init(*flags, "--no-live", "--yes", typed=f"{typed}\n$.answer\n")
+    body = (load_config(project / "casebench.yaml").target or {})["body"]
+    asked = made.output.split("the request body", 1)[1].splitlines()[0].replace(typed, "")
+
+    assert made.exit_code == 0, made.output
+    assert "{{question}}" in asked
+    assert fill_json(body, {"question": "Is the dismissal valid?"}) == {
+        "q": "Is the dismissal valid?"
+    }

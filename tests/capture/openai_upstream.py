@@ -42,9 +42,33 @@ class OpenAi(BaseHTTPRequestHandler):
             reply = completion({"role": "assistant", "content": "Invalid dismissal."}, 150, 8)
         else:
             reply = completion({"role": "assistant", "content": "Short: invalid."}, 30, 4)
+        if body.get("stream"):
+            self._stream(reply, (body.get("stream_options") or {}).get("include_usage", False))
+            return
         payload = json.dumps(reply).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _stream(self, reply: dict, include_usage: bool) -> None:
+        """The reply as chunks; the usage comes in a last chunk only when the request asked."""
+        message = reply["choices"][0]["message"]
+        chunks = [
+            {
+                "id": reply["id"],
+                "object": "chat.completion.chunk",
+                "model": reply["model"],
+                "choices": [{"index": 0, "delta": {"content": message.get("content")}}],
+            }
+        ]
+        if include_usage:
+            chunks.append({**chunks[0], "choices": [], "usage": reply["usage"]})
+        lines = [f"data: {json.dumps(chunk)}\n\n" for chunk in chunks] + ["data: [DONE]\n\n"]
+        payload = "".join(lines).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)

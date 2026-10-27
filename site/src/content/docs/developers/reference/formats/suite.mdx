@@ -1,0 +1,53 @@
+---
+title: Suite manifest
+description: "A frozen suite's manifest.json: its id, content hash, the Casebench version that froze it and the mix of cases it holds."
+sidebar:
+  order: 3
+---
+
+import SchemaTables from '../../../../../components/SchemaTables.astro';
+
+`casebench.suite/1.0`. The `manifest.json` beside a suite's `suite.jsonl`. It names its own format in `format`, and the format of every line of `suite.jsonl` in `case_format`.
+
+## Example
+
+A suite of one case, the [case example](/developers/reference/formats/case/), frozen with Casebench 0.5.1. Its `generation` has the fields `casebench generate` records.
+
+```json title="manifest.json"
+{
+  "format": "casebench.suite/1.0",
+  "case_format": "casebench.case/1.1",
+  "suite_id": "employment-2024",
+  "content_hash": "sha256:805053123b76331666bd1af7a9535562ebbe1e7c77fb74c6b2da0ca2d5bb30ab",
+  "casebench_version": "0.5.1",
+  "case_count": 1,
+  "task_types": { "outcome": 1 },
+  "reference_sources": { "court": 1 },
+  "approvals": { "approved": 1 },
+  "generation": {
+    "types": ["outcome"],
+    "requested": 1,
+    "after": null,
+    "decisions_allowed": 1,
+    "decisions_excluded_by_date": 0,
+    "stratified_by": null
+  },
+  "corpora": { "appeals": 1 },
+  "jurisdictions": { "GB": 1 },
+  "extensions": {}
+}
+```
+
+`corpora` counts the cases per corpus their source decision came from, and `jurisdictions` the cases per jurisdiction, for those that name one. `generation` is free-form: `casebench generate` records the case types, the count asked for, the `--after` cutoff with how many decisions it allowed and excluded, whether the suite was balanced across court levels, and, for statute and precedent cases, how many court citations were found in the corpus and how many were dropped.
+
+## The content hash
+
+`content_hash` is SHA-256 over the cases in order, each serialised as canonical JSON: keys sorted, no insignificant whitespace, UTF-8, one case per line. A suite generated from the same keys with the same suite id produces the same lines in the same order, because sampling is seeded from the suite id. `casebench validate` checks the hash when it validates `manifest.json` or `suite.jsonl` with the other file beside it.
+
+A manifest that names no format was frozen before formats existed. It is read as 1.0, with a note, and its hash is checked as before.
+
+## Fields
+
+These tables are generated from the JSON Schema that ships with Casebench, at `casebench/formats/schemas/suite/1.0.json`. `casebench schema export` writes a copy.
+
+<SchemaTables format="suite" version="1.0" />

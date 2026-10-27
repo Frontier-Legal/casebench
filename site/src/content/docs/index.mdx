@@ -1,0 +1,29 @@
+---
+title: Casebench
+description: Open-source evaluation for legal AI. Build test cases from court decisions you already hold, check every citation against your own corpus, and report each task with its interval.
+template: splash
+pagefind: false
+editUrl: false
+lastUpdated: false
+head:
+  - tag: title
+    content: Casebench · Measure the legal accuracy of an AI system
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: '{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"Casebench","description":"Measure the legal accuracy of an AI system against real court decisions and lawyer-written references.","codeRepository":"https://github.com/Frontier-Legal/casebench","license":"https://www.apache.org/licenses/LICENSE-2.0","programmingLanguage":"Python","url":"https://casebench.dev/"}'
+---
+
+import Audiences from '../../components/landing/Audiences.astro';
+import CitationDemo from '../../components/landing/CitationDemo.astro';
+import Hero from '../../components/landing/Hero.astro';
+import Pipeline from '../../components/landing/Pipeline.astro';
+import Principles from '../../components/landing/Principles.astro';
+
+<div class="landing">
+	<Hero />
+	<Audiences />
+	<Pipeline />
+	<CitationDemo />
+	<Principles />
+</div>

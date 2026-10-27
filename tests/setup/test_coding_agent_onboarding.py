@@ -5,6 +5,8 @@ import asyncio
 import hashlib
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
 import threading
@@ -21,8 +23,10 @@ from casebench.capture.session import CaptureSession, session_for
 from casebench.capture.step import StepKind
 from casebench.cli import main
 from casebench.config import load_config
+from casebench.runs.first import SAMPLE
 from casebench.runs.log import RunInfo, RunLog
 from casebench.runs.runner import run_cases
+from casebench.suites.freeze import freeze
 from casebench.targets.load import target_from_config
 from tests.capture.openai_upstream import start_openai
 from tests.capture.test_proxy_capture import case
@@ -336,6 +340,30 @@ def test_an_adapter_in_casebench_reaches_the_projects_code(
         assert "no call was recorded" in checked.output  # this adapter calls no model
 
 
+def test_an_adapter_given_with_python_reaches_the_projects_code(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+):
+    write(project / ".casebench" / "target.py", ADAPTER)
+    write(project / "casebench.yaml", yaml.safe_dump({"target": {"type": "command", "run": "x"}}))
+    freeze("s", [case("c1", "Is the dismissal valid?")], project / "suite")
+    elsewhere = project.parent / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    ran = invoke(
+        "run", "--config", str(project / "casebench.yaml"),
+        "--python", str(project / ".casebench" / "target.py:answer"),
+        "--suite", str(project / "suite"), "--runs-dir", "runs", "--run-id", "r", "--no-capture",
+    )  # fmt: skip
+    helped = " ".join(invoke("run", "--help").output.split())
+
+    assert ran.exit_code == 0, ran.output
+    [result] = RunLog(elsewhere / "runs" / "r").results()
+    assert result.error is None, result.error
+    assert result.output == "production: the dismissal is invalid"
+    assert "in this process" not in helped and "in worker processes" in helped
+
+
 def test_a_hard_coded_url_is_still_recorded(project: Path):
     upstream = start_openai()
     literal = f"http://127.0.0.1:{upstream.server_port}/v1"
@@ -521,3 +549,43 @@ def test_an_agents_own_search_is_recorded(project: Path):
     [read] = [step for step in result.steps if step.kind is StepKind.DOCUMENT]
     assert searched.doc_ids_out == ["101"]
     assert read.doc_ids_out == ["101"]
+
+
+def _guided_init(guide: str) -> list[str]:
+    """The init command the guide's setup step gives, with this test's models in it."""
+    setup = guide.split("## 5. Write the setup", 1)[1].split("```", 2)[1]
+    line = re.sub(r"\[[^]]*\]", "", setup.replace("\\\n", " "))
+    named = {
+        "PROVIDER_1": "anthropic",
+        "MODEL_1": "judge-model",
+        "PROVIDER_2": "fireworks-ai",
+        "MODEL_2": "accounts/fireworks/models/qwen-x",
+        "PROVIDER": "anthropic",
+        "MODEL": "judge-model",
+    }
+    words = [named.get(word, word) for word in shlex.split(line)]
+    return [*words[words.index("casebench") + 1 :], "--catalog", str(CATALOG)]
+
+
+def test_following_the_guide_the_first_run_says_what_extraction_costs(project: Path):
+    os.environ.pop("FIREWORKS_API_KEY", None)
+    keys_file = project / "env" / "eval.env"
+    write(keys_file, keys_file.read_text(encoding="utf-8") + "FIREWORKS_API_KEY=fw-key\n")
+    write(project / ".casebench" / "target.py", ADAPTER)
+    decisions = project / ".casebench" / "decisions"
+    record = {"jurisdiction": "TR", "court": "Yargıtay", "date": "2024-01-01", "text": "Bozma."}
+    for number in (1, 2):
+        write(decisions / f"tr-{number}.json", json.dumps({"id": f"tr-{number}", **record}))
+    guide = invoke("guide").output
+
+    initialised = invoke(*_guided_init(guide))
+    assert initialised.exit_code == 0, initialised.output
+    written = yaml.safe_load((project / "casebench.yaml").read_text(encoding="utf-8"))
+    written["corpora"] = {"decisions": {"connector": "folder", "options": {"path": str(decisions)}}}
+    write(project / "casebench.yaml", yaml.safe_dump(written))
+    first = invoke("run")
+
+    assert len(written["extract"]["models"]) == 2
+    # It says what building the first suite costs and spends nothing until told to go on.
+    assert f"extract: {SAMPLE} decisions, {2 * SAMPLE} model calls" in first.output, first.output
+    assert "nothing was spent; pass --yes" in first.output

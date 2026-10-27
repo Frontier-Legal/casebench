@@ -83,8 +83,12 @@ class Parser:
             return {**body, "stream_options": options}
         return body
 
+    def reads(self, url: str) -> bool:
+        """Whether a call is to this parser's API, read from its path alone."""
+        return url.split("?")[0].rstrip("/").endswith("/chat/completions")
+
     def parse(self, exchange: HttpExchange) -> list[Step]:
-        if not exchange.url.split("?")[0].rstrip("/").endswith("/chat/completions"):
+        if not self.reads(exchange.url):
             return []
         if exchange.response_events is not None:
             model, prompt, completion, tools = _from_chunks(exchange.response_events)

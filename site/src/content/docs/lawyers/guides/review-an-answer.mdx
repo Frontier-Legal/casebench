@@ -1,0 +1,67 @@
+---
+title: Review an answer
+description: Everything about reviewing an answer in the queue, from reading citations and overruling the judge to the keyboard, phones, and items a colleague has open.
+sidebar:
+  order: 2
+---
+
+import Screenshot from '../../../../components/Screenshot.astro';
+
+The review queue holds every answer no lawyer has reviewed yet. [Your first review](/lawyers/tutorials/first-review/) walks through one. This page is the reference for the rest.
+
+## The order of the queue
+
+1. Answers where two grading models disagreed. A disagreement counts as failed until a lawyer decides it.
+2. Answers that failed a point.
+3. The rest.
+
+Court drafts to approve follow, for editors. The tabs **Answers** and **Approvals** show one kind at a time.
+
+## Reading the page
+
+<Screenshot
+	name="review-source-open"
+	alt="An answer under review with the citation's source open on the left, its holding highlighted, and the verdict panel on the right."
+	caption="With a citation's source open: the decision's text, and the passage the citation was matched to."
+/>
+
+| Part | Shows |
+| --- | --- |
+| Summary | How many points the judge passed, how many citations the sources support, and which run the answer came from |
+| What the AI was asked | The question, and the facts or document it was given |
+| Checked against | The court's finding with its passage, or your colleague's reference answer |
+| The AI's answer | The answer as written, each citation underlined in its colour and listed with its verdict |
+| Your verdict | Each point, with the judge's suggestion selected and the passage of the answer it relied on |
+
+Citation colours: **green**, the source supports the claim; **orange**, the source exists but says something else; **red**, no such source in the corpus. Click a citation to open the source.
+
+## Confirming and overruling
+
+- The judge's suggestion is already selected. To agree, leave it.
+- To disagree, choose the other answer. A box asks why; the note is required and is kept with your name.
+- When the judge finds that the answer makes a point, it must quote the passage that makes it. If the quote is not in the answer, Casebench has already counted the point as not made.
+- Everything is saved as you choose it. A closed tab loses nothing.
+
+**Finish and next** records your verdicts and opens the next item. From then on your verdict replaces the judge's in every report, chart and check, until a colleague gives a later one.
+
+## Items a colleague has open
+
+Opening an item reserves it for you for 15 minutes, renewed while it stays open. The queue skips items others have open, so two lawyers never review the same answer at once.
+
+## The keyboard
+
+| Key | Does |
+| --- | --- |
+| <kbd>1</kbd> to <kbd>9</kbd> | Picks the numbered choice on the highlighted row |
+| <kbd>↓</kbd> or <kbd>J</kbd>, <kbd>↑</kbd> or <kbd>K</kbd> | Next row, previous row |
+| <kbd>⌘</kbd> <kbd>Enter</kbd> (<kbd>Ctrl</kbd> <kbd>Enter</kbd> on Windows) | Finishes the item and opens the next |
+| <kbd>Esc</kbd> | Leaves a text box |
+| <kbd>?</kbd> | Shows the shortcuts |
+
+## On a phone or tablet
+
+On a narrow screen the evidence and the answer become two tabs, and every choice is a button large enough to tap.
+
+## What you never see
+
+The review view shows legal text, citations and passages only. The AI's internal steps, token counts and raw records belong to the engineering view, which a reviewer's account does not open.

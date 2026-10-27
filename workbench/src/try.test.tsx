@@ -92,6 +92,16 @@ describe("try a question", () => {
     )
   })
 
+  test("asks for a question as the agent's users would ask it", async () => {
+    const user = userEvent.setup()
+    serve(OPEN)
+    render(<App />)
+    await user.click(await screen.findByRole("button", { name: /Try a question/ }))
+
+    expect(await screen.findByText(/a question as your agent's users would ask it\./)).toBeInTheDocument()
+    expect(screen.queryByText(/as a client would/)).not.toBeInTheDocument()
+  })
+
   test("spend limit holds", async () => {
     const user = userEvent.setup()
     const sent = serve({

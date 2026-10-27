@@ -150,9 +150,28 @@ def test_cost_stated_before_spending(workspace):
     assert planned.exit_code == 0, planned.output
     assert "5 decisions, 10 model calls" in planned.output
     assert "input: unknown until decisions are fetched" in planned.output
-    # At most 10 calls of 2,048 output tokens at $4 a million.
-    assert "cost, an estimate: from $0.00 (input alone) to $0.08" in planned.output
+    # Nothing is cached, so the input's cost is unknown; at most 10 calls of 2,048 output
+    # tokens at $4 a million.
+    assert (
+        "cost, an estimate: lower bound unknown until decisions are fetched; the output alone "
+        "costs at most $0.08"
+    ) in planned.output
+    assert "$0.00 (input alone)" not in planned.output
     assert "nothing was sent" in planned.output
+    assert FakeModels.bodies == []
+
+
+def test_the_dry_run_says_an_unpriced_model_is_in_no_price_list(workspace):
+    _, config, port, store = workspace
+    unpriced = config_text(port, store).replace(", price: {input: 1.0, output: 4.0}", "", 1)
+    config.write_text(unpriced, encoding="utf-8")
+
+    planned = invoke("extract", "--sample", "5", "--dry-run")
+
+    assert planned.exit_code == 0, planned.output
+    assert (
+        "cost: unknown, anthropic/model-a has no price in the price lists or the config"
+    ) in planned.output
     assert FakeModels.bodies == []
 
 

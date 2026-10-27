@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from casebench.keys import hold
+from casebench.keys import fingerprint, hold
 
 # Folders that hold no file of the project's own.
 SKIPPED = {"node_modules", "__pycache__", "site-packages"}
@@ -75,6 +75,24 @@ def holders(name: str, root: Path) -> dict[Path, str]:
     Casebench to compare and use; a caller shows only the files and fingerprints."""
     held = {path: value(path, name) for path in env_files(root)}
     return {path: found for path, found in held.items() if found}
+
+
+class Disagreement(ValueError):
+    """Several .env files give a variable different values; the message names each file with
+    its value's fingerprint, never the value."""
+
+
+def agreed(name: str, root: Path) -> str | None:
+    """The value the project's .env files give the variable: None when none does, and
+    `Disagreement` when files give it different values (decision 0043)."""
+    holding = holders(name, root)
+    if len(set(holding.values())) > 1:
+        files = ", ".join(
+            f"{path.relative_to(root).as_posix()} (fingerprint {fingerprint(found)})"
+            for path, found in holding.items()
+        )
+        raise Disagreement(f"{name} has different values in {files}")
+    return next(iter(holding.values()), None)
 
 
 def load(keys: dict[str, str], base: Path) -> list[str]:

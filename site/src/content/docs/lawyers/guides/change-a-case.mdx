@@ -1,0 +1,40 @@
+---
+title: Change a case
+description: Correct a case in Golden data, say why, and see who must approve the change before it counts.
+sidebar:
+  order: 4
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+An answer key is never finished. A statute changes, a key point lets a wrong answer through, a question turns out to be ambiguous. Correct it in Golden data. You need the editor role.
+
+<Steps>
+
+1. Choose **Golden data**, find the case, and click its row. Search narrows a long list.
+
+2. Change what needs changing. Here a lawyer adds a reference answer, the precedent, and a key point that costs an answer giving the wrong limitation period.
+
+3. Write **why** you change it. The reason is required: the change log keeps it with your name and the time.
+
+	<Screenshot
+		name="golden-change"
+		alt="A case open for editing: the question, a new reference answer, three weighted key points, the precedent CA 2022/31, the practice area, and the reason for the change."
+		caption="Every change needs a reason."
+		frame="plain"
+		width={520}
+	/>
+
+4. Choose **Save the change**.
+
+</Steps>
+
+## When it takes effect
+
+- **By default**, a change takes effect when you save it. The suite gets a new fingerprint, so every later report says it tested the corrected case.
+- **When your team requires a second editor**, your change waits in other editors' queues. They see each field before and after, your name, the time and your reason, and approve it or reject it with a note. Nobody approves their own change.
+
+## The change log
+
+Every change, approval and rejection is kept: who, when, before, after and why. On a team server, editors, engineers and admins read it under **Audit log**. Nothing in it can be changed or removed.

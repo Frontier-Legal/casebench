@@ -1,0 +1,212 @@
+---
+/** An illustrated answer with its three citations, each marked with the verdict a citation check gives it. */
+
+const checks = [
+	{
+		label: 'verified',
+		citation: 'Employment Act, s. 18',
+		finding: 'The corpus holds the section, and the judge quotes the passage that supports the claim.',
+	},
+	{
+		label: 'misgrounded',
+		citation: 'Court of Appeal, 2023/5678',
+		finding: 'The decision exists, but it turned on procedure. It says nothing about late arrival.',
+	},
+	{
+		label: 'fabricated',
+		citation: 'Supreme Court, 2019/441',
+		finding: 'The corpus covers this court and holds no decision this citation could mean.',
+	},
+];
+---
+
+<section class="demo not-content" aria-labelledby="demo-title">
+	<div class="copy">
+		<p class="eyebrow">Citation checks</p>
+		<h2 id="demo-title">Every citation, looked up. Not just the ones that look wrong.</h2>
+		<p>
+			The judge model lists each citation with the claim it supports. Your corpus finds the candidates. The judge names
+			the document the citation means, or none, and reads it to decide whether it says what the answer claims.
+		</p>
+		<p>
+			The system under test is never asked to confirm its own sources, and every verdict shows the passage it rests on.
+		</p>
+		<a href="/developers/concepts/citation-checks/">How citation checks work <span aria-hidden="true">→</span></a>
+	</div>
+	<figure class="answer">
+		<p class="kicker">Illustration · an answer under review</p>
+		<p class="text">
+			No. Under <mark data-label="verified">section 18 of the Employment Act</mark>, a dismissal must rest on a valid
+			reason connected with conduct, and the Court of Appeal held in <mark data-label="misgrounded">2023/5678</mark> that
+			a single late arrival is never enough. See also <mark data-label="fabricated">Supreme Court 2019/441</mark>.
+		</p>
+		<ul>
+			{
+				checks.map((check) => (
+					<li data-label={check.label}>
+						<span class="label">{check.label}</span>
+						<span class="citation">{check.citation}</span>
+						<span class="finding">{check.finding}</span>
+					</li>
+				))
+			}
+		</ul>
+	</figure>
+</section>
+
+<style>
+	.demo {
+		display: grid;
+		gap: 2.5rem;
+		align-items: center;
+		padding: 3.5rem 0;
+		border-top: 1px solid var(--cb-border);
+	}
+
+	@media (min-width: 64rem) {
+		.demo {
+			grid-template-columns: 0.9fr 1.1fr;
+			gap: 3.5rem;
+		}
+	}
+
+	.eyebrow {
+		margin: 0 0 0.75rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--sl-color-text-accent);
+	}
+
+	h2 {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-weight: 560;
+		font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.4rem);
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		color: var(--sl-color-white);
+	}
+
+	.copy p {
+		margin: 1rem 0 0;
+		color: var(--sl-color-gray-2);
+	}
+
+	.copy a {
+		display: inline-block;
+		margin-top: 1.25rem;
+		font-weight: 600;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-white);
+		text-decoration: none;
+	}
+
+	.answer {
+		margin: 0;
+		padding: 1.6rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius-lg);
+		background: var(--cb-surface);
+	}
+
+	.kicker {
+		margin: 0 0 0.9rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+
+	.text {
+		margin: 0;
+		font-family: var(--cb-font-display);
+		font-size: 1.15rem;
+		line-height: 1.7;
+		color: var(--sl-color-white);
+	}
+
+	mark {
+		padding: 0.05em 0.2em;
+		border-radius: 0.25rem;
+		color: inherit;
+		background: transparent;
+		border-bottom: 2px solid;
+	}
+
+	mark[data-label='verified'] {
+		border-color: var(--cb-verified);
+		background: color-mix(in srgb, var(--cb-verified) 14%, transparent);
+	}
+
+	mark[data-label='misgrounded'] {
+		border-color: var(--cb-misgrounded);
+		background: color-mix(in srgb, var(--cb-misgrounded) 14%, transparent);
+	}
+
+	mark[data-label='fabricated'] {
+		border-color: var(--cb-fabricated);
+		background: color-mix(in srgb, var(--cb-fabricated) 14%, transparent);
+	}
+
+	ul {
+		display: grid;
+		gap: 0.6rem;
+		margin: 1.4rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	li {
+		display: grid;
+		grid-template-columns: 7.5rem 1fr;
+		gap: 0.15rem 0.9rem;
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius);
+		font-size: var(--sl-text-sm);
+	}
+
+	.label {
+		grid-row: span 2;
+		align-self: start;
+		justify-self: start;
+		padding: 0.1rem 0.5rem;
+		border-radius: 999px;
+		font-family: var(--sl-font-mono);
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+
+	[data-label='verified'] .label {
+		color: var(--cb-verified);
+		background: color-mix(in srgb, var(--cb-verified) 14%, transparent);
+	}
+
+	[data-label='misgrounded'] .label {
+		color: var(--cb-misgrounded);
+		background: color-mix(in srgb, var(--cb-misgrounded) 14%, transparent);
+	}
+
+	[data-label='fabricated'] .label {
+		color: var(--cb-fabricated);
+		background: color-mix(in srgb, var(--cb-fabricated) 14%, transparent);
+	}
+
+	.citation {
+		font-weight: 600;
+		color: var(--sl-color-white);
+	}
+
+	.finding {
+		color: var(--sl-color-gray-2);
+	}
+
+	@media (max-width: 30rem) {
+		li {
+			grid-template-columns: 1fr;
+		}
+		.label {
+			grid-row: auto;
+		}
+	}
+</style>

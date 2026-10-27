@@ -1,0 +1,47 @@
+---
+title: Sign in
+description: Open your team's workbench from the invitation email, sign in again later with a link, Google or Microsoft, and what to do when a link has expired.
+sidebar:
+  order: 1
+---
+
+import Screenshot from '../../../../components/Screenshot.astro';
+
+Your team's workbench runs on a server your firm controls. There is no password to remember: you sign in with a link sent to your email, or with your Google or Microsoft account.
+
+## The first time
+
+Your admin invites you with your work email and a role. The email names how many items wait for you and about how long they take, and holds a sign-in link. Click it and the workbench opens on your queue.
+
+A sign-in link works **once**, and only **within 15 minutes**. That is deliberate: a forwarded or old link cannot open your account.
+
+## Later
+
+Open the workbench's address. If you are signed out:
+
+- enter your email and choose **Email me a sign-in link**, then click the link in the email; or
+- choose Google or Microsoft, when your firm has set them up, with the same email the admin invited.
+
+<Screenshot
+	name="team-sign-in"
+	alt="The sign-in page of a server that sends no email: an email field, a button to ask for a sign-in link, and a note to ask the admin for the link."
+	caption="On a server that sends no email, the button reads Ask for a sign-in link and the admin hands you the link."
+	width={900}
+/>
+
+A sign-in lasts 14 days on that browser.
+
+## When the server sends no email
+
+Some firms run the server without email. Then the sign-in page says so, the button reads **Ask for a sign-in link**, and your admin gives you a link from the Team page instead. It follows the same rules: once, within 15 minutes.
+
+## On a colleague's machine
+
+When an engineer opens the workbench on their own computer instead of a team server, there is no sign-in. You type your name, which is recorded with every verdict, and choose **I review legal answers**.
+
+<Screenshot
+	name="sign-in"
+	alt="The local workbench's start page, asking for your name and whether you review legal answers or build the AI system."
+	caption="On an engineer's machine: your name and what you do."
+	width={900}
+/>

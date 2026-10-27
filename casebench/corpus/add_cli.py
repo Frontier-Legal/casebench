@@ -10,7 +10,7 @@ import click
 import httpx2
 
 from casebench import keys
-from casebench.config import DEFAULT_CONFIG
+from casebench.config import DEFAULT_CONFIG, load_config
 from casebench.core.jurisdiction import UnknownJurisdiction, code
 from casebench.corpus.add import (
     ConfigHasCorpus,
@@ -627,6 +627,9 @@ def profile(
 ) -> None:
     """A store described by a provider's profile: a file, or a bundled profile's id. Nothing
     is asked; one live search and fetch prove it works with your key."""
+    if config_path.is_file():
+        # The keys `keys:` names are read from their .env files, as for every command (0043).
+        load_config(config_path)
     try:
         path, recorded = resolve(given)
         block, notes = profile_block(path, codes(jurisdictions), recorded)

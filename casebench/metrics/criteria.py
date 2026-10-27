@@ -32,7 +32,9 @@ def label_of(verdicts: list[CriterionVerdict]) -> str:
 def weighted_score(verdicts: list[CriterionVerdict]) -> float:
     """The weighted sum of met criteria over the sum of positive weights, clipped to 0 to 1.
 
-    The scheme PRBench and BigLaw Bench use; decision 0002 cites it.
+    A negative weight takes points away for what an answer must not do, and no answer scores
+    below 0. Decision 0002 records the scheme, with the paper (arXiv:2511.11562) that measured
+    how closely a judge agrees with experts under it.
     """
     possible = sum(verdict.weight for verdict in verdicts if verdict.weight > 0)
     if possible == 0:

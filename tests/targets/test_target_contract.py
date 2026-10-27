@@ -108,6 +108,20 @@ def test_http_endpoint_with_a_start_command(tmp_path: Path, monkeypatch: pytest.
         deployed.shutdown()
 
 
+def test_an_http_targets_url_may_name_a_variable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    deployed = serve(0)
+    threading.Thread(target=deployed.serve_forever, daemon=True).start()
+    monkeypatch.setenv("AGENT_URL", f"http://127.0.0.1:{deployed.server_port}")
+    config = {"type": "http", "url": "${AGENT_URL}/ask", "body": {"q": "{{question}}"}}
+    target = target_from_config({**config, "answer": "$.data.text"})
+    try:
+        [result] = asyncio.run(run_cases([case("c1", question="Q1")], target, new_log(tmp_path)))
+    finally:
+        deployed.shutdown()
+
+    assert result.error is None and result.output == 'echo {"q": "Q1"} auth=None'
+
+
 def test_command(tmp_path: Path):
     target = target_from_config(
         {

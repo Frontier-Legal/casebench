@@ -43,7 +43,7 @@ def _cloud(config_path: Path) -> tuple[CasebenchConfig, Cloud]:
             f"machine needs only casebench. {GUIDE} says how to run it"
         )
     try:
-        return config, Cloud(connect(config.cloud))
+        return config, Cloud(connect(config.cloud, config_path.resolve().parent))
     except CloudError as failure:
         raise click.ClickException(str(failure)) from None
 

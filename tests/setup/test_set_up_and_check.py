@@ -111,6 +111,22 @@ def test_init_refuses_an_entry_that_does_not_exist(checkout: Path):
     assert not (checkout / "casebench.yaml").exists()
 
 
+def test_an_adapter_that_imports_its_function_passes_check(checkout: Path):
+    (checkout / "adapter.py").write_text(
+        "from agent import answer\nfrom agent import answer as reply\n", encoding="utf-8"
+    )
+    (checkout / "every.py").write_text("from agent import *\n", encoding="utf-8")
+    checked = []
+    for number, entry in enumerate(("adapter.py:answer", "adapter.py:reply", "every.py:answer")):
+        target = {"type": "python", "entry": entry}
+        (checkout / f"{number}.yaml").write_text(yaml.safe_dump({"target": target}), "utf-8")
+        checked.append(CliRunner().invoke(main, ["check", "--config", f"{number}.yaml"]))
+
+    for each in checked:
+        assert each.exit_code == 0, each.output
+        assert 'target   passed: answered "The appeal is upheld."' in each.output
+
+
 def test_checked_and_run_where_it_is_reachable(checkout: Path):
     upstream = start_upstream()
     judge = start_fake_judge()
@@ -187,6 +203,26 @@ def test_check_fails_when_a_part_is_out_of_reach(checkout: Path):
     assert checked.exit_code == 1
     assert "target   passed" in checked.output
     assert "judge    not reachable from here" in checked.output
+
+
+def test_a_missing_judge_key_is_named_whatever_the_judges_settings(
+    checkout: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    judge = {
+        "provider": "anthropic",
+        "model": "judge-model",
+        "options": {"base_url": f"http://127.0.0.1:{closed_port()}", "max_tokens": 256},
+    }
+    (checkout / "casebench.yaml").write_text(yaml.safe_dump({"judge": judge}), encoding="utf-8")
+
+    checked = CliRunner().invoke(main, ["check", "--json"])
+    [part] = json.loads(checked.output)["parts"]
+
+    assert checked.exit_code == 1
+    assert part["status"] == "failed"
+    assert "ANTHROPIC_API_KEY is not set" in part["reason"]
+    assert "ANTHROPIC_API_KEY" in part["next"] and "max_tokens" not in part["next"]
 
 
 def test_sdks_found_in_a_lock_and_a_package_json(tmp_path: Path):

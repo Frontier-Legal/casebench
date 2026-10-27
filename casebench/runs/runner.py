@@ -66,7 +66,8 @@ async def run_cases(
 ) -> list[Result]:
     """At most `max_concurrency` cases at once; cases the log already holds are skipped. With
     nothing left to send, the target is never started, so a stored run is scored again
-    without calling the agent (decision 0037). `on_answered` hears of each stored result."""
+    without calling the agent (decision 0037). `on_answered` hears of each stored result.
+    The calls the proxy recorded that no case could claim are counted in the run's log."""
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be at least 1")
     stored = {result.case_id for result in log.results()}
@@ -94,3 +95,4 @@ async def run_cases(
     finally:
         if capture is not None:
             await capture.stop()
+            log.count_unattributed(len(capture.recorder.unattributed))

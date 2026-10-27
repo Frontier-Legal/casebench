@@ -1,4 +1,4 @@
-"""`casebench demo` runs a bundled suite with no key and no network (decision 0061)."""
+"""`casebench demo` runs a bundled suite with no key, and asks no model (decision 0061)."""
 
 import socket
 from asyncio.proactor_events import BaseProactorEventLoop as ProactorLoop
@@ -59,3 +59,22 @@ def test_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     # It wrote nothing outside its own folder, and nothing left this machine.
     assert not (tmp_path / ".casebench").exists()
     assert {host for host, _ in connected} <= {"127.0.0.1"}
+
+
+def test_the_demos_help_names_the_price_lists_it_reads():
+    shown = CliRunner().invoke(main, ["demo", "--help"])
+
+    assert shown.exit_code == 0
+    assert "no network" not in shown.output
+    assert "two public price lists" in shown.output
+
+
+def test_a_relative_dir_holds_the_demo_itself(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.chdir(tmp_path)
+
+    ran = CliRunner().invoke(main, ["demo", "--dir", "demo1", "--no-serve"])
+
+    assert ran.exit_code == 0, ran.output
+    assert f"the demo is in {tmp_path.resolve() / 'demo1'}\n" in ran.output
+    assert (tmp_path / "demo1" / "runs" / "demo").is_dir()
+    assert not (tmp_path / "demo1" / "demo1").exists()

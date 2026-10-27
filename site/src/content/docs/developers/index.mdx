@@ -1,0 +1,62 @@
+---
+title: Developer documentation
+description: Set Casebench up for your legal AI agent, run suites against it, gate changes in CI, and bring lawyers in through the workbench.
+sidebar:
+  label: Overview
+  order: 0
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Casebench measures how often a legal AI system gets the law wrong. You point it at three things:
+
+| You connect | What it is | Example |
+| --- | --- | --- |
+| A **target** | The agent under test, reached the way your own code reaches it | `agent.py:answer`, an HTTP endpoint, a command |
+| A **corpus** | The decisions and statutes citations are checked against | a folder, a document API, an MCP server, a provider's profile |
+| A **judge** | A model you choose and pay for, from another family than your agent's | any model in the public model catalog |
+
+The command line and CI run the evaluations. The **workbench**, a web app that ships in the same package, is where you set up in a browser, start runs, and where lawyers review answers and keep the answer key. Every result is computed on your machine; a team server only stores and shows it.
+
+## Where to start
+
+<CardGrid>
+	<LinkCard
+		title="Try the demo"
+		description="uvx casebench demo: a bundled suite with no key and no model calls, then the workbench on its failures."
+		href="/developers/tutorials/demo/"
+	/>
+	<LinkCard
+		title="Your first evaluation"
+		description="Set up a small agent, let the first run build a suite from court decisions, and open the results."
+		href="/developers/tutorials/first-evaluation/"
+	/>
+	<LinkCard
+		title="Set up with a coding agent"
+		description="One prompt: the coding agent reads your project and writes casebench.yaml and an adapter, nothing else."
+		href="/developers/guides/setup/coding-agent/"
+	/>
+	<LinkCard
+		title="Bring lawyers in"
+		description="Run a team server, push runs, and invite lawyers by email to review in the browser."
+		href="/developers/guides/team/invite-lawyers/"
+	/>
+</CardGrid>
+
+## How these docs are organised
+
+Each page does one job, and the label above its title says which.
+
+- **Tutorials** take you through a complete task once, with every command to type.
+- **How-to guides** answer one question each, such as connecting an HTTP agent or failing a build on a significant drop.
+- **Concepts** explain why Casebench works the way it does: how answer keys are made, how citations are checked, what leaves your machine.
+- **Reference** lists every command, configuration key, file format and label, generated from the code where possible.
+
+The [lawyer documentation](/lawyers/) covers the workbench for the people who review answers and keep the answer key. Send your lawyers there.
+
+## What Casebench needs from you
+
+- **Python 3.11 or later** where Casebench runs. Your agent can be in any language.
+- **A key for one model provider**, for the judge, and for two extraction models if you build suites from court decisions.
+- **Court decisions or lawyer-written cases.** Casebench ships no corpus. It reads yours.
+- **No change to your agent.** Casebench records your agent's model and search calls where they go, and calls only the hosts your config names.

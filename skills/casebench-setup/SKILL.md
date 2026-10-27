@@ -24,13 +24,13 @@ It prints the setup steps for the installed version, and the exact command to ru
 Answer every question you can from the repository: which function answers a legal question, how production loads its settings, which document store the agent searches, and which models it calls. Ask the user only two things:
 
 1. **Where the court decisions are**, when the code does not show which store the agent searches.
-2. **Which judge to pay for.** Propose one from a different model family than the agent's, as the guide says, and say it is billed for each run.
+2. **Which models to pay for.** Propose a judge from a different model family than the agent's, and two extraction models from two different families, as the guide says. Say the judge is billed for each run, and the extraction models when the first run builds its suite.
 
 The guide ends when `casebench check` passes, or when you can say in plain words what cannot pass from here. Below, `casebench` stands for the command the guide told you to run it with.
 
 ## 2. Run the first evaluation
 
-Setup is done; the guide's rule against running `casebench run` covered setup only. A first evaluation needs a suite of cases. Without one, `casebench run` builds it from the corpus: two models read a sample of decisions, and their agreed findings become cases.
+Setup is done; the guide's rule against running `casebench run` covered setup only. A first evaluation needs a suite of cases. Without one, `casebench run` builds it from the corpus: the two extraction models the guide's setup named read a sample of decisions, and their agreed findings become cases.
 
 1. Run `casebench run` with no `--suite`. It prints what extraction will cost and how many cases it will send, then stops, because nothing answers its question.
 2. Show the user that estimate and ask whether to go on. Apart from the team server question in step 4, this is the only other question you ask.
@@ -59,4 +59,4 @@ Lawyers who review on another machine need a team server: the workbench with sig
 
 ## Without a project of its own
 
-`uvx casebench demo` runs a bundled suite with no key and no network, and opens the workbench on it. Use it when the user wants to see Casebench before connecting their agent.
+`uvx casebench demo` runs a bundled suite with no key and asks no model, and opens the workbench on it. Like every run, it reads two public price lists. Use it when the user wants to see Casebench before connecting their agent.

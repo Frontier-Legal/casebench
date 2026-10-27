@@ -110,7 +110,9 @@ def _target(
     return {
         "type": "http",
         "url": url or text("the agent's endpoint"),
-        "body": yaml.safe_load(text("the request body, as JSON with {question}")),
+        "body": yaml.safe_load(
+            text('the request body, as JSON, with "{{question}}" where the question goes')
+        ),
         "answer": text("JSONPath to the answer in the response"),
     }
 

@@ -1,0 +1,37 @@
+---
+/** The repository's CHANGELOG.md, as the release tooling writes it, without its own top heading. */
+import { getEntry, render } from 'astro:content';
+
+const entry = await getEntry('changelog', 'changelog');
+if (!entry) throw new Error('CHANGELOG.md was not found at the repository root');
+const { Content } = await render(entry);
+---
+
+<div class="changelog">
+	<Content />
+</div>
+
+<style>
+	.changelog :global(h1) {
+		display: none;
+	}
+
+	.changelog :global(h2) {
+		margin-top: 2.5rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--cb-border);
+		font-size: var(--sl-text-h3);
+	}
+
+	.changelog :global(h2:first-of-type) {
+		border-top: 0;
+		padding-top: 0;
+	}
+
+	.changelog :global(h3) {
+		font-size: var(--sl-text-base);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--sl-color-gray-3);
+	}
+</style>

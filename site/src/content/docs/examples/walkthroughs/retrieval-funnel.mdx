@@ -1,0 +1,104 @@
+---
+title: A retrieval agent with the authority funnel
+description: Record the search calls and an in-process rerank of a Python retrieval agent, and read the funnel to find where the right decision was lost.
+sidebar:
+  order: 2
+---
+
+A Python agent searches a decision index over HTTP, reranks the hits in plain Python, and asks a model to answer from the top five. Its outcome score is lower than the team expected. The authority funnel shows why, without changing a line of the agent.
+
+## The agent
+
+```python title="agent.py"
+import os
+
+import httpx
+from openai import OpenAI
+
+from search.rerank import rerank
+
+search = httpx.Client(base_url=os.environ.get("SEARCH_URL", "http://127.0.0.1:9200"))
+llm = OpenAI()
+
+
+def answer(question: str, facts: str = "") -> str:
+    hits = search.get("/decisions/_search", params={"q": f"{question} {facts}", "size": 40}).json()
+    candidates = [hit["_source"] for hit in hits["hits"]["hits"]]
+    top = rerank(question, candidates)[:5]
+    context = "\n\n".join(f"[{d['decision_id']}] {d['summary']}" for d in top)
+    reply = llm.chat.completions.create(
+        model="gpt-5.5",
+        messages=[
+            {"role": "system", "content": "Answer from the decisions given. Cite them by their id in brackets."},
+            {"role": "user", "content": f"{context}\n\nFacts: {facts}\n\nQuestion: {question}"},
+        ],
+    )
+    return reply.choices[0].message.content
+```
+
+## The config
+
+```yaml title="casebench.yaml"
+target:
+  type: python
+  entry: agent.py:answer
+  max_concurrency: 4
+corpus:
+  connector: http
+  jurisdictions: [TR]
+  options: { ... }            # written by `casebench corpus add http`
+judge:
+  provider: anthropic
+  model: claude-sonnet-5-5
+  options: { api_key_env: ANTHROPIC_API_KEY, max_tokens: 4000 }
+agent_models:
+  - { model: gpt-5.5, family: gpt }
+network:
+  allow: [api.openai.com]
+capture:
+  routes:
+    - name: search
+      upstream: http://127.0.0.1:9200
+      step: retrieval
+      doc_ids: $.hits.hits[*]._source.decision_id
+  functions:
+    - function: search/rerank.py:rerank
+      step: rerank
+      doc_ids_in: $.arguments.candidates[*].decision_id
+      doc_ids_out: $.result[*].decision_id
+```
+
+- Casebench runs the agent in worker processes. Each call the agent makes with httpx, httpx2 or requests passes through Casebench's recording proxy on its way to the host the agent chose. The agent's code and its `SEARCH_URL` stay as they are.
+- The search route matches the search calls by their host, `127.0.0.1:9200`, and reads the corpus ids from `_source.decision_id`, not the index's own `_id`, so they match the corpus.
+- The function entry wraps `rerank` in each worker before the agent is imported. The agent's `from search.rerank import rerank` gets the wrapper.
+- The model call is recorded by the `openai` parser with no route. Because the context lists `[decision_id]` for each document, the funnel can tell which decisions the model read.
+- A run calls only the hosts the config names. The judge's provider and the corpus are named already, and `127.0.0.1` is always allowed. The agent's own model API is not, so `network: allow:` lists `api.openai.com`.
+- `agent_models:` names the model the agent calls with its catalog family. The run checks that the judge is from another family, and prices the agent's calls.
+
+## Run it
+
+```sh
+casebench check
+casebench run --suite suites/labour-court --run-id funnel-1
+```
+
+If the agent calls a host the config does not name, such as a second model API, the run stops at that call and names the host. Add it under `network: allow:` and run the same command again; the run resumes.
+
+## Read the funnel
+
+```text frame="terminal"
+authority funnel: 287 court authorities in 112 cases with captured document ids (8 cases had none)
+  retrieved    241    84%
+  kept         203    71%
+  read         151    53%
+  cited        118    41%
+  ignored_authority 33, not_in_context 52, rerank_drop 38, retrieval_miss 46
+  ungrounded citations: 9
+  read means the document's id was in a model call's request
+```
+
+The search found the decision the court relied on 84% of the time. The rerank kept 71%. Only 53% reached the model, because the agent keeps the top five of forty. The biggest single loss, 52 authorities, is `not_in_context`: kept by the rerank, cut by the `[:5]`.
+
+The fix to try first is the context budget, not the model. Change `[:5]` to `[:10]`, run again, and [compare the two runs](/developers/guides/runs/compare-runs/).
+
+The 9 ungrounded citations resolve to real decisions that no step returned: the model cited them from memory.

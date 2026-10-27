@@ -1,4 +1,4 @@
-"""`casebench demo`: a bundled project that runs with no key, no data and no network.
+"""`casebench demo`: a bundled project that runs with no key and no data.
 
 Its cases, documents and answers are written for the demo, and its judge's replies are kept
 in the run's memo, so scoring asks no model (decision 0061).

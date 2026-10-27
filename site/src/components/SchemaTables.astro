@@ -1,0 +1,196 @@
+---
+/**
+ * The field tables of one published format, read from the JSON Schema that ships with Casebench, so the reference
+ * cannot drift from the data model.
+ */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { shapes, type JsonSchema } from '../lib/json-schema';
+
+interface Props {
+	/** The format's short name, such as `case`. */
+	format: string;
+	version?: string;
+}
+
+const { format, version = '1.0' } = Astro.props;
+// Pages are rendered at build time from the site folder, which sits beside the package.
+const file = resolve(process.cwd(), '..', 'casebench', 'formats', 'schemas', format, `${version}.json`);
+const schema = JSON.parse(readFileSync(file, 'utf8')) as JsonSchema;
+const tables = shapes(schema);
+
+const anchor = (name: string) => `${format}-${name.toLowerCase()}`;
+/** Split text on backticks so code reads as code. */
+const pieces = (text = '') => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+---
+
+<div class="schema-tables not-content">
+	{
+		tables.map((table) => (
+			<section class="shape" id={table.name ? anchor(table.name) : undefined}>
+				{table.name && (
+					<h3 class="shape-name">
+						<code>{table.name}</code>
+					</h3>
+				)}
+				{table.description && (
+					<p class="shape-description">
+						{pieces(table.description).map(({ code, part }) => (code ? <code>{part}</code> : part))}
+					</p>
+				)}
+				{table.values && !table.fields.length && (
+					<p class="values">
+						One of{' '}
+						{table.values.map((value, i) => (
+							<>
+								{i > 0 && ', '}
+								<code>{value}</code>
+							</>
+						))}
+						.
+					</p>
+				)}
+				{table.fields.length > 0 && (
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr>
+									<th scope="col">Field</th>
+									<th scope="col">Type</th>
+									<th scope="col">Notes</th>
+								</tr>
+							</thead>
+							<tbody>
+								{table.fields.map((field) => (
+									<tr>
+										<td>
+											<code class="field">{field.name}</code>
+											{field.required && <span class="required">required</span>}
+										</td>
+										<td class="type">
+											{field.refs.length ? (
+												<a href={`#${anchor(field.refs[0]!)}`}>
+													<code>{field.type}</code>
+												</a>
+											) : (
+												<code>{field.type}</code>
+											)}
+										</td>
+										<td>
+											{pieces(field.description).map(({ code, part }) => (code ? <code>{part}</code> : part))}
+											{field.default && field.default !== 'null' && (
+												<span class="default">
+													Default <code>{field.default}</code>.
+												</span>
+											)}
+											{field.values?.map((value) => (
+												<span class="default">{value}</span>
+											))}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+			</section>
+		))
+	}
+</div>
+
+<style>
+	.schema-tables {
+		display: grid;
+		gap: 2rem;
+		margin-top: 1.5rem;
+	}
+
+	.shape {
+		scroll-margin-top: calc(var(--sl-nav-height) + 1.5rem);
+	}
+
+	.shape-name {
+		font-size: var(--sl-text-lg);
+		margin: 0 0 0.35rem;
+	}
+
+	.shape-name code {
+		font-size: inherit;
+		color: var(--sl-color-white);
+		background: none;
+	}
+
+	.shape-description,
+	.values {
+		margin: 0 0 0.75rem;
+		color: var(--sl-color-gray-2);
+		font-size: var(--sl-text-sm);
+	}
+
+	.table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--cb-border);
+		border-radius: var(--cb-radius);
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--sl-text-sm);
+	}
+
+	th {
+		text-align: start;
+		background: var(--cb-surface);
+		color: var(--sl-color-white);
+		font-weight: 600;
+	}
+
+	th,
+	td {
+		padding: 0.55rem 0.8rem;
+		border-bottom: 1px solid var(--cb-border);
+		vertical-align: top;
+		color: var(--sl-color-gray-2);
+	}
+
+	tr:last-child td {
+		border-bottom: 0;
+	}
+
+	td:first-child {
+		white-space: nowrap;
+	}
+
+	code {
+		font-family: var(--sl-font-mono);
+		font-size: 0.85em;
+	}
+
+	.field {
+		color: var(--sl-color-white);
+	}
+
+	.type code {
+		color: var(--sl-color-text-accent);
+	}
+
+	.type a {
+		text-decoration: none;
+	}
+
+	.required {
+		display: block;
+		margin-top: 0.2rem;
+		font-size: var(--sl-text-xs);
+		color: var(--cb-misgrounded);
+	}
+
+	.default {
+		display: block;
+		margin-top: 0.25rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+</style>

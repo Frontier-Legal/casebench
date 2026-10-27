@@ -100,10 +100,15 @@ def profile_block(
     profile, notes = load_profile(path)
     unset = _unset(profile)
     if unset:
-        raise ProfileProblem(f"{', '.join(unset)} is not set in this shell; export it first")
+        raise ProfileProblem(
+            f"{', '.join(unset)} is set neither in this shell nor in a .env file that `keys:` "
+            f"in casebench.yaml names; export it, or name its file there as {unset[0]}: FILE"
+        )
     fetched = _check(profile)
     block = corpus_block(profile.connector, profile.options, jurisdictions or profile.jurisdictions)
     block["profile"] = recorded or path.name
+    # The search the live check ran, which `casebench check` runs again (decision 0044).
+    block["probe"] = profile.probe
     if profile.metered is not Metered.NONE:
         block["metered"] = profile.metered.value
     if profile.search_filters:

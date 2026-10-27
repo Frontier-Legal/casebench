@@ -1,0 +1,53 @@
+---
+title: Compare two versions
+description: Read two versions' answers to each question blind, say which is better and why, and read whether the newer version is better per practice area.
+sidebar:
+  order: 6
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import Screenshot from '../../../../components/Screenshot.astro';
+
+When your team changes the AI, a new prompt, a new model, a better search, the question is whether the new version gives better legal answers. Scores help, but a lawyer's judgment is the evidence the grading model cannot give. **Compare runs** collects it without bias: you never know which version wrote which answer until you have chosen.
+
+## Choose the two runs
+
+Open **Compare runs**. Pick the **later run** (the new version) and the **earlier run**. Both must have answered the same suite.
+
+## Compare each pair
+
+<Steps>
+
+1. Read the question and the answer key, then **Answer A** and **Answer B**. Which version is A changes from pair to pair, and nothing on screen names a run, a score or the judge's verdict.
+
+	<Screenshot
+		name="compare-pair"
+		alt="A pair to compare: the question about unused leave, Answer A and Answer B side by side, and the answer key below."
+		caption="Two answers to the same question. Which run wrote which is hidden."
+	/>
+
+2. Choose **A is better** (<kbd>A</kbd>), **B is better** (<kbd>B</kbd>) or **Equal** (<kbd>E</kbd>).
+
+3. Say why. The reason is required, and kept with your name beside the later run.
+
+	<Screenshot
+		name="compare-choice"
+		alt="Answer A chosen as better, with the reason written below."
+		caption="A choice and its reason."
+	/>
+
+4. Choose **Give preference and next**, or press <kbd>⌘</kbd> <kbd>Enter</kbd>.
+
+</Steps>
+
+## Read the result
+
+When pairs have been compared, the summary at the top counts, per practice area, the later run's wins, losses and ties, and whether the difference is significant.
+
+<Screenshot
+	name="compare-summary"
+	alt="The summary: employment, 4 wins, 0 losses, 3 ties, difference +0.57 with an interval from +0.14 to +0.86, marked Not significant."
+	caption="Four wins and no losses over seven pairs, and still not significant."
+/>
+
+Why is 4 wins and 0 losses "not significant"? Because seven pairs are few. Casebench calls a difference significant only when its range leaves out zero **and** a standard test of wins against losses agrees. A split as lopsided as four to nothing, either way, happens by chance about one time in eight. Compare more questions before telling anyone the new version is better.
