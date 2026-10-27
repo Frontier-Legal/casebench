@@ -32,7 +32,7 @@ def test_the_command_line_reference_shows_every_current_option():
 
 def test_the_capture_server_reference_lists_the_routes_the_server_serves():
     spec = yaml.safe_load((SITE / "openapi" / "capture-server.yaml").read_text(encoding="utf-8"))
-    app = make_app([], Recorder(), {})
+    app = make_app([], Recorder(), lambda route, url: None)
     served = {
         re.sub(r"\{(\w+):path\}", r"{\1}", route.path): set(route.methods or ())
         for route in app.routes

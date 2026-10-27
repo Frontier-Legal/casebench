@@ -5,8 +5,9 @@ when the page in the repository differs from what this script writes, so the ref
 every change to an option or a help text.
 """
 
+import copy
 import inspect
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import click
 
@@ -44,12 +45,21 @@ def _paragraphs(text: str) -> str:
     return "\n\n".join(_escaped(" ".join(block.split())) for block in blocks)
 
 
+def _portable(option: click.Option) -> click.Option:
+    """The option with a path default in forward slashes, so the page is the same on Windows."""
+    if not isinstance(option.default, PurePath):
+        return option
+    portable = copy.copy(option)
+    portable.default = option.default.as_posix()
+    return portable
+
+
 def _options(command: click.Command, context: click.Context) -> list[str]:
     rows: list[str] = []
     for param in command.get_params(context):
         if not isinstance(param, click.Option) or "--help" in param.opts:
             continue
-        record = param.get_help_record(context)
+        record = _portable(param).get_help_record(context)
         if record is None:
             continue
         flags, help_text = record
