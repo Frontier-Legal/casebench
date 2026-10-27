@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0](https://github.com/Frontier-Legal/casebench/compare/v0.5.1...v0.6.0) (2026-10-27)
+
+
+### Features
+
+* pages open at once, document APIs search by POST, and prices are looked up instead of written ([#106](https://github.com/Frontier-Legal/casebench/issues/106)) ([272a9dd](https://github.com/Frontier-Legal/casebench/commit/272a9ddef6392cf223cceeed4594e83a0ca93341))
+
+
+### Bug Fixes
+
+* setup, capture, keys and review fixes found by the documentation ([#115](https://github.com/Frontier-Legal/casebench/issues/115)) ([1711371](https://github.com/Frontier-Legal/casebench/commit/1711371991b61e9b0633dbba2f9ab06b8828901b))
+
+
+### Documentation
+
+* add the casebench.dev documentation site ([#114](https://github.com/Frontier-Legal/casebench/issues/114)) ([374da19](https://github.com/Frontier-Legal/casebench/commit/374da1977244f6d5d78337dc597aabf5923fdfb3))
+
 ## [0.5.1](https://github.com/Frontier-Legal/casebench/compare/v0.5.0...v0.5.1) (2026-10-21)
 
 

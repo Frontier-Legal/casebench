@@ -99,7 +99,7 @@ wheels = [
 
 [[package]]
 name = "casebench"
-version = "0.5.1"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -185,7 +185,7 @@ dev = [
 
 [[package]]
 name = "casebench-ee"
-version = "0.5.1"
+version = "0.6.0"
 source = { editable = "ee" }
 dependencies = [
     { name = "casebench" },
